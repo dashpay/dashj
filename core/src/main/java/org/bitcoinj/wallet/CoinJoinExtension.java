@@ -262,41 +262,43 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
     }
 
     @Override
-    public String toString(boolean includeLookahead, boolean includePrivateKeys, @Nullable KeyParameter aesKey) {
+    public String toString(boolean includeLookahead, boolean includePrivateKeys, @Nullable KeyParameter aesKey, boolean includeDebugInfo) {
         StringBuilder builder = new StringBuilder();
         builder.append("COINJOIN:\n Rounds: ").append(rounds).append("\n");
-        builder.append(super.toString(includeLookahead, includePrivateKeys, aesKey)).append("\n");
-        builder.append("Key Usage:").append(getKeyUsage()).append("\n");
-        builder.append("Outputs:\n");
+        builder.append(super.toString(includeLookahead, includePrivateKeys, aesKey, includeDebugInfo)).append("\n");
+        if (includeDebugInfo && wallet != null) {
+            builder.append("Key Usage:").append(getKeyUsage()).append("\n");
+            builder.append("Outputs:\n");
 
-        for (Map.Entry<Integer, List<TransactionOutput>> entry : getOutputs().entrySet()) {
-            int denom = entry.getKey();
-            List<TransactionOutput> outputs = entry.getValue();
-            Coin value = outputs.stream().map(TransactionOutput::getValue).reduce(Coin::add).orElse(Coin.ZERO);
-            builder.append(CoinJoin.denominationToString(denom)).append(" outputs:").append(outputs.size()).append(" total:")
-                    .append(value.toFriendlyString()).append("\n");
-            outputs.forEach(output -> {
-                TransactionOutPoint outPoint = new TransactionOutPoint(output.getParams(), output.getIndex(), output.getParentTransactionHash());
-                builder.append("  addr:")
-                        .append(Address.fromPubKeyHash(output.getParams(), ScriptPattern.extractHashFromP2PKH(output.getScriptPubKey())))
-                        .append(" outpoint:")
-                        .append(outPoint.toStringShort())
-                        .append(" ");
-                int rounds = ((WalletEx) wallet).getRealOutpointCoinJoinRounds(outPoint);
-                builder.append(CoinJoin.getRoundsString(rounds));
-                if (rounds >= 0) {
-                    builder.append(" ").append(rounds).append(" rounds");
-                    if (((WalletEx) wallet).isFullyMixed(outPoint)) {
-                        builder.append(" (fully mixed)");
+            for (Map.Entry<Integer, List<TransactionOutput>> entry : getOutputs().entrySet()) {
+                int denom = entry.getKey();
+                List<TransactionOutput> outputs = entry.getValue();
+                Coin value = outputs.stream().map(TransactionOutput::getValue).reduce(Coin::add).orElse(Coin.ZERO);
+                builder.append(CoinJoin.denominationToString(denom)).append(" outputs:").append(outputs.size()).append(" total:")
+                        .append(value.toFriendlyString()).append("\n");
+                outputs.forEach(output -> {
+                    TransactionOutPoint outPoint = new TransactionOutPoint(output.getParams(), output.getIndex(), output.getParentTransactionHash());
+                    builder.append("  addr:")
+                            .append(Address.fromPubKeyHash(output.getParams(), ScriptPattern.extractHashFromP2PKH(output.getScriptPubKey())))
+                            .append(" outpoint:")
+                            .append(outPoint.toStringShort())
+                            .append(" ");
+                    int rounds = ((WalletEx) wallet).getRealOutpointCoinJoinRounds(outPoint);
+                    builder.append(CoinJoin.getRoundsString(rounds));
+                    if (rounds >= 0) {
+                        builder.append(" ").append(rounds).append(" rounds");
+                        if (((WalletEx) wallet).isFullyMixed(outPoint)) {
+                            builder.append(" (fully mixed)");
+                        }
+                    } else {
+                        builder.append(" ").append(output.getValue().toFriendlyString());
                     }
-                } else {
-                    builder.append(" ").append(output.getValue().toFriendlyString());
-                }
-                builder.append("\n");
-            });
+                    builder.append("\n");
+                });
+            }
+            builder.append(getUnusedKeyReport());
+            builder.append(getKeyUsageReport());
         }
-        builder.append(getUnusedKeyReport());
-        builder.append(getKeyUsageReport());
 
         return builder.toString();
     }
