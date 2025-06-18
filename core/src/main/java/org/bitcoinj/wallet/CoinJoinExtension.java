@@ -615,10 +615,10 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
                         IKey key = findKeyFromPubKeyHash(hash, Script.ScriptType.P2PKH);
                         if (key != null && key instanceof IDeterministicKey) {
                             IDeterministicKey deterministicKey = (IDeterministicKey) key;
-                            if (confidence != null) {
+                            if (confidence != null && confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING) {
                                 builder.append(confidence.getAppearedAtChainHeight()).append(": ");
                             } else {
-                                builder.append("?").append(": ");
+                                builder.append("PENDING: ");
                             }
                             builder.append(deterministicKey.getPathAsString()).append("\n");
                         }

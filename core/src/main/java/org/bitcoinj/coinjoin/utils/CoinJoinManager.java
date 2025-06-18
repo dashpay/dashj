@@ -71,7 +71,9 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 
+import static com.google.common.base.Preconditions.checkState;
 import static org.bitcoinj.utils.Threading.SAME_THREAD;
 
 public class CoinJoinManager {
@@ -92,6 +94,7 @@ public class CoinJoinManager {
     private RequestKeyParameter requestKeyParameter;
     private RequestDecryptedKey requestDecryptedKey;
     private final ScheduledExecutorService scheduledExecutorService;
+    protected final ReentrantLock lock = Threading.lock("coinjoin-manager");
 
     private boolean finishCurrentSessions = false;
 
@@ -188,19 +191,24 @@ public class CoinJoinManager {
     }
 
     public void stop() {
-        log.info("CoinJoinManager stopping...");
-        if (schedule != null) {
-            schedule.cancel(false);
-            schedule = null;
-        }
+        lock.lock();
+        try {
+            log.info("CoinJoinManager stopping...");
+            if (schedule != null) {
+                schedule.cancel(false);
+                schedule = null;
+            }
 
-        for (CoinJoinClientManager clientManager: coinJoinClientManagers.values()) {
-            clientManager.resetPool();
-            clientManager.stopMixing();
-            clientManager.close(blockChain);
+            for (CoinJoinClientManager clientManager : coinJoinClientManagers.values()) {
+                clientManager.resetPool();
+                clientManager.stopMixing();
+                clientManager.close(blockChain);
+            }
+            stopAsync();
+            finishCurrentSessions = false;
+        } finally {
+            lock.unlock();
         }
-        stopAsync();
-        finishCurrentSessions = false;
     }
 
     public boolean isRunning() {
@@ -269,14 +277,20 @@ public class CoinJoinManager {
     }
     
     public void startAsync() {
-        if (!masternodeGroup.isRunning()) {
-            log.info("coinjoin: broadcasting senddsq(true) to all peers");
-            peerGroup.shouldSendDsq(true);
-            masternodeGroup.startAsync();
+        lock.lock();
+        try {
+            if (!masternodeGroup.isRunning()) {
+                log.info("coinjoin: broadcasting senddsq(true) to all peers");
+                peerGroup.shouldSendDsq(true);
+                masternodeGroup.startAsync();
+            }
+        } finally {
+            lock.unlock();
         }
     }
 
     public void stopAsync() {
+        checkState(lock.isHeldByCurrentThread());
         if (masternodeGroup != null && masternodeGroup.isRunning()) {
             if (peerGroup != null)
                 peerGroup.shouldSendDsq(false);
