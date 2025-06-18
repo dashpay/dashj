@@ -1615,13 +1615,13 @@ public class WalletTool {
                 final KeyParameter aesKey = passwordToKey(true);
                 if (aesKey == null)
                     return; // Error message already printed.
-                System.out.println(wallet.toString(dumpLookahead, true, aesKey, true, true, chain));
+                System.out.println(wallet.toString(dumpLookahead, true, aesKey, true, true, chain, true));
             } else {
                 System.err.println("Can't dump privkeys, wallet is encrypted.");
                 return;
             }
         } else {
-            System.out.println(wallet.toString(dumpLookahead, dumpPrivkeys, null, true, true, chain));
+            System.out.println(wallet.toString(dumpLookahead, dumpPrivkeys, null, true, true, chain, true));
         }
     }
 

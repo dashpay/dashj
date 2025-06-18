@@ -3728,6 +3728,7 @@ public class Wallet extends BaseTaggableObject
      * @param includeTransactions Whether to print transaction data.
      * @param includeExtensions Whether to print extension data.
      * @param chain If set, will be used to estimate lock times for block timelocked transactions.
+     * @param includeDebugInfo If set, will include debug information
      */
     public String toString(boolean includeLookahead, boolean includePrivateKeys, @Nullable KeyParameter aesKey,
             boolean includeTransactions, boolean includeExtensions, @Nullable AbstractBlockChain chain, boolean includeDebugInfo) {
