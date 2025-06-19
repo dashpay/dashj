@@ -537,9 +537,9 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
     }
 
     @Override
-    public String toString(boolean includeLookahead, boolean includePrivateKeys, @Nullable KeyParameter aesKey) {
+    public String toString(boolean includeLookahead, boolean includePrivateKeys, @Nullable KeyParameter aesKey, boolean includeDebugInfo) {
         StringBuilder builder = new StringBuilder();
-        builder.append(super.toString(includeLookahead, includePrivateKeys, aesKey));
+        builder.append(super.toString(includeLookahead, includePrivateKeys, aesKey, includeDebugInfo));
         builder.append("\n").append("Authentication Key Usage").append("\n");
         NetworkParameters params;
         if (wallet != null)

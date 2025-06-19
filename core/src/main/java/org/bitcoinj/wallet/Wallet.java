@@ -3698,25 +3698,25 @@ public class Wallet extends BaseTaggableObject
 
     @Override
     public String toString() {
-        return toString(false, false, null, true, true, null);
+        return toString(false, false, null, true, true, null, false);
     }
 
     /**
-     * @deprecated Use {@link #toString(boolean, boolean, KeyParameter, boolean, boolean, AbstractBlockChain)} instead.
+     * @deprecated Use {@link #toString(boolean, boolean, KeyParameter, boolean, boolean, AbstractBlockChain, boolean)} instead.
      */
     @Deprecated
     public String toString(boolean includePrivateKeys, boolean includeTransactions, boolean includeExtensions,
             @Nullable AbstractBlockChain chain) {
-        return toString(false, includePrivateKeys, null, includeTransactions, includeExtensions, chain);
+        return toString(false, includePrivateKeys, null, includeTransactions, includeExtensions, chain, false);
     }
 
     /**
-     * @deprecated Use {@link #toString(boolean, boolean, KeyParameter, boolean, boolean, AbstractBlockChain)} instead.
+     * @deprecated Use {@link #toString(boolean, boolean, KeyParameter, boolean, boolean, AbstractBlockChain, boolean)} instead.
      */
     @Deprecated
     public String toString(boolean includePrivateKeys, @Nullable KeyParameter aesKey, boolean includeTransactions,
-            boolean includeExtensions, @Nullable AbstractBlockChain chain) {
-        return toString(false, includePrivateKeys, aesKey, includeTransactions, includeExtensions, chain);
+            boolean includeExtensions, @Nullable AbstractBlockChain chain, boolean includeDebugInfo) {
+        return toString(false, includePrivateKeys, aesKey, includeTransactions, includeExtensions, chain, includeDebugInfo);
     }
 
     /**
@@ -3728,9 +3728,10 @@ public class Wallet extends BaseTaggableObject
      * @param includeTransactions Whether to print transaction data.
      * @param includeExtensions Whether to print extension data.
      * @param chain If set, will be used to estimate lock times for block timelocked transactions.
+     * @param includeDebugInfo If set, will include debug information
      */
     public String toString(boolean includeLookahead, boolean includePrivateKeys, @Nullable KeyParameter aesKey,
-            boolean includeTransactions, boolean includeExtensions, @Nullable AbstractBlockChain chain) {
+            boolean includeTransactions, boolean includeExtensions, @Nullable AbstractBlockChain chain, boolean includeDebugInfo) {
         lock.lock();
         keyChainGroupLock.lock();
         try {
@@ -3776,7 +3777,7 @@ public class Wallet extends BaseTaggableObject
             if (includeExtensions && keyChainExtensions.size() > 0) {
                 builder.append("\n>>> KEYCHAIN EXTENSIONS:\n");
                 for (KeyChainGroupExtension extension : keyChainExtensions.values()) {
-                    builder.append(extension.toString(includeLookahead, includePrivateKeys, aesKey)).append("\n\n");
+                    builder.append(extension.toString(includeLookahead, includePrivateKeys, aesKey, includeDebugInfo)).append("\n\n");
                 }
             }
             if (!watchedScripts.isEmpty()) {
@@ -3808,7 +3809,7 @@ public class Wallet extends BaseTaggableObject
             if (includeExtensions && extensions.size() > 0) {
                 builder.append("\n>>> EXTENSIONS:\n");
                 for (WalletExtension extension : extensions.values()) {
-                    builder.append(extension).append("\n\n");
+                    builder.append(extension.toString()).append("\n\n");
                 }
             }
             return builder.toString();

@@ -103,8 +103,12 @@ public class LargeCoinJoinWalletTest {
         info("wallet.coinjoin.toString: {}", watch2);
 
         Stopwatch watch3 = Stopwatch.createStarted();
-        wallet.coinjoin.toString(true, false, null);
-        info("wallet.coinjoin.toString(true, false, null): {}", watch3);
+        wallet.coinjoin.toString(true, false, null, true);
+        info("wallet.coinjoin.toString(true, false, null, true): {}", watch3);
+
+        Stopwatch watch4 = Stopwatch.createStarted();
+        wallet.coinjoin.toString(true, false, null, false);
+        info("wallet.coinjoin.toString(true, false, null, false): {}", watch4);
     }
 
     @Test

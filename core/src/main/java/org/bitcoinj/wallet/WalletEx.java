@@ -1007,8 +1007,8 @@ public class WalletEx extends Wallet {
     }
 
     @Override
-    public String toString(boolean includeLookahead, boolean includePrivateKeys, @Nullable KeyParameter aesKey, boolean includeTransactions, boolean includeExtensions, @Nullable AbstractBlockChain chain) {
-        return super.toString(includeLookahead, includePrivateKeys, aesKey, includeTransactions, includeExtensions, chain) + getTransactionReport();
+    public String toString(boolean includeLookahead, boolean includePrivateKeys, @Nullable KeyParameter aesKey, boolean includeTransactions, boolean includeExtensions, @Nullable AbstractBlockChain chain, boolean includeDebugInfo) {
+        return super.toString(includeLookahead, includePrivateKeys, aesKey, includeTransactions, includeExtensions, chain, includeDebugInfo) + getTransactionReport();
     }
 
     @Override
