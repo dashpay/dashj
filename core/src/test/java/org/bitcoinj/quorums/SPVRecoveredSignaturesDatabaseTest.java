@@ -104,7 +104,6 @@ public class SPVRecoveredSignaturesDatabaseTest {
 
     @Test
     public void testVotingFunctionality() {
-        int llmqType = 1;
         String idHex = "1111111111111111111111111111111111111111111111111111111111111111";
         String msgHashHex = "2222222222222222222222222222222222222222222222222222222222222222";
         
