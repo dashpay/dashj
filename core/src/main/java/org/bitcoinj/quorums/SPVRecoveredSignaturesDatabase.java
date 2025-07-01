@@ -42,11 +42,16 @@ public class SPVRecoveredSignaturesDatabase extends AbstractManager implements R
     }
 
     public boolean hasRecoveredSig(LLMQParameters.LLMQType llmqType, Sha256Hash id, Sha256Hash msgHash){
-        for(RecoveredSignature recSig : recoveredSignatures) {
-            if(recSig.llmqType == llmqType.getValue() && recSig.id.equals(id) && recSig.msgHash.equals(msgHash))
-                return true;
+        lock.lock();
+        try {
+            for(RecoveredSignature recSig : recoveredSignatures) {
+                if(recSig.llmqType == llmqType.getValue() && recSig.id.equals(id) && recSig.msgHash.equals(msgHash))
+                    return true;
+            }
+            return false;
+        } finally {
+            lock.unlock();
         }
-        return false;
     }
 
     public boolean hasRecoveredSigForId(LLMQParameters.LLMQType llmqType, Sha256Hash id) {
