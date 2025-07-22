@@ -133,7 +133,7 @@ public class Wallet extends BaseTaggableObject
 
     // Ordering: lock > keyChainGroupLock. KeyChainGroup is protected separately to allow fast querying of current receive address
     // even if the wallet itself is busy e.g. saving or processing a big reorg. Useful for reducing UI latency.
-    protected final ReentrantLock lock = Threading.lock("wallet");
+    protected final ReentrantReadWriteLock lock = Threading.readWriteLock("wallet");
     protected final ReentrantLock keyChainGroupLock = Threading.lock("wallet-keychaingroup");
 
     // The various pools below give quick access to wallet-relevant transactions by the state they're in:
@@ -513,17 +513,17 @@ public class Wallet extends BaseTaggableObject
                 // to us to listen for that. Other types of confidence changes (type, etc) are triggered by us,
                 // so we'll queue up a wallet change event in other parts of the code.
                 if (reason == ChangeReason.SEEN_PEERS) {
-                    lock.lock();
+                    lock.writeLock().lock();
                     try {
                         checkBalanceFuturesLocked(null);
                         Transaction tx = getTransaction(confidence.getTransactionHash());
                         queueOnTransactionConfidenceChanged(tx);
                         maybeQueueOnWalletChanged();
                     } finally {
-                        lock.unlock();
+                        lock.writeLock().unlock();
                     }
                 } else if(reason == ChangeReason.IX_TYPE || reason == ChangeReason.REJECT) {
-                    lock.lock();
+                    lock.writeLock().lock();
                     try {
                         Transaction tx = getTransaction(confidence.getTransactionHash());
                         queueOnTransactionConfidenceChanged(tx);
@@ -531,7 +531,7 @@ public class Wallet extends BaseTaggableObject
                         //save the wallet when an InstantSend transaction is locked
                         saveLater();
                     } finally {
-                         lock.unlock();;
+                         lock.writeLock().unlock();
                     }
                 }
             }
@@ -575,23 +575,23 @@ public class Wallet extends BaseTaggableObject
      * will be thrown</p>
      */
     public final void addTransactionSigner(TransactionSigner signer) {
-        lock.lock();
+        lock.writeLock().lock();
         try {
             if (signer.isReady())
                 signers.add(signer);
             else
                 throw new IllegalStateException("Signer instance is not ready to be added into Wallet: " + signer.getClass());
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
     }
 
     public List<TransactionSigner> getTransactionSigners() {
-        lock.lock();
+        lock.readLock().lock();
         try {
             return ImmutableList.copyOf(signers);
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
@@ -1125,7 +1125,7 @@ public class Wallet extends BaseTaggableObject
      * @return true if successful
      */
     public boolean removeWatchedScripts(final List<Script> scripts) {
-        lock.lock();
+        lock.writeLock().lock();
         try {
             for (final Script script : scripts) {
                 if (!watchedScripts.contains(script))
@@ -1138,7 +1138,7 @@ public class Wallet extends BaseTaggableObject
             saveNow();
             return true;
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
     }
 
@@ -1659,7 +1659,7 @@ public class Wallet extends BaseTaggableObject
     /** Saves the wallet first to the given temp file, then renames to the dest file. */
     public void saveToFile(File temp, File destFile) throws IOException {
         FileOutputStream stream = null;
-        lock.lock();
+        lock.writeLock().lock();
         try {
             stream = new FileOutputStream(temp);
             saveToFileStream(stream);
@@ -1684,7 +1684,7 @@ public class Wallet extends BaseTaggableObject
             log.error("Failed whilst saving wallet", e);
             throw e;
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
             if (stream != null) {
                 stream.close();
             }
@@ -1716,11 +1716,11 @@ public class Wallet extends BaseTaggableObject
      * even if it's loaded from a protocol buffer.</p>
      */
     public void setAcceptRiskyTransactions(boolean acceptRiskyTransactions) {
-        lock.lock();
+        lock.writeLock().lock();
         try {
             this.acceptRiskyTransactions = acceptRiskyTransactions;
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
     }
 
@@ -1728,11 +1728,11 @@ public class Wallet extends BaseTaggableObject
      * See {@link Wallet#setAcceptRiskyTransactions(boolean)} for an explanation of this property.
      */
     public boolean isAcceptRiskyTransactions() {
-        lock.lock();
+        lock.readLock().lock();
         try {
             return acceptRiskyTransactions;
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
@@ -1742,11 +1742,11 @@ public class Wallet extends BaseTaggableObject
      * behaviour with {@link #setAcceptRiskyTransactions(boolean)}.
      */
     public void setRiskAnalyzer(RiskAnalysis.Analyzer analyzer) {
-        lock.lock();
+        lock.writeLock().lock();
         try {
             this.riskAnalyzer = checkNotNull(analyzer);
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
     }
 
@@ -1754,11 +1754,11 @@ public class Wallet extends BaseTaggableObject
      * Gets the current {@link RiskAnalysis} implementation. The default is {@link DefaultRiskAnalysis}.
      */
     public RiskAnalysis.Analyzer getRiskAnalyzer() {
-        lock.lock();
+        lock.readLock().lock();
         try {
             return riskAnalyzer;
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
@@ -1786,7 +1786,7 @@ public class Wallet extends BaseTaggableObject
      */
     public WalletFiles autosaveToFile(File f, long delayTime, TimeUnit timeUnit,
                                       @Nullable WalletFiles.Listener eventListener) {
-        lock.lock();
+        lock.writeLock().lock();
         try {
             checkState(vFileManager == null, "Already auto saving this wallet.");
             WalletFiles manager = new WalletFiles(this, f, delayTime, timeUnit);
@@ -1795,7 +1795,7 @@ public class Wallet extends BaseTaggableObject
             vFileManager = manager;
             return manager;
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
     }
 
@@ -1807,14 +1807,14 @@ public class Wallet extends BaseTaggableObject
      * </p>
      */
     public void shutdownAutosaveAndWait() {
-        lock.lock();
+        lock.writeLock().lock();
         try {
             WalletFiles files = vFileManager;
             vFileManager = null;
             checkState(files != null, "Auto saving not enabled.");
             files.shutdownAndWait();
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
     }
 
@@ -1846,11 +1846,11 @@ public class Wallet extends BaseTaggableObject
      * {@link WalletProtobufSerializer}.
      */
     public void saveToFileStream(OutputStream f) throws IOException {
-        lock.lock();
+        lock.writeLock().lock();
         try {
             new WalletProtobufSerializer().writeWallet(this, f);
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
     }
 
@@ -1909,7 +1909,7 @@ public class Wallet extends BaseTaggableObject
      * inconsistency.
      */
     public void isConsistentOrThrow() throws IllegalStateException {
-        lock.lock();
+        lock.readLock().lock();
         try {
             Set<Transaction> transactions = getTransactions(true);
 
@@ -1940,7 +1940,7 @@ public class Wallet extends BaseTaggableObject
                 }
             }
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
@@ -2005,7 +2005,7 @@ public class Wallet extends BaseTaggableObject
     public boolean notifyTransactionIsInBlock(Sha256Hash txHash, StoredBlock block,
                                               BlockChain.NewBlockType blockType,
                                               int relativityOffset) throws VerificationException {
-        lock.lock();
+        lock.writeLock().lock();
         try {
             Transaction tx = transactions.get(txHash);
             if (tx == null) {
@@ -2021,7 +2021,7 @@ public class Wallet extends BaseTaggableObject
             receive(tx, block, blockType, relativityOffset);
             return true;
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
     }
 
@@ -2042,7 +2042,7 @@ public class Wallet extends BaseTaggableObject
         // Can run in a peer thread. This method will only be called if a prior call to isPendingTransactionRelevant
         // returned true, so we already know by this point that it sends coins to or from our wallet, or is a double
         // spend against one of our other pending transactions.
-        lock.lock();
+        lock.writeLock().lock();
         try {
             tx.verify();
             // Ignore it if we already know about this transaction. Receiving a pending transaction never moves it
@@ -2075,7 +2075,7 @@ public class Wallet extends BaseTaggableObject
             // timestamp on the transaction and registers/runs event listeners.
             commitTx(tx);
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
         // maybeRotateKeys() will ignore pending transactions so we don't bother calling it here (see the comments
         // in that function for an explanation of why).
@@ -2086,7 +2086,7 @@ public class Wallet extends BaseTaggableObject
         // Can run in a peer thread. This method will only be called if a prior call to isPendingTransactionLockRelevant
         // returned true, so we already know by this point that it sends coins to or from our wallet, or is a double
         // spend against one of our other pending transactions.
-        lock.lock();
+        lock.writeLock().lock();
         try {
             tx.verify();
 
@@ -2099,7 +2099,7 @@ public class Wallet extends BaseTaggableObject
             //pending.remove(lockedTx);
 
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
         // maybeRotateKeys() will ignore pending transactions so we don't bother calling it here (see the comments
         // in that function for an explanation of why).
@@ -2113,7 +2113,7 @@ public class Wallet extends BaseTaggableObject
      * using the factory returned by {@link #getRiskAnalyzer()} and use it directly.
      */
     public boolean isTransactionRisky(Transaction tx, @Nullable List<Transaction> dependencies) {
-        lock.lock();
+        lock.readLock().lock();
         try {
             if (dependencies == null)
                 dependencies = ImmutableList.of();
@@ -2125,7 +2125,7 @@ public class Wallet extends BaseTaggableObject
             }
             return false;
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
@@ -2151,7 +2151,7 @@ public class Wallet extends BaseTaggableObject
      * will soon be called with the transactions dependencies as well.
      */
     public boolean isPendingTransactionRelevant(Transaction tx) throws ScriptException {
-        lock.lock();
+        lock.readLock().lock();
         try {
             // Ignore it if we already know about this transaction. Receiving a pending transaction never moves it
             // between pools.
@@ -2170,13 +2170,13 @@ public class Wallet extends BaseTaggableObject
             }
             return true;
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
     @Deprecated
     public boolean isPendingTransactionLockRelevant(Transaction tx) throws ScriptException {
-        lock.lock();
+        lock.readLock().lock();
         try {
             boolean hasPendingTxLockRequest = getPendingTransactions().contains(tx);
             if(!hasPendingTxLockRequest)
@@ -2197,7 +2197,7 @@ public class Wallet extends BaseTaggableObject
             }
             return true;
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
@@ -2210,7 +2210,7 @@ public class Wallet extends BaseTaggableObject
      * it will not be considered relevant.</p>
      */
     public boolean isTransactionRelevant(Transaction tx) throws ScriptException {
-        lock.lock();
+        lock.readLock().lock();
         try {
             boolean isRevelant = false;
             for (KeyChainGroupExtension extension : keyChainExtensions.values()) {
@@ -2221,7 +2221,7 @@ public class Wallet extends BaseTaggableObject
                    tx.getValueSentToMe(this).signum() > 0 ||
                    !findDoubleSpendsAgainst(tx, transactions).isEmpty();
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
@@ -2231,7 +2231,7 @@ public class Wallet extends BaseTaggableObject
      * @return The set of transactions that double spend "tx".
      */
     private Set<Transaction> findDoubleSpendsAgainst(Transaction tx, Map<Sha256Hash, Transaction> candidates) {
-        checkState(lock.isHeldByCurrentThread());
+        // checkState(lock.writeLock().isHeldByCurrentThread());
         if (tx.isCoinBase()) return Sets.newHashSet();
         // Compile a set of outpoints that are spent by tx.
         HashSet<TransactionOutPoint> outpoints = new HashSet<>();
@@ -2303,13 +2303,13 @@ public class Wallet extends BaseTaggableObject
     public void receiveFromBlock(Transaction tx, StoredBlock block,
                                  BlockChain.NewBlockType blockType,
                                  int relativityOffset) throws VerificationException {
-        lock.lock();
+        lock.writeLock().lock();
         try {
             if (!isTransactionRelevant(tx))
                 return;
             receive(tx, block, blockType, relativityOffset);
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
     }
 
@@ -2319,7 +2319,7 @@ public class Wallet extends BaseTaggableObject
     private void receive(Transaction tx, StoredBlock block, BlockChain.NewBlockType blockType,
                          int relativityOffset) throws VerificationException {
         // Runs in a peer thread.
-        checkState(lock.isHeldByCurrentThread());
+        checkState(lock.writeLock().isHeldByCurrentThread());
 
         Coin prevBalance = getBalance();
         Sha256Hash txHash = tx.getTxId();
@@ -2540,7 +2540,7 @@ public class Wallet extends BaseTaggableObject
         Sha256Hash newBlockHash = block.getHeader().getHash();
         if (newBlockHash.equals(getLastBlockSeenHash()))
             return;
-        lock.lock();
+        lock.writeLock().lock();
         try {
             // Store the new block hash.
             setLastBlockSeenHash(newBlockHash);
@@ -2582,7 +2582,7 @@ public class Wallet extends BaseTaggableObject
                 saveLater();
             }
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
     }
 
@@ -2591,7 +2591,7 @@ public class Wallet extends BaseTaggableObject
      * re-org. Places the tx into the right pool, handles coinbase transactions, handles double-spends and so on.
      */
     private void processTxFromBestChain(Transaction tx, boolean forceAddToPool) throws VerificationException {
-        checkState(lock.isHeldByCurrentThread());
+        checkState(lock.writeLock().isHeldByCurrentThread());
         checkState(!pending.containsKey(tx.getTxId()));
 
         // This TX may spend our existing outputs even though it was not pending. This can happen in unit
@@ -2679,7 +2679,7 @@ public class Wallet extends BaseTaggableObject
      * @param fromChain If true, the tx appeared on the current best chain, if false it was pending.
      */
     private void updateForSpends(Transaction tx, boolean fromChain) throws VerificationException {
-        checkState(lock.isHeldByCurrentThread());
+        checkState(lock.writeLock().isHeldByCurrentThread());
         if (fromChain)
             checkState(!pending.containsKey(tx.getTxId()));
         for (TransactionInput input : tx.getInputs()) {
@@ -2822,7 +2822,7 @@ public class Wallet extends BaseTaggableObject
      * If the owned transactions outputs are not all marked as spent, and it's in the spent map, move it.
      */
     protected void maybeMovePool(Transaction tx, String context) {
-        checkState(lock.isHeldByCurrentThread());
+        checkState(lock.writeLock().isHeldByCurrentThread());
         if (tx.isEveryOwnedOutputSpent(this)) {
             // There's nothing left I can spend in this transaction.
             if (unspent.remove(tx.getTxId()) != null) {
@@ -2856,7 +2856,7 @@ public class Wallet extends BaseTaggableObject
      */
     public boolean maybeCommitTx(Transaction tx) throws VerificationException {
         tx.verify();
-        lock.lock();
+        lock.writeLock().lock();
         try {
             if (pending.containsKey(tx.getTxId()))
                 return false;
@@ -2941,7 +2941,7 @@ public class Wallet extends BaseTaggableObject
             informConfidenceListenersIfNotReorganizing();
             saveNow();
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
         return true;
     }
@@ -3182,7 +3182,7 @@ public class Wallet extends BaseTaggableObject
 
 
     private void queueOnTransactionConfidenceChanged(final Transaction tx) {
-        checkState(lock.isHeldByCurrentThread());
+        checkState(lock.writeLock().isHeldByCurrentThread());
         for (final ListenerRegistration<TransactionConfidenceEventListener> registration : transactionConfidenceListeners) {
             if (registration.executor == Threading.SAME_THREAD) {
                 registration.listener.onTransactionConfidenceChanged(this, tx);
@@ -3200,7 +3200,7 @@ public class Wallet extends BaseTaggableObject
     protected void maybeQueueOnWalletChanged() {
         // Don't invoke the callback in some circumstances, eg, whilst we are re-organizing or fiddling with
         // transactions due to a new block arriving. It will be called later instead.
-        checkState(lock.isHeldByCurrentThread());
+        checkState(lock.writeLock().isHeldByCurrentThread());
         checkState(onWalletChangedSuppressions >= 0);
         if (onWalletChangedSuppressions > 0) return;
         for (final ListenerRegistration<WalletChangeEventListener> registration : changeListeners) {
@@ -3214,7 +3214,7 @@ public class Wallet extends BaseTaggableObject
     }
 
     protected void queueOnCoinsReceived(final Transaction tx, final Coin balance, final Coin newBalance) {
-        checkState(lock.isHeldByCurrentThread());
+        checkState(lock.writeLock().isHeldByCurrentThread());
         for (final ListenerRegistration<WalletCoinsReceivedEventListener> registration : coinsReceivedListeners) {
             registration.executor.execute(new Runnable() {
                 @Override
@@ -3226,7 +3226,7 @@ public class Wallet extends BaseTaggableObject
     }
 
     protected void queueOnCoinsSent(final Transaction tx, final Coin prevBalance, final Coin newBalance) {
-        checkState(lock.isHeldByCurrentThread());
+        checkState(lock.writeLock().isHeldByCurrentThread());
         for (final ListenerRegistration<WalletCoinsSentEventListener> registration : coinsSentListeners) {
             registration.executor.execute(new Runnable() {
                 @Override
@@ -3238,7 +3238,7 @@ public class Wallet extends BaseTaggableObject
     }
 
     protected void queueOnReorganize() {
-        checkState(lock.isHeldByCurrentThread());
+        checkState(lock.writeLock().isHeldByCurrentThread());
         checkState(insideReorg);
         for (final ListenerRegistration<WalletReorganizeEventListener> registration : reorganizeListeners) {
             registration.executor.execute(new Runnable() {
@@ -3251,7 +3251,7 @@ public class Wallet extends BaseTaggableObject
     }
 
     protected void queueOnReset() {
-        checkState(lock.isHeldByCurrentThread());
+        checkState(lock.writeLock().isHeldByCurrentThread());
         for (final ListenerRegistration<WalletResetEventListener> registration : resetListeners) {
             registration.executor.execute(new Runnable() {
                 @Override
@@ -3284,7 +3284,7 @@ public class Wallet extends BaseTaggableObject
      * @param includeDead     If true, transactions that were overridden by a double spend are included.
      */
     public Set<Transaction> getTransactions(boolean includeDead) {
-        lock.lock();
+        lock.readLock().lock();
         try {
             int capacity = unspent.size() + spent.size() + pending.size() + (includeDead ? dead.size(): 0);
             Set<Transaction> all = new HashSet<>(capacity);
@@ -3295,7 +3295,7 @@ public class Wallet extends BaseTaggableObject
                 all.addAll(dead.values());
             return all;
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
@@ -3304,11 +3304,11 @@ public class Wallet extends BaseTaggableObject
      * @param includeDead     If true, transactions that were overridden by a double spend are included.
      */
     public int getTransactionCount(boolean includeDead) {
-        lock.lock();
+        lock.readLock().lock();
         try {
             return unspent.size() + spent.size() + pending.size() + (includeDead ? dead.size(): 0);
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
@@ -3317,7 +3317,7 @@ public class Wallet extends BaseTaggableObject
      * @param includeDead     If true, transactions that were overridden by a double spend are included.
      */
     public Collection<Transaction> getTransactionList(boolean includeDead) {
-        lock.lock();
+        lock.readLock().lock();
         try {
             int capacity = unspent.size() + spent.size() + pending.size() + (includeDead ? dead.size(): 0);
             ArrayList<Transaction> all = new ArrayList<>(capacity);
@@ -3328,7 +3328,7 @@ public class Wallet extends BaseTaggableObject
                 all.addAll(dead.values());
             return all;
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
@@ -3336,7 +3336,7 @@ public class Wallet extends BaseTaggableObject
      * Returns a set of all WalletTransactions in the wallet.
      */
     public Iterable<WalletTransaction> getWalletTransactions() {
-        lock.lock();
+        lock.readLock().lock();
         try {
             Set<WalletTransaction> all = new HashSet<>();
             addWalletTransactionsToSet(all, Pool.UNSPENT, unspent.values());
@@ -3345,7 +3345,7 @@ public class Wallet extends BaseTaggableObject
             addWalletTransactionsToSet(all, Pool.PENDING, pending.values());
             return all;
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
@@ -3362,11 +3362,11 @@ public class Wallet extends BaseTaggableObject
      * applications. It does not trigger auto saving.
      */
     public void addWalletTransaction(WalletTransaction wtx) {
-        lock.lock();
+        lock.writeLock().lock();
         try {
             addWalletTransaction(wtx.getPool(), wtx.getTransaction());
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
     }
 
@@ -3374,7 +3374,7 @@ public class Wallet extends BaseTaggableObject
      * Adds the given transaction to the given pools and registers a confidence change listener on it.
      */
     protected void addWalletTransaction(Pool pool, Transaction tx) {
-        checkState(lock.isHeldByCurrentThread());
+        checkState(lock.writeLock().isHeldByCurrentThread());
         transactions.put(tx.getTxId(), tx);
         switch (pool) {
         case UNSPENT:
@@ -3407,7 +3407,7 @@ public class Wallet extends BaseTaggableObject
      * Returns a WalletTransaction for the given hash.
      */
     public WalletTransaction getWalletTransaction(Sha256Hash hash) {
-        lock.lock();
+        lock.readLock().lock();
         try {
             // TODO: optimize this method to loop through all tx's only once
             Set<WalletTransaction> all = new HashSet<>();
@@ -3420,7 +3420,7 @@ public class Wallet extends BaseTaggableObject
                     return wtx;
             }
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
         return null;
     }
@@ -3441,7 +3441,7 @@ public class Wallet extends BaseTaggableObject
      * depending on how the wallet is implemented (eg if backed by a database).</p>
      */
     public List<Transaction> getRecentTransactions(int numTransactions, boolean includeDead) {
-        lock.lock();
+        lock.readLock().lock();
         try {
             checkArgument(numTransactions >= 0);
             // Firstly, put all transactions into an array.
@@ -3459,7 +3459,7 @@ public class Wallet extends BaseTaggableObject
                 return all;
             }
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
@@ -3468,17 +3468,17 @@ public class Wallet extends BaseTaggableObject
      */
     @Nullable
     public Transaction getTransaction(Sha256Hash hash) {
-        lock.lock();
+        lock.readLock().lock();
         try {
             return transactions.get(hash);
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
     @Override
     public Map<Sha256Hash, Transaction> getTransactionPool(Pool pool) {
-        lock.lock();
+        lock.readLock().lock();
         try {
             switch (pool) {
                 case UNSPENT:
@@ -3495,7 +3495,7 @@ public class Wallet extends BaseTaggableObject
                     throw new RuntimeException("Unknown wallet transaction type " + pool);
             }
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
@@ -3505,7 +3505,7 @@ public class Wallet extends BaseTaggableObject
      * be fired.
      */
     public void reset() {
-        lock.lock();
+        lock.writeLock().lock();
         try {
             clearTransactions();
             lastBlockSeenHash = null;
@@ -3515,7 +3515,7 @@ public class Wallet extends BaseTaggableObject
             queueOnReset();
             maybeQueueOnWalletChanged();
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
     }
 
@@ -3525,7 +3525,7 @@ public class Wallet extends BaseTaggableObject
      * Triggers auto saving.
      */
     public void clearTransactions(int fromHeight) {
-        lock.lock();
+        lock.writeLock().lock();
         try {
             if (fromHeight == 0) {
                 clearTransactions();
@@ -3534,7 +3534,7 @@ public class Wallet extends BaseTaggableObject
                 throw new UnsupportedOperationException();
             }
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
     }
 
@@ -3553,7 +3553,7 @@ public class Wallet extends BaseTaggableObject
      * @param excludeImmatureCoinbases Whether to ignore outputs that are unspendable due to being immature.
      */
     public List<TransactionOutput> getWatchedOutputs(boolean excludeImmatureCoinbases) {
-        lock.lock();
+        lock.readLock().lock();
         keyChainGroupLock.lock();
         try {
             LinkedList<TransactionOutput> candidates = Lists.newLinkedList();
@@ -3573,7 +3573,7 @@ public class Wallet extends BaseTaggableObject
             return candidates;
         } finally {
             keyChainGroupLock.unlock();
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
@@ -3582,7 +3582,7 @@ public class Wallet extends BaseTaggableObject
      * outputs have not been spent.
      */
     public void cleanup() {
-        lock.lock();
+        lock.writeLock().lock();
         try {
             boolean dirty = false;
             for (Iterator<Transaction> i = pending.values().iterator(); i.hasNext();) {
@@ -3619,12 +3619,12 @@ public class Wallet extends BaseTaggableObject
                     log.info("Estimated balance is now: {}", getBalance(BalanceType.ESTIMATED).toFriendlyString());
             }
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
     }
 
     EnumSet<Pool> getContainingPools(Transaction tx) {
-        lock.lock();
+        lock.readLock().lock();
         try {
             EnumSet<Pool> result = EnumSet.noneOf(Pool.class);
             Sha256Hash txHash = tx.getTxId();
@@ -3642,13 +3642,13 @@ public class Wallet extends BaseTaggableObject
             }
             return result;
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
     @VisibleForTesting
     public int getPoolSize(WalletTransaction.Pool pool) {
-        lock.lock();
+        lock.readLock().lock();
         try {
             switch (pool) {
                 case UNSPENT:
@@ -3662,13 +3662,13 @@ public class Wallet extends BaseTaggableObject
             }
             throw new RuntimeException("Unreachable");
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
     @VisibleForTesting
     public boolean poolContainsTxHash(final WalletTransaction.Pool pool, final Sha256Hash txHash) {
-        lock.lock();
+        lock.readLock().lock();
         try {
             switch (pool) {
                 case UNSPENT:
@@ -3682,17 +3682,17 @@ public class Wallet extends BaseTaggableObject
             }
             throw new RuntimeException("Unreachable");
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
     /** Returns a copy of the internal unspent outputs list */
     public List<TransactionOutput> getUnspents() {
-        lock.lock();
+        lock.readLock().lock();
         try {
             return new ArrayList<>(myUnspents);
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
@@ -3731,7 +3731,7 @@ public class Wallet extends BaseTaggableObject
      */
     public String toString(boolean includeLookahead, boolean includePrivateKeys, @Nullable KeyParameter aesKey,
             boolean includeTransactions, boolean includeExtensions, @Nullable AbstractBlockChain chain) {
-        lock.lock();
+        lock.readLock().lock();
         keyChainGroupLock.lock();
         try {
             StringBuilder builder = new StringBuilder("Wallet\n");
@@ -3814,13 +3814,13 @@ public class Wallet extends BaseTaggableObject
             return builder.toString();
         } finally {
             keyChainGroupLock.unlock();
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
     private void toStringHelper(StringBuilder builder, Map<Sha256Hash, Transaction> transactionMap,
                                 @Nullable AbstractBlockChain chain, @Nullable Comparator<Transaction> sortOrder) {
-        checkState(lock.isHeldByCurrentThread());
+        // checkState(lock.readLock().isHeldByCurrentThread());
 
         final Collection<Transaction> txns;
         if (sortOrder != null) {
@@ -3851,11 +3851,11 @@ public class Wallet extends BaseTaggableObject
      * Returns an immutable view of the transactions currently waiting for network confirmations.
      */
     public Collection<Transaction> getPendingTransactions() {
-        lock.lock();
+        lock.readLock().lock();
         try {
             return Collections.unmodifiableCollection(pending.values());
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
@@ -3889,38 +3889,38 @@ public class Wallet extends BaseTaggableObject
     /** Returns the hash of the last seen best-chain block, or null if the wallet is too old to store this data. */
     @Nullable
     public Sha256Hash getLastBlockSeenHash() {
-        lock.lock();
+        lock.readLock().lock();
         try {
             return lastBlockSeenHash;
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
     public void setLastBlockSeenHash(@Nullable Sha256Hash lastBlockSeenHash) {
-        lock.lock();
+        lock.writeLock().lock();
         try {
             this.lastBlockSeenHash = lastBlockSeenHash;
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
     }
 
     public void setLastBlockSeenHeight(int lastBlockSeenHeight) {
-        lock.lock();
+        lock.writeLock().lock();
         try {
             this.lastBlockSeenHeight = lastBlockSeenHeight;
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
     }
 
     public void setLastBlockSeenTimeSecs(long timeSecs) {
-        lock.lock();
+        lock.writeLock().lock();
         try {
             lastBlockSeenTimeSecs = timeSecs;
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
     }
 
@@ -3932,11 +3932,11 @@ public class Wallet extends BaseTaggableObject
      * time then this method returns zero.
      */
     public long getLastBlockSeenTimeSecs() {
-        lock.lock();
+        lock.readLock().lock();
         try {
             return lastBlockSeenTimeSecs;
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
@@ -3961,11 +3961,11 @@ public class Wallet extends BaseTaggableObject
      * is old and doesn't have that data.
      */
     public int getLastBlockSeenHeight() {
-        lock.lock();
+        lock.readLock().lock();
         try {
             return lastBlockSeenHeight;
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
@@ -4069,7 +4069,7 @@ public class Wallet extends BaseTaggableObject
      * Returns the balance of this wallet as calculated by the provided balanceType.
      */
     public Coin getBalance(BalanceType balanceType) {
-        lock.lock();
+        lock.readLock().lock();
         try {
             if (balanceType == BalanceType.AVAILABLE || balanceType == BalanceType.AVAILABLE_SPENDABLE) {
                 List<TransactionOutput> candidates = calculateAllSpendCandidates(true, balanceType == BalanceType.AVAILABLE_SPENDABLE);
@@ -4088,7 +4088,7 @@ public class Wallet extends BaseTaggableObject
                 throw new AssertionError("Unknown balance type");  // Unreachable.
             }
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
@@ -4098,14 +4098,14 @@ public class Wallet extends BaseTaggableObject
      * possible and returns the total.
      */
     public Coin getBalance(CoinSelector selector) {
-        lock.lock();
+        lock.readLock().lock();
         try {
             checkNotNull(selector);
             List<TransactionOutput> candidates = calculateAllSpendCandidates(true, false);
             CoinSelection selection = selector.select(params.getMaxMoney(), candidates);
             return selection.valueGathered;
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
@@ -4131,7 +4131,7 @@ public class Wallet extends BaseTaggableObject
      * chance to be updated.</p>
      */
     public ListenableFuture<Coin> getBalanceFuture(final Coin value, final BalanceType type) {
-        lock.lock();
+        lock.readLock().lock();
         try {
             final SettableFuture<Coin> future = SettableFuture.create();
             final Coin current = getBalance(type);
@@ -4150,14 +4150,14 @@ public class Wallet extends BaseTaggableObject
             }
             return future;
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
     // Runs any balance futures in the user code thread.
     @SuppressWarnings("FieldAccessNotGuarded")
     private void checkBalanceFuturesLocked(@Nullable Coin avail) {
-        checkState(lock.isHeldByCurrentThread());
+        checkState(lock.writeLock().isHeldByCurrentThread());
         final ListIterator<BalanceFutureRequest> it = balanceFutureRequests.listIterator();
         while (it.hasNext()) {
             final BalanceFutureRequest req = it.next();
@@ -4341,13 +4341,13 @@ public class Wallet extends BaseTaggableObject
      * @throws MultipleOpReturnRequested if there is more than one OP_RETURN output for the resultant transaction.
      */
     public Transaction sendCoinsOffline(SendRequest request) throws InsufficientMoneyException {
-        lock.lock();
+        lock.writeLock().lock();
         try {
             completeTx(request);
             commitTx(request.tx);
             return request.tx;
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
     }
 
@@ -4406,7 +4406,7 @@ public class Wallet extends BaseTaggableObject
     public SendResult sendCoins(TransactionBroadcaster broadcaster, SendRequest request) throws InsufficientMoneyException {
         // Should not be locked here, as we're going to call into the broadcaster and that might want to hold its
         // own lock. sendCoinsOffline handles everything that needs to be locked.
-        checkState(!lock.isHeldByCurrentThread());
+        checkState(!lock.writeLock().isHeldByCurrentThread());
 
         // Commit the TX to the wallet immediately so the spent coins won't be reused.
         // TODO: We should probably allow the request to specify tx commit only after the network has accepted it.
@@ -4499,7 +4499,7 @@ public class Wallet extends BaseTaggableObject
      * @throws MultipleOpReturnRequested if there is more than one OP_RETURN output for the resultant transaction.
      */
     public void completeTx(SendRequest req) throws InsufficientMoneyException {
-        lock.lock();
+        lock.writeLock().lock();
         try {
             checkArgument(!req.completed, "Given SendRequest has already been completed.");
             // Calculate the amount of value we need to import.
@@ -4626,7 +4626,7 @@ public class Wallet extends BaseTaggableObject
             req.completed = true;
             log.info("  completed: {}", req.tx);
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
     }
 
@@ -4637,7 +4637,7 @@ public class Wallet extends BaseTaggableObject
      * transaction will be complete in the end.</p>
      */
     public void signTransaction(SendRequest req) {
-        lock.lock();
+        lock.writeLock().lock();
         try {
             Transaction tx = req.tx;
             List<TransactionInput> inputs = tx.getInputs();
@@ -4684,7 +4684,7 @@ public class Wallet extends BaseTaggableObject
             // resolve missing sigs if any
             new MissingSigResolutionSigner(req.missingSigsMode).signInputs(proposal, maybeDecryptingKeyBag);
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
     }
 
@@ -4720,7 +4720,7 @@ public class Wallet extends BaseTaggableObject
      * @param excludeUnsignable Whether to ignore outputs that we are tracking but don't have the keys to sign for.
      */
     public List<TransactionOutput> calculateAllSpendCandidates(boolean excludeImmatureCoinbases, boolean excludeUnsignable) {
-        lock.lock();
+        lock.readLock().lock();
         try {
             List<TransactionOutput> candidates;
             if (vUTXOProvider == null) {
@@ -4738,7 +4738,7 @@ public class Wallet extends BaseTaggableObject
             }
             return candidates;
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
@@ -4786,7 +4786,7 @@ public class Wallet extends BaseTaggableObject
      * @return The list of candidates.
      */
     protected LinkedList<TransactionOutput> calculateAllSpendCandidatesFromUTXOProvider(boolean excludeImmatureCoinbases) {
-        checkState(lock.isHeldByCurrentThread());
+        // checkState(lock.isHeldByCurrentThread());
         UTXOProvider utxoProvider = checkNotNull(vUTXOProvider, "No UTXO provider has been set");
         LinkedList<TransactionOutput> candidates = Lists.newLinkedList();
         try {
@@ -4838,11 +4838,11 @@ public class Wallet extends BaseTaggableObject
 
     /** Returns the {@link CoinSelector} object which controls which outputs can be spent by this wallet. */
     public CoinSelector getCoinSelector() {
-        lock.lock();
+        lock.readLock().lock();
         try {
             return coinSelector;
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
@@ -4853,11 +4853,11 @@ public class Wallet extends BaseTaggableObject
      * operation by changing {@link SendRequest#coinSelector}.
      */
     public void setCoinSelector(CoinSelector coinSelector) {
-        lock.lock();
+        lock.writeLock().lock();
         try {
             this.coinSelector = checkNotNull(coinSelector);
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
     }
 
@@ -4875,11 +4875,11 @@ public class Wallet extends BaseTaggableObject
      * @return The UTXO provider.
      */
     @Nullable public UTXOProvider getUTXOProvider() {
-        lock.lock();
+        lock.readLock().lock();
         try {
             return vUTXOProvider;
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
@@ -4893,12 +4893,12 @@ public class Wallet extends BaseTaggableObject
      * The association is not serialized.</p>
      */
     public void setUTXOProvider(@Nullable UTXOProvider provider) {
-        lock.lock();
+        lock.writeLock().lock();
         try {
             checkArgument(provider == null || provider.getParams().equals(params));
             this.vUTXOProvider = provider;
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
     }
 
@@ -4984,7 +4984,7 @@ public class Wallet extends BaseTaggableObject
      */
     @Override
     public void reorganize(StoredBlock splitPoint, List<StoredBlock> oldBlocks, List<StoredBlock> newBlocks) throws VerificationException {
-        lock.lock();
+        lock.writeLock().lock();
         try {
             // This runs on any peer thread with the block chain locked.
             //
@@ -5125,7 +5125,7 @@ public class Wallet extends BaseTaggableObject
             informConfidenceListenersIfNotReorganizing();
             saveLater();
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
     }
 
@@ -5159,7 +5159,7 @@ public class Wallet extends BaseTaggableObject
     public void beginBloomFilterCalculation() {
         if (bloomFilterGuard.incrementAndGet() > 1)
             return;
-        lock.lock();
+        lock.writeLock().lock();
         keyChainGroupLock.lock();
         //noinspection FieldAccessNotGuarded
         calcBloomOutPointsLocked();
@@ -5211,7 +5211,7 @@ public class Wallet extends BaseTaggableObject
             return;
         bloomOutPoints.clear();
         keyChainGroupLock.unlock();
-        lock.unlock();
+        lock.writeLock().unlock();
     }
 
     /**
@@ -5405,7 +5405,7 @@ public class Wallet extends BaseTaggableObject
      */
     public void addExtension(WalletExtension extension) {
         String id = checkNotNull(extension).getWalletExtensionID();
-        lock.lock();
+        lock.writeLock().lock();
         try {
             if (extensions.containsKey(id))
                 throw new IllegalStateException("Cannot add two extensions with the same ID: " + id);
@@ -5414,7 +5414,7 @@ public class Wallet extends BaseTaggableObject
             else extensions.put(id, extension);
             saveNow();
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
     }
 
@@ -5423,7 +5423,7 @@ public class Wallet extends BaseTaggableObject
      */
     public WalletExtension addOrGetExistingExtension(WalletExtension extension) {
         String id = checkNotNull(extension).getWalletExtensionID();
-        lock.lock();
+        lock.writeLock().lock();
         try {
             WalletExtension previousExtension = extensions.get(id);
             if (previousExtension == null) {
@@ -5437,7 +5437,7 @@ public class Wallet extends BaseTaggableObject
             saveNow();
             return extension;
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
     }
 
@@ -5448,51 +5448,51 @@ public class Wallet extends BaseTaggableObject
      */
     public void addOrUpdateExtension(WalletExtension extension) {
         String id = checkNotNull(extension).getWalletExtensionID();
-        lock.lock();
+        lock.writeLock().lock();
         try {
             extensions.put(id, extension);
             saveNow();
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
     }
 
     /** Returns a snapshot of all registered extension objects. The extensions themselves are not copied. */
     public Map<String, WalletExtension> getExtensions() {
-        lock.lock();
+        lock.readLock().lock();
         try {
             return ImmutableMap.copyOf(extensions);
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
     /** Returns a snapshot of all registered extension objects. The extensions themselves are not copied. */
     public Map<String, KeyChainGroupExtension> getKeyChainExtensions() {
-        lock.lock();
+        lock.readLock().lock();
         try {
             return ImmutableMap.copyOf(keyChainExtensions);
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
     
     /** checks for the existance of an extension */
     public boolean hasExtension(String id) {
-        lock.lock();
+        lock.readLock().lock();
         try {
             return extensions.containsKey(id) || keyChainExtensions.containsKey(id);
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
     public KeyChainGroupExtension getKeyChainExtension(String id) {
-        lock.lock();
+        lock.readLock().lock();
         try {
             return keyChainExtensions.get(id);
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
      
@@ -5502,7 +5502,7 @@ public class Wallet extends BaseTaggableObject
      * if already present.
      */
     public void deserializeExtension(WalletExtension extension, byte[] data) throws Exception {
-        lock.lock();
+        lock.writeLock().lock();
         keyChainGroupLock.lock();
         try {
             // This method exists partly to establish a lock ordering of wallet > extension.
@@ -5520,7 +5520,7 @@ public class Wallet extends BaseTaggableObject
             throw throwable;
         } finally {
             keyChainGroupLock.unlock();
-            lock.unlock();
+            lock.writeLock().unlock();
         }
     }
 
@@ -5547,7 +5547,7 @@ public class Wallet extends BaseTaggableObject
 
     private FeeCalculation calculateFee(SendRequest req, Coin value, List<TransactionInput> originalInputs,
                                        boolean needAtLeastReferenceFee, List<TransactionOutput> candidates) throws InsufficientMoneyException {
-        checkState(lock.isHeldByCurrentThread());
+        checkState(lock.writeLock().isHeldByCurrentThread());
         FeeCalculation result;
         Coin fee = Coin.ZERO;
         while (true) {
@@ -5712,7 +5712,7 @@ public class Wallet extends BaseTaggableObject
      */
     public void setTransactionBroadcaster(@Nullable org.bitcoinj.core.TransactionBroadcaster broadcaster) {
         Transaction[] toBroadcast = {};
-        lock.lock();
+        lock.writeLock().lock();
         try {
             if (vTransactionBroadcaster == broadcaster)
                 return;
@@ -5721,7 +5721,7 @@ public class Wallet extends BaseTaggableObject
                 return;
             toBroadcast = pending.values().toArray(toBroadcast);
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
         // Now use it to upload any pending transactions we have that are marked as not being seen by any peers yet.
         // Don't hold the wallet lock whilst doing this, so if the broadcaster accesses the wallet at some point there
@@ -5850,7 +5850,7 @@ public class Wallet extends BaseTaggableObject
     public ListenableFuture<List<Transaction>> doMaintenance(KeyChainGroupStructure structure,
             @Nullable KeyParameter aesKey, boolean signAndSend) throws DeterministicUpgradeRequiresPassword {
         List<Transaction> txns;
-        lock.lock();
+        lock.writeLock().lock();
         keyChainGroupLock.lock();
         try {
             txns = maybeRotateKeys(structure, aesKey, signAndSend);
@@ -5858,9 +5858,9 @@ public class Wallet extends BaseTaggableObject
                 return Futures.immediateFuture(txns);
         } finally {
             keyChainGroupLock.unlock();
-            lock.unlock();
+            lock.writeLock().unlock();
         }
-        checkState(!lock.isHeldByCurrentThread());
+        checkState(!lock.writeLock().isHeldByCurrentThread());
         ArrayList<ListenableFuture<Transaction>> futures = new ArrayList<>(txns.size());
         TransactionBroadcaster broadcaster = vTransactionBroadcaster;
         for (Transaction tx : txns) {
@@ -5889,7 +5889,7 @@ public class Wallet extends BaseTaggableObject
     @GuardedBy("keyChainGroupLock")
     private List<Transaction> maybeRotateKeys(KeyChainGroupStructure structure, @Nullable KeyParameter aesKey,
             boolean sign) throws DeterministicUpgradeRequiresPassword {
-        checkState(lock.isHeldByCurrentThread());
+        checkState(lock.writeLock().isHeldByCurrentThread());
         checkState(keyChainGroupLock.isHeldByCurrentThread());
         List<Transaction> results = Lists.newLinkedList();
         // TODO: Handle chain replays here.
@@ -5965,7 +5965,7 @@ public class Wallet extends BaseTaggableObject
 
     @Nullable
     private Transaction rekeyOneBatch(long timeSecs, @Nullable KeyParameter aesKey, List<Transaction> others, boolean sign) {
-        lock.lock();
+        lock.writeLock().lock();
         try {
             // Build the transaction using some custom logic for our special needs. Last parameter to
             // KeyTimeCoinSelector is whether to ignore pending transactions or not.
@@ -6004,7 +6004,7 @@ public class Wallet extends BaseTaggableObject
         } catch (VerificationException e) {
             throw new RuntimeException(e);  // Cannot happen.
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
     }
     //endregion
@@ -6382,33 +6382,33 @@ public class Wallet extends BaseTaggableObject
 
     @Override
     public boolean isLockedOutput(TransactionOutPoint outPoint) {
-        lock.lock();
+        lock.readLock().lock();
         try {
             return lockedOutputs.contains(outPoint);
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
     /** locks an unspent outpoint so that it cannot be spent */
     @Override
     public boolean lockOutput(TransactionOutPoint outPoint) {
-        lock.lock();
+        lock.writeLock().lock();
         try {
             log.info("lock output: {}:{}", outPoint.getHash(), outPoint.getIndex());
             return lockedOutputs.add(outPoint);
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
     }
     /** unlocks an outpoint so that it cannot be spent */
     public void unlockOutput(TransactionOutPoint outPoint) {
-        lock.lock();
+        lock.writeLock().lock();
         try {
             log.info("unlock output: {}:{}", outPoint.getHash(), outPoint.getIndex());
             lockedOutputs.remove(outPoint);
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
     }
 }
