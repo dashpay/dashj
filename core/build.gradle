@@ -1,9 +1,13 @@
-apply plugin: 'java'
+plugins {
+    id 'java'
+    id 'maven-publish'
+    id 'signing'
+    id 'org.jreleaser' version '1.17.0'
+}
+
 apply plugin: 'com.google.protobuf'
 apply plugin: 'eclipse'
-apply plugin: 'maven-publish'
 apply plugin: 'jacoco'
-apply plugin: 'signing'
 // apply plugin:  'com.github.spotbugs'
 
 version = '21.1.12-SNAPSHOT'
@@ -123,17 +127,63 @@ publishing {
             }
         }
     }
+
     repositories {
         maven {
-            // change URLs to point to your repos, e.g. http://my.org/repo
-            def releasesRepoUrl = "https://ossrh-staging-api.central.sonatype.com/service/local/staging/deploy/maven2/"
-            def snapshotsRepoUrl = "https://central.sonatype.com/repository/maven-snapshots/"
-            url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
-            credentials {
-                username = project.hasProperty('ossrhUsernameDash')?project.findProperty('ossrhUsernameDash'):''
-                password = project.hasProperty('ossrhPasswordDash')?project.findProperty('ossrhPasswordDash'):''
+            url = layout.buildDirectory.dir('staging-deploy')
+        }
+    }
+}
+
+jreleaser {
+    project {
+        name = 'dashj-core'
+        description = 'Dash Java Library'
+        website = 'https://dashj.org'
+        authors = ['HashEngineering']
+        license = 'Apache-2.0'
+        gitRootSearch = true
+    }
+
+    signing {
+        active = 'ALWAYS'
+        armored = true
+    }
+
+//    deploy {
+//        maven {
+//            targets {
+//                mavenCentral {
+//                    active = 'ALWAYS'
+//                    //url = 'https://central.sonatype.com/api/v1/publisher'
+//                    username = project.findProperty('ossrhUsernameDash')
+//                    password = project.findProperty('ossrhPasswordDash')
+//                    stagingRepository = 'target/staging-deploy'
+//                }
+//            }
+//        }
+//    }
+    deploy {
+        maven {
+            mavenCentral {
+                sonatype {
+                    active = 'ALWAYS'
+                    url = 'https://central.sonatype.com/api/v1/publisher'
+                    stagingRepository("$buildDir/staging-deploy")
+                }
             }
-            name = 'ossrh-staging-api'
+            nexus2 {
+                app {
+                    active = 'SNAPSHOT'
+                    url = 'https://central.sonatype.com/repository/maven-snapshots/'
+                    snapshotUrl = 'https://central.sonatype.com/repository/maven-snapshots/'
+                    applyMavenCentralRules = true
+                    snapshotSupported = true
+                    closeRepository = true
+                    releaseRepository = true
+                    stagingRepository("$buildDir/staging-deploy")
+                }
+            }
         }
     }
 }
