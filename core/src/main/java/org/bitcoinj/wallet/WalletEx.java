@@ -423,7 +423,6 @@ public class WalletEx extends Wallet {
         }
     }
 
-    Sha256Hash coinJoinSalt = Sha256Hash.ZERO_HASH;
 
     @Override
     public boolean isFullyMixed(TransactionOutput output) {
