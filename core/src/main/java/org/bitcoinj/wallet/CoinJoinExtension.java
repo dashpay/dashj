@@ -19,6 +19,7 @@ package org.bitcoinj.wallet;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.protobuf.ByteString;
 import com.google.protobuf.CodedOutputStream;
 import net.jcip.annotations.GuardedBy;
 import org.bitcoinj.coinjoin.CoinJoin;
@@ -133,6 +134,23 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
             List<Protos.Key> keys = coinJoinKeyChainGroup != null ? coinJoinKeyChainGroup.serializeToProtobuf() : Lists.newArrayList();
             builder.addAllKey(keys);
             builder.setRounds(rounds);
+            
+            // Serialize outpoint rounds cache for WalletEx
+            if (wallet instanceof WalletEx) {
+                WalletEx walletEx = (WalletEx) wallet;
+                if (!walletEx.mapOutpointRoundsCache.isEmpty()) {
+                    Protos.OutpointRoundsCache.Builder cacheBuilder = Protos.OutpointRoundsCache.newBuilder();
+                    for (Map.Entry<TransactionOutPoint, Integer> entry : walletEx.mapOutpointRoundsCache.entrySet()) {
+                        Protos.OutpointRoundsEntry.Builder entryBuilder = Protos.OutpointRoundsEntry.newBuilder();
+                        entryBuilder.setTransactionHash(ByteString.copyFrom(entry.getKey().getHash().getBytes()));
+                        entryBuilder.setOutputIndex(entry.getKey().getIndex());
+                        entryBuilder.setRounds(entry.getValue());
+                        cacheBuilder.addEntries(entryBuilder);
+                    }
+                    builder.setOutpointRoundsCache(cacheBuilder);
+                }
+            }
+            
             // Serialize coinJoinSalt
             builder.setCoinjoinSalt(ByteString.copyFrom(coinJoinSalt.getBytes()));
             
@@ -169,6 +187,20 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
         }
         rounds = coinJoinProto.getRounds();
         CoinJoinClientOptions.setRounds(rounds);
+        
+        // Deserialize outpoint rounds cache for WalletEx
+        if (containingWallet instanceof WalletEx && coinJoinProto.hasOutpointRoundsCache()) {
+            WalletEx walletEx = (WalletEx) containingWallet;
+            Protos.OutpointRoundsCache cacheProto = coinJoinProto.getOutpointRoundsCache();
+            for (Protos.OutpointRoundsEntry entryProto : cacheProto.getEntriesList()) {
+                Sha256Hash txHash = Sha256Hash.wrap(entryProto.getTransactionHash().toByteArray());
+                long outputIndex = entryProto.getOutputIndex();
+                int rounds = entryProto.getRounds();
+                TransactionOutPoint outPoint = new TransactionOutPoint(containingWallet.params, outputIndex, txHash);
+                walletEx.mapOutpointRoundsCache.put(outPoint, rounds);
+            }
+        }
+        
         // Deserialize coinJoinSalt
         if (coinJoinProto.hasCoinjoinSalt()) {
             coinJoinSalt = Sha256Hash.wrap(coinJoinProto.getCoinjoinSalt().toByteArray());
