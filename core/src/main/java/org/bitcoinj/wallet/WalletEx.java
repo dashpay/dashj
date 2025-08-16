@@ -435,34 +435,29 @@ public class WalletEx extends Wallet {
     }
 
     public boolean isFullyMixed(TransactionOutPoint outPoint) {
-        lock.lock();
-        try {
-            int rounds = getRealOutpointCoinJoinRounds(outPoint);
-            // Mix again if we don't have N rounds yet
-            if (rounds < CoinJoinClientOptions.getRounds()) return false;
+        int rounds = getRealOutpointCoinJoinRounds(outPoint);
+        // Mix again if we don't have N rounds yet
+        if (rounds < CoinJoinClientOptions.getRounds()) return false;
 
-            // Try to mix a "random" number of rounds more than minimum.
-            // If we have already mixed N + MaxOffset rounds, don't mix again.
-            // Otherwise, we should mix again 50% of the time, this results in an exponential decay
-            // N rounds 50% N+1 25% N+2 12.5%... until we reach N + GetRandomRounds() rounds where we stop.
-            if (rounds < CoinJoinClientOptions.getRounds() + CoinJoinClientOptions.getRandomRounds()) {
-                ByteArrayOutputStream stream = new ByteArrayOutputStream();
-                try {
-                    outPoint.bitcoinSerialize(stream);
-                    stream.write(coinJoinSalt.getReversedBytes());
-                    Sha256Hash hash = Sha256Hash.twiceOf(stream.toByteArray());
-                    if (Utils.readInt64(hash.getBytes(), 0) % 2 == 0) {
-                        return false;
-                    }
-                } catch (IOException x) {
-                    throw new RuntimeException(x);
+        // Try to mix a "random" number of rounds more than minimum.
+        // If we have already mixed N + MaxOffset rounds, don't mix again.
+        // Otherwise, we should mix again 50% of the time, this results in an exponential decay
+        // N rounds 50% N+1 25% N+2 12.5%... until we reach N + GetRandomRounds() rounds where we stop.
+        if (rounds < CoinJoinClientOptions.getRounds() + CoinJoinClientOptions.getRandomRounds()) {
+            ByteArrayOutputStream stream = new ByteArrayOutputStream();
+            try {
+                outPoint.bitcoinSerialize(stream);
+                stream.write(coinjoin.getCoinJoinSalt().getReversedBytes());
+                Sha256Hash hash = Sha256Hash.twiceOf(stream.toByteArray());
+                if (Utils.readInt64(hash.getBytes(), 0) % 2 == 0) {
+                    return false;
                 }
+            } catch (IOException x) {
+                throw new RuntimeException(x);
             }
-
-            return true;
-        } finally {
-            lock.unlock();
         }
+
+        return true;
     }
 
     boolean anonymizableTallyCached = false;
