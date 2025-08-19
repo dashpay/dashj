@@ -17,9 +17,13 @@
 package org.bitcoinj.wallet;
 
 import com.google.common.base.Stopwatch;
+import org.bitcoinj.coinjoin.CoinJoinCoinSelector;
+import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.Context;
+import org.bitcoinj.core.InsufficientMoneyException;
 import org.bitcoinj.core.Transaction;
+import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.utils.BriefLogFormatter;
 import org.junit.Before;
@@ -37,6 +41,8 @@ import java.io.InputStream;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 public class LargeCoinJoinWalletTest {
     private WalletEx wallet;
@@ -568,5 +574,101 @@ public class LargeCoinJoinWalletTest {
         }
 
         info("✓ Wallet #{} transactions match wallet #1 perfectly", wallet2Number);
+    }
+
+    @Test
+    public void greedyAlgorithmTest() throws InsufficientMoneyException {
+        Stopwatch watch = Stopwatch.createStarted();
+
+        //Coin sendAmount = Coin.valueOf(1050000000L);
+        Coin sendAmount = Coin.COIN.div(2);
+        Address toAddress = wallet.freshReceiveAddress();
+
+        System.out.println("=== GREEDY ALGORITHM TEST ===");
+        System.out.println("Testing greedy algorithm with send amount: " + sendAmount.toFriendlyString());
+        System.out.println("Available balance: " + wallet.getBalance().toFriendlyString());
+
+        SendRequest req = SendRequest.to(toAddress, sendAmount);
+        req.coinSelector = new CoinJoinCoinSelector(wallet, true, true);
+        //req.greedyAlgorithm = true;
+
+        wallet.completeTx(req);
+        Transaction tx = req.tx;
+
+        System.out.println("Transaction has " + tx.getInputs().size() + " inputs and " + tx.getOutputs().size() + " outputs");
+
+        boolean hasLargerInput = false;
+        Coin totalInputValue = Coin.ZERO;
+
+        for (int i = 0; i < tx.getInputs().size(); i++) {
+            TransactionInput input = tx.getInputs().get(i);
+            Coin inputValue = input.getConnectedOutput().getValue();
+            totalInputValue = totalInputValue.add(inputValue);
+            System.out.println("Input " + i + ": " + inputValue.toFriendlyString());
+
+            if (inputValue.isGreaterThan(sendAmount)) {
+                hasLargerInput = true;
+                System.out.println("  -> Input " + i + " (" + inputValue.toFriendlyString() +
+                                 ") is larger than send amount (" + sendAmount.toFriendlyString() + ")");
+            }
+        }
+
+        System.out.println("Total input value: " + totalInputValue.toFriendlyString());
+        System.out.println("Send amount: " + sendAmount.toFriendlyString());
+        System.out.println("Change: " + totalInputValue.subtract(sendAmount).toFriendlyString());
+
+        if (sendAmount.isGreaterThanOrEqualTo(Coin.valueOf(100000L))) {
+            if (hasLargerInput) {
+                System.out.println("CONSTRAINT VIOLATION: Found inputs larger than send amount for amount >= 0.001 DASH");
+            } else {
+                System.out.println("SUCCESS: No inputs larger than send amount for amount >= 0.001 DASH");
+            }
+        }
+
+        System.out.println("=== TEST COMPLETED IN " + watch + " ===");
+
+        info("Testing greedy algorithm with send amount: {}", sendAmount.toFriendlyString());
+        info("Available balance: {}", wallet.getBalance().toFriendlyString());
+        info("Created greedy transaction: {}", tx);
+        info("Transaction has {} inputs and {} outputs", tx.getInputs().size(), tx.getOutputs().size());
+
+        for (int i = 0; i < tx.getInputs().size(); i++) {
+            TransactionInput input = tx.getInputs().get(i);
+            Coin inputValue = input.getConnectedOutput().getValue();
+            info("Input {}: {}", i, inputValue.toFriendlyString());
+        }
+
+        info("Total input value: {}", totalInputValue.toFriendlyString());
+        info("Send amount: {}", sendAmount.toFriendlyString());
+        info("Change amount: {}", tx.getFee().toFriendlyString());
+        info("Greedy algorithm test completed in: {}", watch);
+    }
+
+    @Test
+    public void greedyAlgorithmSmallAmountTest() throws InsufficientMoneyException {
+        Stopwatch watch = Stopwatch.createStarted();
+
+        Coin sendAmount = Coin.valueOf(50000L);
+        Address toAddress = wallet.freshReceiveAddress();
+
+        SendRequest req = SendRequest.to(toAddress, sendAmount);
+
+        info("Testing greedy algorithm with small send amount: {}", sendAmount.toFriendlyString());
+
+        wallet.completeTx(req);
+        Transaction tx = req.tx;
+
+        info("Created transaction: {}", tx);
+        info("Transaction has {} inputs and {} outputs", tx.getInputs().size(), tx.getOutputs().size());
+
+        for (int i = 0; i < tx.getInputs().size(); i++) {
+            TransactionInput input = tx.getInputs().get(i);
+            Coin inputValue = input.getConnectedOutput().getValue();
+            info("Input {}: {}", i, inputValue.toFriendlyString());
+        }
+
+        info("For amounts < 0.001 DASH, inputs can be larger than send amount");
+        assertTrue("Should have at least one input", tx.getInputs().size() > 0);
+        info("Small amount greedy algorithm test completed in: {}", watch);
     }
 }
