@@ -5769,6 +5769,8 @@ public class Wallet extends BaseTaggableObject
                     tx.addOutput(changeOutput);
                     result.bestChangeOutput = changeOutput;
                 }
+            } else if (!req.returnChange) {
+                fee = result.bestCoinSelection.valueGathered.subtract(value);
             }
 
             for (TransactionOutput selectedOutput : selection.gathered) {

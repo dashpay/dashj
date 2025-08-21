@@ -30,6 +30,8 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.stream.Collectors;
+
 import static com.google.common.base.Preconditions.checkArgument;
 
 public class CoinJoinCoinSelector extends ZeroConfCoinSelector {
@@ -130,27 +132,25 @@ public class CoinJoinCoinSelector extends ZeroConfCoinSelector {
     private ArrayList<TransactionOutput> findBestCombination(HashMap<Coin, ArrayList<TransactionOutput>> denomMap, 
                                                            List<Coin> denoms, long target, Coin feePerKb) {
         
-        // Estimate fee first
-        int estimatedInputs = 3; // rough estimate
-        int txSize = 100 + (estimatedInputs * 150) + (2 * 34);
-        long estimatedFee = (feePerKb.value * txSize) / 1000;
-        long totalNeeded = target + estimatedFee;
+        System.out.println("Target: " + Coin.valueOf(target).toFriendlyString());
         
-        System.out.println("Target: " + Coin.valueOf(target).toFriendlyString() + 
-                          ", Estimated fee: " + Coin.valueOf(estimatedFee).toFriendlyString() +
-                          ", Total needed: " + Coin.valueOf(totalNeeded).toFriendlyString());
+        // Create working copies to avoid modifying original
+        HashMap<Coin, ArrayList<TransactionOutput>> workingDenomMap = new HashMap<>();
+        denomMap.forEach((denom, outputs) -> workingDenomMap.put(denom, new ArrayList<>(outputs)));
         
         // Sort denominations largest to smallest
         denoms.sort(Comparator.reverseOrder());
         
         ArrayList<TransactionOutput> selection = new ArrayList<>();
-        long remaining = totalNeeded;
+        long remaining = target; // Start with just the target amount
         
-        // Simple greedy: start with largest denom that's <= remaining amount
+        System.out.println("Starting greedy selection for target: " + Coin.valueOf(remaining).toFriendlyString());
+        
+        // Phase 1: Use largest denominations that are <= remaining amount
         for (Coin denom : denoms) {
             if (remaining <= 0) break;
             
-            ArrayList<TransactionOutput> availableOutputs = denomMap.get(denom);
+            ArrayList<TransactionOutput> availableOutputs = workingDenomMap.get(denom);
             if (availableOutputs == null || availableOutputs.isEmpty()) continue;
             
             // Only use this denomination if it's <= remaining amount
@@ -159,52 +159,91 @@ public class CoinJoinCoinSelector extends ZeroConfCoinSelector {
                 int availableCount = availableOutputs.size();
                 int useCount = Math.min(neededCount, availableCount);
                 
-                System.out.println("Using " + useCount + " of " + denom.toFriendlyString() + 
+                System.out.println("Phase 1 - Using " + useCount + " of " + denom.toFriendlyString() + 
                                  " (available: " + availableCount + ", needed: " + neededCount + ")");
                 
                 for (int i = 0; i < useCount; i++) {
-                    selection.add(availableOutputs.get(i));
+                    selection.add(availableOutputs.remove(0)); // Remove to avoid reuse
                     remaining -= denom.value;
                 }
             }
         }
         
-        // If we still need more, try to use smallest possible denominations first
+        // Calculate fee based on actual transaction structure:
+        // Transaction header: version(4) + input_count(1) + output_count(1) + locktime(4) = 10 bytes
+        // Input: outpoint(36) + script_len(1) + script_sig(~107) + sequence(4) = ~148 bytes  
+        // Output: value(8) + script_len(1) + script_pubkey(25) = 34 bytes
+        // Based on your measurement: 1 input + 1 output = 193 bytes
+        
+        int numInputs = selection.size();
+        
+        // Transaction structure breakdown:
+        // Header: 10 bytes (version + varint counts + locktime)
+        // Each input: ~148 bytes (36 + 1 + ~107 + 4) for P2PKH signed input
+        // Each output: 34 bytes (8 + 1 + 25) for P2PKH output
+        
+        int txSize;
+        if (numInputs == 0) {
+            // Minimum case: need at least 1 input
+            txSize = 10 + 148 + 34; // header + 1_input + 1_output = 192 bytes (close to your 193)
+        } else {
+            // Formula based on actual structure
+            txSize = 10 + (numInputs * 148) + 34; // header + inputs + 1_output
+        }
+        
+        long calculatedFee = (feePerKb.value * txSize) / 1000;
+        remaining += calculatedFee; // Add fee to remaining needed
+        
+        System.out.println("After Phase 1: " + selection.size() + " inputs selected, fee needed: " + 
+                          Coin.valueOf(calculatedFee).toFriendlyString() + 
+                          ", still need: " + Coin.valueOf(remaining).toFriendlyString());
+        
+        // Phase 2: If we still need more (for fee), use smallest denominations first
         if (remaining > 0) {
-            System.out.println("Still need: " + Coin.valueOf(remaining).toFriendlyString() + 
-                             ", trying smallest denominations first...");
+            // Sort denominations smallest to largest for efficient fee coverage
+            List<Coin> suitableDenoms = denoms.stream()
+                .sorted(Coin::compareTo)  // Smallest first
+                .collect(Collectors.toList());
             
-            // Sort denominations smallest to largest to use smallest possible first
-            denoms.sort(Coin::compareTo);
+            System.out.println("Phase 2 - Using smallest denominations first for fee coverage");
             
-            // First try to satisfy with smallest denominations
-            for (Coin denom : denoms) {
+            for (Coin denom : suitableDenoms) {
                 if (remaining <= 0) break;
                 
-                ArrayList<TransactionOutput> availableOutputs = denomMap.get(denom);
+                ArrayList<TransactionOutput> availableOutputs = workingDenomMap.get(denom);
                 if (availableOutputs == null || availableOutputs.isEmpty()) continue;
                 
-                // Use all available of this small denomination if it helps
-                while (remaining > 0 && !availableOutputs.isEmpty() /*&& denom.value <= remaining*/) {
-                    System.out.println("Using 1 more of " + denom.toFriendlyString() + 
+                // Use available denominations to cover remaining amount (fee)
+                while (remaining > 0 && !availableOutputs.isEmpty()) {
+                    System.out.println("Phase 2 - Using 1 of " + denom.toFriendlyString() + 
                                      " for remaining " + Coin.valueOf(remaining).toFriendlyString());
-                    selection.add(availableOutputs.remove(0)); // Remove to avoid reuse
+                    selection.add(availableOutputs.remove(0));
                     remaining -= denom.value;
+                    
+                    // Recalculate fee as we add more inputs using the formula
+                    numInputs = selection.size();
+                    txSize = 10 + (numInputs * 148) + 34; // header + inputs + 1_output
+                    long newFee = (feePerKb.value * txSize) / 1000;
+                    long additionalFee = newFee - calculatedFee;
+                    if (additionalFee > 0) {
+                        remaining += additionalFee;
+                        calculatedFee = newFee;
+                        System.out.println("Fee increased to: " + Coin.valueOf(calculatedFee).toFriendlyString());
+                    }
                 }
             }
             
-            // If still need more, use exactly 1 of the next larger denomination
+            // Phase 3: If still need more, use exactly 1 of the next larger denomination
             if (remaining > 0) {
-                System.out.println("Small denoms insufficient, using 1 larger denomination...");
+                System.out.println("Phase 3 - Small denoms insufficient, using 1 larger denomination...");
                 
                 for (Coin denom : denoms) {
-                    ArrayList<TransactionOutput> availableOutputs = denomMap.get(denom);
+                    ArrayList<TransactionOutput> availableOutputs = workingDenomMap.get(denom);
                     if (availableOutputs == null || availableOutputs.isEmpty()) continue;
                     
-                    if (denom.value > remaining) {
+                    if (denom.value >= remaining) {
                         System.out.println("Using 1 of " + denom.toFriendlyString() + 
                                          " to cover remaining " + Coin.valueOf(remaining).toFriendlyString());
-                        selection.clear();
                         selection.add(availableOutputs.get(0));
                         remaining = 0;
                         break;
@@ -212,12 +251,17 @@ public class CoinJoinCoinSelector extends ZeroConfCoinSelector {
                 }
             }
         }
+
+        // TODO: merge 10x of denomons, starting with lowest
         
         if (remaining > 0) {
-            System.out.println("WARNING: Could not satisfy target, remaining: " + 
+            System.out.println("WARNING: Could not satisfy target + fee, remaining: " + 
                              Coin.valueOf(remaining).toFriendlyString());
             return null;
         }
+        
+        System.out.println("Final selection: " + selection.size() + " inputs, total fee: " + 
+                          Coin.valueOf(calculatedFee).toFriendlyString());
         
         return selection;
     }
