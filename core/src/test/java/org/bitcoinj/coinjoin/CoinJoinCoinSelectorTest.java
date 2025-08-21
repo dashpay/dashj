@@ -129,8 +129,10 @@ public class CoinJoinCoinSelectorTest extends TestWithCoinJoinWallet {
                 Coin.valueOf(5000000L),    // 0.05 DASH
                 Coin.valueOf(50000000L),    // 0.5 DASH
                 Coin.valueOf(5000000L),     // 0.05 DASH
+                Coin.COIN,
+                Coin.COIN.plus(Coin.CENT.multiply(27)),
                 Coin.valueOf(500000000L),    // 5 DASH
-                Coin.valueOf(5000000000L)    // 50 DASH
+                Coin.FIFTY_COINS    // 50 DASH
         };
 
         for (int i = 0; i < testAmounts.length; i++) {
@@ -145,6 +147,7 @@ public class CoinJoinCoinSelectorTest extends TestWithCoinJoinWallet {
                 SendRequest greedyReq = SendRequest.to(toAddress, sendAmount);
                 greedyReq.coinSelector = new CoinJoinCoinSelector(realWallet, false, true);
                 greedyReq.feePerKb = Coin.valueOf(1000L); // Set fee
+                greedyReq.returnChange = false;
 
                 // Clone wallet state for parallel testing
                 WalletEx greedyWallet = realWallet; // Use same wallet for now
@@ -189,8 +192,10 @@ public class CoinJoinCoinSelectorTest extends TestWithCoinJoinWallet {
                 System.out.println("Comparison:");
                 System.out.println("  Greedy change: " + greedyChange.toFriendlyString());
                 System.out.println("  Normal change: " + normalChange.toFriendlyString());
-                System.out.println("  Greedy uses fewer inputs: " + (greedyTx.getInputs().size() <= normalTx.getInputs().size()));
-                System.out.println("  Greedy minimizes change: " + greedyChange.isLessThanOrEqualTo(normalChange));
+                System.out.println("  Greedy fee: " + greedyTx.getFee().toFriendlyString());
+                System.out.println("  Normal fee: " + normalTx.getFee().toFriendlyString());
+                System.out.println("  Greedy uses more inputs: " + (greedyTx.getInputs().size() > normalTx.getInputs().size()));
+                System.out.println("  Greedy has higher fee: " + greedyTx.getFee().isGreaterThan(normalTx.getFee()));
 
                 // Verify that greedy algorithm produces efficient results
 //                assertTrue("Greedy algorithm should minimize change for " + sendAmount.toFriendlyString(),
