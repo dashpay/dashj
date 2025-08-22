@@ -135,7 +135,7 @@ public class CoinJoinCoinSelector extends ZeroConfCoinSelector {
         System.out.println("Target: " + Coin.valueOf(target).toFriendlyString());
         
         // Create working copies to avoid modifying original
-        HashMap<Coin, ArrayList<TransactionOutput>> workingDenomMap = new HashMap<>();
+        final HashMap<Coin, ArrayList<TransactionOutput>> workingDenomMap = new HashMap<>();
         denomMap.forEach((denom, outputs) -> workingDenomMap.put(denom, new ArrayList<>(outputs)));
         
         // Sort denominations largest to smallest
@@ -252,7 +252,161 @@ public class CoinJoinCoinSelector extends ZeroConfCoinSelector {
             }
         }
 
-        // TODO: merge 10x of denomons, starting with lowest
+        // Phase 4: Optimize by consolidating 10x smaller denominations with 1x larger denomination
+        System.out.println("Phase 4 - Optimizing denomination consolidation");
+        
+        // Create a copy of selection to test optimizations
+        ArrayList<TransactionOutput> optimizedSelection = new ArrayList<>(selection);
+        HashMap<Coin, ArrayList<TransactionOutput>> optimizedWorkingMap = new HashMap<>();
+        workingDenomMap.forEach((denom, outputs) -> optimizedWorkingMap.put(denom, new ArrayList<>(outputs)));
+        
+        // Add back any unused outputs from our selection to the working map for optimization
+        HashMap<Coin, Integer> selectionCounts = new HashMap<>();
+        for (TransactionOutput output : optimizedSelection) {
+            Coin denom = output.getValue();
+            selectionCounts.put(denom, selectionCounts.getOrDefault(denom, 0) + 1);
+        }
+        
+        // Sort denominations smallest to largest for consolidation
+        List<Coin> consolidationDenoms = denoms.stream()
+            .sorted(Coin::compareTo)
+            .collect(Collectors.toList());
+        
+        for (int i = 0; i < consolidationDenoms.size() - 1; i++) {
+            Coin smallDenom = consolidationDenoms.get(i);
+            Coin largeDenom = consolidationDenoms.get(i + 1);
+            
+            // Check if we have 10+ of the small denomination and the large denom is exactly 10x
+            if (largeDenom.value == smallDenom.value * 10) {
+                int smallCount = selectionCounts.getOrDefault(smallDenom, 0);
+                ArrayList<TransactionOutput> availableLarge = optimizedWorkingMap.get(largeDenom);
+                
+                if (smallCount >= 10 && availableLarge != null && !availableLarge.isEmpty()) {
+                    System.out.println("Consolidating 10x" + smallDenom.toFriendlyString() + 
+                                     " with 1x" + largeDenom.toFriendlyString());
+                    
+                    // Remove 10 small denominations from optimized selection
+                    int removed = 0;
+                    for (int j = optimizedSelection.size() - 1; j >= 0 && removed < 10; j--) {
+                        if (optimizedSelection.get(j).getValue().equals(smallDenom)) {
+                            optimizedSelection.remove(j);
+                            removed++;
+                        }
+                    }
+                    
+                    // Add 1 large denomination
+                    optimizedSelection.add(availableLarge.remove(0));
+                    
+                    // Update counts
+                    selectionCounts.put(smallDenom, selectionCounts.get(smallDenom) - 10);
+                    selectionCounts.put(largeDenom, selectionCounts.getOrDefault(largeDenom, 0) + 1);
+                    
+                    // Recalculate fee with new input count
+                    int newNumInputs = optimizedSelection.size();
+                    int newTxSize = 10 + (newNumInputs * 148) + 34;
+                    long newCalculatedFee = (feePerKb.value * newTxSize) / 1000;
+                    
+                    // Calculate total value of optimized selection
+                    long optimizedTotal = optimizedSelection.stream().mapToLong(o -> o.getValue().value).sum();
+                    long optimizedRemaining = target + newCalculatedFee - optimizedTotal;
+                    
+                    System.out.println("After consolidation: " + newNumInputs + " inputs, fee: " + 
+                                     Coin.valueOf(newCalculatedFee).toFriendlyString() + 
+                                     ", remaining: " + Coin.valueOf(optimizedRemaining).toFriendlyString());
+                    
+                    // If optimization is valid (we still have enough value), use it
+                    if (optimizedRemaining <= 0) {
+                        selection = optimizedSelection;
+                        workingDenomMap.clear();
+                        workingDenomMap.putAll(optimizedWorkingMap);
+                        calculatedFee = newCalculatedFee;
+                        System.out.println("Optimization successful - using consolidated selection");
+                    } else {
+                        System.out.println("Optimization failed - insufficient value, reverting");
+                        // Revert the changes
+                        selectionCounts.put(smallDenom, selectionCounts.get(smallDenom) + 10);
+                        selectionCounts.put(largeDenom, selectionCounts.get(largeDenom) - 1);
+                        break; // Stop trying further consolidations for this iteration
+                    }
+                }
+            }
+        }
+
+        // Phase 5: Remove unnecessary smallest denomination inputs
+        System.out.println("Phase 5 - Removing unnecessary smallest denomination inputs");
+        
+        // Calculate current total value and what we actually need
+        long currentTotal = selection.stream().mapToLong(o -> o.getValue().value).sum();
+        long totalNeeded = target + calculatedFee;
+        long excess = currentTotal - totalNeeded;
+        
+        System.out.println("Current total: " + Coin.valueOf(currentTotal).toFriendlyString() + 
+                          ", needed: " + Coin.valueOf(totalNeeded).toFriendlyString() + 
+                          ", excess: " + Coin.valueOf(excess).toFriendlyString());
+        
+        if (excess > 0) {
+            // Sort denominations smallest to largest to remove smallest first
+            List<Coin> removalDenoms = denoms.stream()
+                .sorted(Coin::compareTo)
+                .collect(Collectors.toList());
+            
+            // Try to remove smallest denominations that we don't need
+            for (Coin denom : removalDenoms) {
+                if (excess <= 0) break;
+                
+                // Count how many of this denomination we can remove
+                long canRemove = Math.min(excess / denom.value, 
+                    selection.stream().mapToLong(o -> o.getValue().equals(denom) ? 1 : 0).sum());
+                
+                if (canRemove > 0) {
+                    System.out.println("Removing " + canRemove + " unnecessary " + denom.toFriendlyString() + " inputs");
+                    
+                    // Remove the specified number of this denomination
+                    long removed = 0;
+                    for (int i = selection.size() - 1; i >= 0 && removed < canRemove; i--) {
+                        if (selection.get(i).getValue().equals(denom)) {
+                            selection.remove(i);
+                            excess -= denom.value;
+                            removed++;
+                        }
+                    }
+                    
+                    // Recalculate fee with new input count
+                    int newNumInputs = selection.size();
+                    int newTxSize = 10 + (newNumInputs * 148) + 34;
+                    long newCalculatedFee = (feePerKb.value * newTxSize) / 1000;
+                    
+                    // Update totals
+                    long newTotal = selection.stream().mapToLong(o -> o.getValue().value).sum();
+                    long newTotalNeeded = target + newCalculatedFee;
+                    
+                    System.out.println("After removing " + removed + " inputs: " + newNumInputs + " total inputs, " +
+                                     "fee: " + Coin.valueOf(newCalculatedFee).toFriendlyString() + 
+                                     ", total: " + Coin.valueOf(newTotal).toFriendlyString() +
+                                     ", needed: " + Coin.valueOf(newTotalNeeded).toFriendlyString());
+                    
+                    // Verify we still have enough (should always be true, but safety check)
+                    if (newTotal >= newTotalNeeded) {
+                        calculatedFee = newCalculatedFee;
+                        excess = newTotal - newTotalNeeded;
+                        System.out.println("Successfully removed unnecessary inputs");
+                    } else {
+                        System.out.println("ERROR: Removal created insufficient funds - this shouldn't happen");
+                        break;
+                    }
+                }
+            }
+            
+            // Final summary
+            long finalTotal = selection.stream().mapToLong(o -> o.getValue().value).sum();
+            long finalNeeded = target + calculatedFee;
+            System.out.println("Phase 5 complete - Final: " + selection.size() + " inputs, " +
+                             "total: " + Coin.valueOf(finalTotal).toFriendlyString() + 
+                             ", needed: " + Coin.valueOf(finalNeeded).toFriendlyString() + 
+                             ", excess: " + Coin.valueOf(finalTotal - finalNeeded).toFriendlyString());
+        } else {
+            System.out.println("No excess to remove - selection is optimal");
+        }
         
         if (remaining > 0) {
             System.out.println("WARNING: Could not satisfy target + fee, remaining: " + 
