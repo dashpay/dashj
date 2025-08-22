@@ -24,6 +24,8 @@ import org.bitcoinj.core.TransactionConfidence;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.wallet.CoinSelection;
 import org.bitcoinj.wallet.ZeroConfCoinSelector;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -35,6 +37,7 @@ import java.util.stream.Collectors;
 import static com.google.common.base.Preconditions.checkArgument;
 
 public class CoinJoinCoinSelector extends ZeroConfCoinSelector {
+    private final Logger log = LoggerFactory.getLogger(CoinJoinCoinSelector.class);
     private final TransactionBag transactionBag;
     private final boolean onlyConfirmed;
     private final boolean useGreedyAlgorithm;
@@ -65,7 +68,7 @@ public class CoinJoinCoinSelector extends ZeroConfCoinSelector {
         // Now iterate over the sorted outputs until we have got as close to the target as possible or a little
         // bit over (excessive value will be change).
         long total = 0;
-        // System.out.println("--------------------------");
+        // log.info("--------------------------");
         // selected.forEach(System.out::println);
         if (useGreedyAlgorithm) {
             for (TransactionOutput output : sortedOutputs) {
@@ -132,7 +135,7 @@ public class CoinJoinCoinSelector extends ZeroConfCoinSelector {
     private ArrayList<TransactionOutput> findBestCombination(HashMap<Coin, ArrayList<TransactionOutput>> denomMap, 
                                                            List<Coin> denoms, long target, Coin feePerKb) {
         
-        System.out.println("Target: " + Coin.valueOf(target).toFriendlyString());
+        log.info("Target: " + Coin.valueOf(target).toFriendlyString());
         
         // Create working copies to avoid modifying original
         final HashMap<Coin, ArrayList<TransactionOutput>> workingDenomMap = new HashMap<>();
@@ -144,7 +147,7 @@ public class CoinJoinCoinSelector extends ZeroConfCoinSelector {
         ArrayList<TransactionOutput> selection = new ArrayList<>();
         long remaining = target; // Start with just the target amount
         
-        System.out.println("Starting greedy selection for target: " + Coin.valueOf(remaining).toFriendlyString());
+        log.info("Starting greedy selection for target: " + Coin.valueOf(remaining).toFriendlyString());
         
         // Phase 1: Use largest denominations that are <= remaining amount
         for (Coin denom : denoms) {
@@ -159,7 +162,7 @@ public class CoinJoinCoinSelector extends ZeroConfCoinSelector {
                 int availableCount = availableOutputs.size();
                 int useCount = Math.min(neededCount, availableCount);
                 
-                System.out.println("Phase 1 - Using " + useCount + " of " + denom.toFriendlyString() + 
+                log.info("Phase 1 - Using " + useCount + " of " + denom.toFriendlyString() +
                                  " (available: " + availableCount + ", needed: " + neededCount + ")");
                 
                 for (int i = 0; i < useCount; i++) {
@@ -194,7 +197,7 @@ public class CoinJoinCoinSelector extends ZeroConfCoinSelector {
         long calculatedFee = (feePerKb.value * txSize) / 1000;
         remaining += calculatedFee; // Add fee to remaining needed
         
-        System.out.println("After Phase 1: " + selection.size() + " inputs selected, fee needed: " + 
+        log.info("After Phase 1: " + selection.size() + " inputs selected, fee needed: " +
                           Coin.valueOf(calculatedFee).toFriendlyString() + 
                           ", still need: " + Coin.valueOf(remaining).toFriendlyString());
         
@@ -205,7 +208,7 @@ public class CoinJoinCoinSelector extends ZeroConfCoinSelector {
                 .sorted(Coin::compareTo)  // Smallest first
                 .collect(Collectors.toList());
             
-            System.out.println("Phase 2 - Using smallest denominations first for fee coverage");
+            log.info("Phase 2 - Using smallest denominations first for fee coverage");
             
             for (Coin denom : suitableDenoms) {
                 if (remaining <= 0) break;
@@ -215,7 +218,7 @@ public class CoinJoinCoinSelector extends ZeroConfCoinSelector {
                 
                 // Use available denominations to cover remaining amount (fee)
                 while (remaining > 0 && !availableOutputs.isEmpty()) {
-                    System.out.println("Phase 2 - Using 1 of " + denom.toFriendlyString() + 
+                    log.info("Phase 2 - Using 1 of " + denom.toFriendlyString() +
                                      " for remaining " + Coin.valueOf(remaining).toFriendlyString());
                     selection.add(availableOutputs.remove(0));
                     remaining -= denom.value;
@@ -228,21 +231,21 @@ public class CoinJoinCoinSelector extends ZeroConfCoinSelector {
                     if (additionalFee > 0) {
                         remaining += additionalFee;
                         calculatedFee = newFee;
-                        System.out.println("Fee increased to: " + Coin.valueOf(calculatedFee).toFriendlyString());
+                        log.info("Fee increased to: " + Coin.valueOf(calculatedFee).toFriendlyString());
                     }
                 }
             }
             
             // Phase 3: If still need more, use exactly 1 of the next larger denomination
             if (remaining > 0) {
-                System.out.println("Phase 3 - Small denoms insufficient, using 1 larger denomination...");
+                log.info("Phase 3 - Small denoms insufficient, using 1 larger denomination...");
                 
                 for (Coin denom : denoms) {
                     ArrayList<TransactionOutput> availableOutputs = workingDenomMap.get(denom);
                     if (availableOutputs == null || availableOutputs.isEmpty()) continue;
                     
                     if (denom.value >= remaining) {
-                        System.out.println("Using 1 of " + denom.toFriendlyString() + 
+                        log.info("Using 1 of " + denom.toFriendlyString() +
                                          " to cover remaining " + Coin.valueOf(remaining).toFriendlyString());
                         selection.add(availableOutputs.get(0));
                         remaining = 0;
@@ -253,7 +256,7 @@ public class CoinJoinCoinSelector extends ZeroConfCoinSelector {
         }
 
         // Phase 4: Optimize by consolidating 10x smaller denominations with 1x larger denomination
-        System.out.println("Phase 4 - Optimizing denomination consolidation");
+        log.info("Phase 4 - Optimizing denomination consolidation");
         
         // Create a copy of selection to test optimizations
         ArrayList<TransactionOutput> optimizedSelection = new ArrayList<>(selection);
@@ -282,7 +285,7 @@ public class CoinJoinCoinSelector extends ZeroConfCoinSelector {
                 ArrayList<TransactionOutput> availableLarge = optimizedWorkingMap.get(largeDenom);
                 
                 if (smallCount >= 10 && availableLarge != null && !availableLarge.isEmpty()) {
-                    System.out.println("Consolidating 10x" + smallDenom.toFriendlyString() + 
+                    log.info("Consolidating 10x" + smallDenom.toFriendlyString() +
                                      " with 1x" + largeDenom.toFriendlyString());
                     
                     // Remove 10 small denominations from optimized selection
@@ -310,7 +313,7 @@ public class CoinJoinCoinSelector extends ZeroConfCoinSelector {
                     long optimizedTotal = optimizedSelection.stream().mapToLong(o -> o.getValue().value).sum();
                     long optimizedRemaining = target + newCalculatedFee - optimizedTotal;
                     
-                    System.out.println("After consolidation: " + newNumInputs + " inputs, fee: " + 
+                    log.info("After consolidation: " + newNumInputs + " inputs, fee: " +
                                      Coin.valueOf(newCalculatedFee).toFriendlyString() + 
                                      ", remaining: " + Coin.valueOf(optimizedRemaining).toFriendlyString());
                     
@@ -320,9 +323,9 @@ public class CoinJoinCoinSelector extends ZeroConfCoinSelector {
                         workingDenomMap.clear();
                         workingDenomMap.putAll(optimizedWorkingMap);
                         calculatedFee = newCalculatedFee;
-                        System.out.println("Optimization successful - using consolidated selection");
+                        log.info("Optimization successful - using consolidated selection");
                     } else {
-                        System.out.println("Optimization failed - insufficient value, reverting");
+                        log.info("Optimization failed - insufficient value, reverting");
                         // Revert the changes
                         selectionCounts.put(smallDenom, selectionCounts.get(smallDenom) + 10);
                         selectionCounts.put(largeDenom, selectionCounts.get(largeDenom) - 1);
@@ -333,14 +336,14 @@ public class CoinJoinCoinSelector extends ZeroConfCoinSelector {
         }
 
         // Phase 5: Remove unnecessary smallest denomination inputs
-        System.out.println("Phase 5 - Removing unnecessary smallest denomination inputs");
+        log.info("Phase 5 - Removing unnecessary smallest denomination inputs");
         
         // Calculate current total value and what we actually need
         long currentTotal = selection.stream().mapToLong(o -> o.getValue().value).sum();
         long totalNeeded = target + calculatedFee;
         long excess = currentTotal - totalNeeded;
         
-        System.out.println("Current total: " + Coin.valueOf(currentTotal).toFriendlyString() + 
+        log.info("Current total: " + Coin.valueOf(currentTotal).toFriendlyString() +
                           ", needed: " + Coin.valueOf(totalNeeded).toFriendlyString() + 
                           ", excess: " + Coin.valueOf(excess).toFriendlyString());
         
@@ -359,7 +362,7 @@ public class CoinJoinCoinSelector extends ZeroConfCoinSelector {
                     selection.stream().mapToLong(o -> o.getValue().equals(denom) ? 1 : 0).sum());
                 
                 if (canRemove > 0) {
-                    System.out.println("Removing " + canRemove + " unnecessary " + denom.toFriendlyString() + " inputs");
+                    log.info("Removing " + canRemove + " unnecessary " + denom.toFriendlyString() + " inputs");
                     
                     // Remove the specified number of this denomination
                     long removed = 0;
@@ -380,7 +383,7 @@ public class CoinJoinCoinSelector extends ZeroConfCoinSelector {
                     long newTotal = selection.stream().mapToLong(o -> o.getValue().value).sum();
                     long newTotalNeeded = target + newCalculatedFee;
                     
-                    System.out.println("After removing " + removed + " inputs: " + newNumInputs + " total inputs, " +
+                    log.info("After removing " + removed + " inputs: " + newNumInputs + " total inputs, " +
                                      "fee: " + Coin.valueOf(newCalculatedFee).toFriendlyString() + 
                                      ", total: " + Coin.valueOf(newTotal).toFriendlyString() +
                                      ", needed: " + Coin.valueOf(newTotalNeeded).toFriendlyString());
@@ -389,9 +392,9 @@ public class CoinJoinCoinSelector extends ZeroConfCoinSelector {
                     if (newTotal >= newTotalNeeded) {
                         calculatedFee = newCalculatedFee;
                         excess = newTotal - newTotalNeeded;
-                        System.out.println("Successfully removed unnecessary inputs");
+                        log.info("Successfully removed unnecessary inputs");
                     } else {
-                        System.out.println("ERROR: Removal created insufficient funds - this shouldn't happen");
+                        log.info("ERROR: Removal created insufficient funds - this shouldn't happen");
                         break;
                     }
                 }
@@ -400,21 +403,21 @@ public class CoinJoinCoinSelector extends ZeroConfCoinSelector {
             // Final summary
             long finalTotal = selection.stream().mapToLong(o -> o.getValue().value).sum();
             long finalNeeded = target + calculatedFee;
-            System.out.println("Phase 5 complete - Final: " + selection.size() + " inputs, " +
+            log.info("Phase 5 complete - Final: " + selection.size() + " inputs, " +
                              "total: " + Coin.valueOf(finalTotal).toFriendlyString() + 
                              ", needed: " + Coin.valueOf(finalNeeded).toFriendlyString() + 
                              ", excess: " + Coin.valueOf(finalTotal - finalNeeded).toFriendlyString());
         } else {
-            System.out.println("No excess to remove - selection is optimal");
+            log.info("No excess to remove - selection is optimal");
         }
         
         if (remaining > 0) {
-            System.out.println("WARNING: Could not satisfy target + fee, remaining: " + 
+            log.info("WARNING: Could not satisfy target + fee, remaining: " +
                              Coin.valueOf(remaining).toFriendlyString());
             return null;
         }
         
-        System.out.println("Final selection: " + selection.size() + " inputs, total fee: " + 
+        log.info("Final selection: " + selection.size() + " inputs, total fee: " +
                           Coin.valueOf(calculatedFee).toFriendlyString());
         
         return selection;
