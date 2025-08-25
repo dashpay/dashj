@@ -537,7 +537,8 @@ message Wallet {
   repeated Key keysForFriends = 30;  //spending, friends send us money
   repeated Key keysFromFriends = 31; //watching, we send money to friends
   repeated Key keysCoinJoin = 32;    // coinjoin
-  // Next tag: 18
+  
+  // Next tag: 33
 }
 
 /** An exchange rate between Bitcoin and some fiat currency. */
@@ -557,4 +558,23 @@ message CoinJoin {
   repeated Key key = 1;
   // last value of rounds from mixing
   required int32 rounds = 2;
+  // outpoint rounds cache
+  optional OutpointRoundsCache outpoint_rounds_cache = 3;
+  // coinjoin salt for mixing randomization
+  optional bytes coinjoin_salt = 4;
+}
+
+/** Outpoint rounds cache entry */
+message OutpointRoundsEntry {
+  // Transaction hash
+  required bytes transaction_hash = 1;
+  // Output index
+  required uint64 output_index = 2;
+  // Number of coinjoin rounds
+  required int32 rounds = 3;
+}
+
+/** Outpoint rounds cache for CoinJoin */
+message OutpointRoundsCache {
+  repeated OutpointRoundsEntry entries = 1;
 }

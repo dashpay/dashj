@@ -1,5 +1,6 @@
 package org.bitcoinj.wallet;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.bitcoinj.coinjoin.CoinJoin;
@@ -47,6 +48,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static com.google.common.base.Preconditions.checkState;
 import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_EXTRA;
 import static org.bitcoinj.core.NetworkParameters.MAX_MONEY;
 
@@ -299,6 +301,15 @@ public class WalletEx extends Wallet {
     HashMap<TransactionOutPoint, Integer> mapOutpointRoundsCache = new HashMap<>();
     // Recursively determine the rounds of a given input (How deep is the CoinJoin chain for a given input)
     public int getRealOutpointCoinJoinRounds(TransactionOutPoint outPoint) {
+        lock.lock();
+        try {
+            return getRealOutpointCoinJoinRounds(outPoint, 0);
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    private int getRealOutpointCoinJoinRoundsInternal(TransactionOutPoint outPoint) {
         return getRealOutpointCoinJoinRounds(outPoint, 0);
     }
 
@@ -330,100 +341,94 @@ public class WalletEx extends Wallet {
     }
 
     int getRealOutpointCoinJoinRounds(TransactionOutPoint outpoint, int rounds) {
-        lock.lock();
-        try {
+        checkState(lock.isHeldByCurrentThread());
 
-            final int roundsMax = CoinJoinConstants.MAX_COINJOIN_ROUNDS + CoinJoinClientOptions.getRandomRounds();
+        final int roundsMax = CoinJoinConstants.MAX_COINJOIN_ROUNDS + CoinJoinClientOptions.getRandomRounds();
+        if (rounds >= roundsMax) {
+            // there can only be roundsMax rounds max
+            return roundsMax - 1;
+        }
 
-            if (rounds >= roundsMax) {
-                // there can only be roundsMax rounds max
-                return roundsMax - 1;
-            }
+        Integer roundsRef = mapOutpointRoundsCache.get(outpoint);
+        if (roundsRef == null) {
+            roundsRef = -10;
+            mapOutpointRoundsCache.put(outpoint, roundsRef);
+        } else {
+            return roundsRef;
+        }
 
-            Integer roundsRef = mapOutpointRoundsCache.get(outpoint);
-            if (roundsRef == null) {
-                roundsRef = -10;
-                mapOutpointRoundsCache.put(outpoint, roundsRef);
-            } else {
-                return roundsRef;
-            }
+        // TODO wtx should refer to a CWalletTx object, not a pointer, based on surrounding code
+        WalletTransaction wtx = getWalletTransaction(outpoint.getHash());
 
-            // TODO wtx should refer to a CWalletTx object, not a pointer, based on surrounding code
-            WalletTransaction wtx = getWalletTransaction(outpoint.getHash());
+        if (wtx == null || wtx.getTransaction() == null) {
+            // no such tx in this wallet
+            roundsRef = -1;
+            mapOutpointRoundsCache.put(outpoint, roundsRef);
 
-            if (wtx == null || wtx.getTransaction() == null) {
-                // no such tx in this wallet
-                roundsRef = -1;
-                mapOutpointRoundsCache.put(outpoint, roundsRef);
+            log.error(String.format("FAILED    %-70s %3d (no such tx)", outpoint.toStringCpp(), -1));
+            return roundsRef;
+        }
 
-                log.error(String.format("FAILED    %-70s %3d (no such tx)", outpoint.toStringCpp(), -1));
-                return roundsRef;
-            }
+        // bounds check
+        if (outpoint.getIndex() >= wtx.getTransaction().getOutputs().size()) {
+            // should never actually hit this
+            roundsRef = -4;
+            mapOutpointRoundsCache.put(outpoint, roundsRef);
+            log.error(String.format("FAILED    %-70s %3d (bad index)", outpoint.toStringCpp(), -4));
+            return roundsRef;
+        }
 
-            // bounds check
-            if (outpoint.getIndex() >= wtx.getTransaction().getOutputs().size()) {
-                // should never actually hit this
-                roundsRef = -4;
-                mapOutpointRoundsCache.put(outpoint, roundsRef);
-                log.error(String.format("FAILED    %-70s %3d (bad index)", outpoint.toStringCpp(), -4));
-                return roundsRef;
-            }
+        TransactionOutput txOut = wtx.getTransaction().getOutput(outpoint.getIndex());
 
-            TransactionOutput txOut = wtx.getTransaction().getOutput(outpoint.getIndex());
+        if (CoinJoin.isCollateralAmount (txOut.getValue())) {
+            roundsRef = -3;
+            mapOutpointRoundsCache.put(outpoint, roundsRef);
 
-            if (CoinJoin.isCollateralAmount (txOut.getValue())) {
-                roundsRef = -3;
-                mapOutpointRoundsCache.put(outpoint, roundsRef);
+            log.info(COINJOIN_EXTRA, String.format("UPDATED   %-70s %3d (collateral)", outpoint.toStringCpp(), roundsRef));
+            return roundsRef;
+        }
 
-                log.info(COINJOIN_EXTRA, String.format("UPDATED   %-70s %3d (collateral)", outpoint.toStringCpp(), roundsRef));
-                return roundsRef;
-            }
+        // make sure the final output is non-denominate
+        if (!CoinJoin.isDenominatedAmount (txOut.getValue())) { //NOT DENOM
+            roundsRef = -2;
+            mapOutpointRoundsCache.put(outpoint, roundsRef);
 
-            // make sure the final output is non-denominate
-            if (!CoinJoin.isDenominatedAmount (txOut.getValue())) { //NOT DENOM
-                roundsRef = -2;
+            log.info(COINJOIN_EXTRA, String.format("UPDATED   %-70s %3d (non-denominated)", outpoint.toStringCpp(), roundsRef));
+            return roundsRef;
+        }
+
+        for (TransactionOutput out :wtx.getTransaction().getOutputs()) {
+            if (!CoinJoin.isDenominatedAmount (out.getValue())){
+                // this one is denominated but there is another non-denominated output found in the same tx
+                roundsRef = 0;
                 mapOutpointRoundsCache.put(outpoint, roundsRef);
 
                 log.info(COINJOIN_EXTRA, String.format("UPDATED   %-70s %3d (non-denominated)", outpoint.toStringCpp(), roundsRef));
                 return roundsRef;
             }
-
-            for (TransactionOutput out :wtx.getTransaction().getOutputs()) {
-                if (!CoinJoin.isDenominatedAmount (out.getValue())){
-                    // this one is denominated but there is another non-denominated output found in the same tx
-                    roundsRef = 0;
-                    mapOutpointRoundsCache.put(outpoint, roundsRef);
-
-                    log.info(COINJOIN_EXTRA, String.format("UPDATED   %-70s %3d (non-denominated)", outpoint.toStringCpp(), roundsRef));
-                    return roundsRef;
-                }
-            }
-
-            int nShortest = -10; // an initial value, should be no way to get this by calculations
-            boolean fDenomFound = false;
-            // only denoms here so let's look up
-            for (TransactionInput txinNext :wtx.getTransaction().getInputs()) {
-                if (isMine(txinNext)) {
-                    int n = getRealOutpointCoinJoinRounds(txinNext.getOutpoint(), rounds + 1);
-                    // denom found, find the shortest chain or initially assign nShortest with the first found value
-                    if (n >= 0 && (n < nShortest || nShortest == -10)) {
-                        nShortest = n;
-                        fDenomFound = true;
-                    }
-                }
-            }
-            roundsRef = fDenomFound
-                    ? (nShortest >= roundsMax - 1 ? roundsMax : nShortest + 1) // good, we a +1 to the shortest one but only roundsMax rounds max allowed
-                    : 0;            // too bad, we are the fist one in that chain
-            mapOutpointRoundsCache.put(outpoint, roundsRef);
-            log.info(COINJOIN_EXTRA, String.format("UPDATED   %-70s %3d (coinjoin)", outpoint.toStringCpp(), roundsRef));
-            return roundsRef;
-        } finally {
-            lock.unlock();
         }
+
+        int nShortest = -10; // an initial value, should be no way to get this by calculations
+        boolean fDenomFound = false;
+        // only denoms here so let's look up
+        for (TransactionInput txinNext :wtx.getTransaction().getInputs()) {
+            if (isMine(txinNext)) {
+                int n = getRealOutpointCoinJoinRounds(txinNext.getOutpoint(), rounds + 1);
+                // denom found, find the shortest chain or initially assign nShortest with the first found value
+                if (n >= 0 && (n < nShortest || nShortest == -10)) {
+                    nShortest = n;
+                    fDenomFound = true;
+                }
+            }
+        }
+        roundsRef = fDenomFound
+                ? (nShortest >= roundsMax - 1 ? roundsMax : nShortest + 1) // good, we a +1 to the shortest one but only roundsMax rounds max allowed
+                : 0;            // too bad, we are the fist one in that chain
+        mapOutpointRoundsCache.put(outpoint, roundsRef);
+        log.info(COINJOIN_EXTRA, String.format("UPDATED   %-70s %3d (coinjoin)", outpoint.toStringCpp(), roundsRef));
+        return roundsRef;
     }
 
-    Sha256Hash coinJoinSalt = Sha256Hash.ZERO_HASH;
 
     @Override
     public boolean isFullyMixed(TransactionOutput output) {
@@ -431,34 +436,29 @@ public class WalletEx extends Wallet {
     }
 
     public boolean isFullyMixed(TransactionOutPoint outPoint) {
-        lock.lock();
-        try {
-            int rounds = getRealOutpointCoinJoinRounds(outPoint);
-            // Mix again if we don't have N rounds yet
-            if (rounds < CoinJoinClientOptions.getRounds()) return false;
+        int rounds = getRealOutpointCoinJoinRounds(outPoint);
+        // Mix again if we don't have N rounds yet
+        if (rounds < CoinJoinClientOptions.getRounds()) return false;
 
-            // Try to mix a "random" number of rounds more than minimum.
-            // If we have already mixed N + MaxOffset rounds, don't mix again.
-            // Otherwise, we should mix again 50% of the time, this results in an exponential decay
-            // N rounds 50% N+1 25% N+2 12.5%... until we reach N + GetRandomRounds() rounds where we stop.
-            if (rounds < CoinJoinClientOptions.getRounds() + CoinJoinClientOptions.getRandomRounds()) {
-                ByteArrayOutputStream stream = new ByteArrayOutputStream();
-                try {
-                    outPoint.bitcoinSerialize(stream);
-                    stream.write(coinJoinSalt.getReversedBytes());
-                    Sha256Hash hash = Sha256Hash.twiceOf(stream.toByteArray());
-                    if (Utils.readInt64(hash.getBytes(), 0) % 2 == 0) {
-                        return false;
-                    }
-                } catch (IOException x) {
-                    throw new RuntimeException(x);
+        // Try to mix a "random" number of rounds more than minimum.
+        // If we have already mixed N + MaxOffset rounds, don't mix again.
+        // Otherwise, we should mix again 50% of the time, this results in an exponential decay
+        // N rounds 50% N+1 25% N+2 12.5%... until we reach N + GetRandomRounds() rounds where we stop.
+        if (rounds < CoinJoinClientOptions.getRounds() + CoinJoinClientOptions.getRandomRounds()) {
+            ByteArrayOutputStream stream = new ByteArrayOutputStream();
+            try {
+                outPoint.bitcoinSerialize(stream);
+                stream.write(coinjoin.getCoinJoinSalt().getReversedBytes());
+                Sha256Hash hash = Sha256Hash.twiceOf(stream.toByteArray());
+                if (Utils.readInt64(hash.getBytes(), 0) % 2 == 0) {
+                    return false;
                 }
+            } catch (IOException x) {
+                throw new RuntimeException(x);
             }
-
-            return true;
-        } finally {
-            lock.unlock();
         }
+
+        return true;
     }
 
     boolean anonymizableTallyCached = false;
@@ -467,6 +467,11 @@ public class WalletEx extends Wallet {
     void clearAnonymizableCaches() {
         anonymizableTallyCachedNonDenom = false;
         anonymizableTallyCached = false;
+    }
+    @VisibleForTesting
+    void clearCachesForTests() {
+        clearAnonymizableCaches();
+        mapOutpointRoundsCache.clear();
     }
     ArrayList<CompactTallyItem> vecAnonymizableTallyCachedNonDenom = new ArrayList<>();
 
@@ -935,6 +940,7 @@ public class WalletEx extends Wallet {
     public void reorganize(StoredBlock splitPoint, List<StoredBlock> oldBlocks, List<StoredBlock> newBlocks) throws VerificationException {
         super.reorganize(splitPoint, oldBlocks, newBlocks);
         clearAnonymizableCaches();
+        mapOutpointRoundsCache.clear();
     }
 
     public CoinJoinExtension getCoinJoin() {

@@ -19,6 +19,7 @@ package org.bitcoinj.wallet;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.protobuf.ByteString;
 import com.google.protobuf.CodedOutputStream;
 import net.jcip.annotations.GuardedBy;
 import org.bitcoinj.coinjoin.CoinJoin;
@@ -28,6 +29,7 @@ import org.bitcoinj.core.Address;
 import org.bitcoinj.core.BlockChain;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.KeyId;
+import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionConfidence;
@@ -50,6 +52,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -75,10 +78,11 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
     private static final Logger log = LoggerFactory.getLogger(CoinJoinExtension.class);
     private static final int COINJOIN_LOOKADHEAD = 500;
     private static final int COINJOIN_LOOKADHEAD_THRESHOLD = COINJOIN_LOOKADHEAD - 1;
-
+    private static final SecureRandom random = new SecureRandom();
     protected AnyKeyChainGroup coinJoinKeyChainGroup;
 
     protected int rounds = CoinJoinClientOptions.getRounds();
+    protected Sha256Hash coinJoinSalt = Sha256Hash.ZERO_HASH;
 
     private final ReentrantLock unusedKeysLock = Threading.lock("unusedKeysLock");
     @GuardedBy("unusedKeysLock")
@@ -130,6 +134,28 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
             List<Protos.Key> keys = coinJoinKeyChainGroup != null ? coinJoinKeyChainGroup.serializeToProtobuf() : Lists.newArrayList();
             builder.addAllKey(keys);
             builder.setRounds(rounds);
+            
+            // Serialize outpoint rounds cache for WalletEx
+            if (wallet instanceof WalletEx) {
+                WalletEx walletEx = (WalletEx) wallet;
+                if (!walletEx.mapOutpointRoundsCache.isEmpty()) {
+                    Protos.OutpointRoundsCache.Builder cacheBuilder = Protos.OutpointRoundsCache.newBuilder();
+                    for (Map.Entry<TransactionOutPoint, Integer> entry : walletEx.mapOutpointRoundsCache.entrySet()) {
+                        Protos.OutpointRoundsEntry.Builder entryBuilder = Protos.OutpointRoundsEntry.newBuilder();
+                        entryBuilder.setTransactionHash(ByteString.copyFrom(entry.getKey().getHash().getBytes()));
+                        entryBuilder.setOutputIndex(entry.getKey().getIndex());
+                        entryBuilder.setRounds(entry.getValue());
+                        cacheBuilder.addEntries(entryBuilder);
+                    }
+                    builder.setOutpointRoundsCache(cacheBuilder);
+                }
+            }
+
+            // Serialize coinJoinSalt (ensure it is initialized)
+            if (coinJoinSalt.equals(Sha256Hash.ZERO_HASH)) {
+                calculateCoinJoinSalt();
+            }
+            builder.setCoinjoinSalt(ByteString.copyFrom(coinJoinSalt.getBytes()));
             Protos.CoinJoin coinJoinProto = builder.build();
             ByteArrayOutputStream output = new ByteArrayOutputStream();
             final CodedOutputStream codedOutput = CodedOutputStream.newInstance(output);
@@ -163,6 +189,28 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
         }
         rounds = coinJoinProto.getRounds();
         CoinJoinClientOptions.setRounds(rounds);
+        
+        // Deserialize outpoint rounds cache for WalletEx
+        if (containingWallet instanceof WalletEx && coinJoinProto.hasOutpointRoundsCache()) {
+            WalletEx walletEx = (WalletEx) containingWallet;
+            Protos.OutpointRoundsCache cacheProto = coinJoinProto.getOutpointRoundsCache();
+            for (Protos.OutpointRoundsEntry entryProto : cacheProto.getEntriesList()) {
+                Sha256Hash txHash = Sha256Hash.wrap(entryProto.getTransactionHash().toByteArray());
+                long outputIndex = entryProto.getOutputIndex();
+                int rounds = entryProto.getRounds();
+                TransactionOutPoint outPoint = new TransactionOutPoint(containingWallet.params, outputIndex, txHash);
+                walletEx.mapOutpointRoundsCache.put(outPoint, rounds);
+            }
+        }
+        
+        // Deserialize coinJoinSalt
+        if (coinJoinProto.hasCoinjoinSalt()) {
+            coinJoinSalt = Sha256Hash.wrap(coinJoinProto.getCoinjoinSalt().toByteArray());
+        } else {
+            // if there is no coinJoinSalt, then add it.
+            calculateCoinJoinSalt();
+        }
+        
         loadedKeys = true;
     }
 
@@ -219,6 +267,20 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
 
     public void setRounds(int rounds) {
         this.rounds = rounds;
+    }
+
+    public Sha256Hash getCoinJoinSalt() {
+        if (coinJoinSalt.equals(Sha256Hash.ZERO_HASH)) {
+            calculateCoinJoinSalt();
+        }
+        return coinJoinSalt;
+    }
+
+    /** only call if coinJoinSalt is {@link Sha256Hash.ZERO_HASH} */
+    private void calculateCoinJoinSalt() {
+        byte [] newCoinJoinSalt = new byte[32];
+        random.nextBytes(newCoinJoinSalt);
+        coinJoinSalt = Sha256Hash.wrap(newCoinJoinSalt);
     }
 
     public Coin getUnmixableTotal() {

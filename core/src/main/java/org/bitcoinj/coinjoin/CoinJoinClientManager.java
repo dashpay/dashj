@@ -296,6 +296,7 @@ public class CoinJoinClientManager implements WalletCoinsReceivedEventListener {
         }
 
         boolean fResult = true;
+        boolean needStartAsync = false;
 
         lock.lock();
         try {
@@ -326,13 +327,22 @@ public class CoinJoinClientManager implements WalletCoinsReceivedEventListener {
                     return false;
                 }
 
-                fResult &= session.doAutomaticDenominating(finishCurrentSessions, dryRun);
+                boolean sessionResult = session.doAutomaticDenominating(finishCurrentSessions, dryRun);
+                if (sessionResult && session.getState() == PoolState.POOL_STATE_QUEUE) {
+                    needStartAsync = true;
+                }
+                fResult &= sessionResult;
             }
 
-            return fResult;
         } finally {
             lock.unlock();
         }
+        
+        if (needStartAsync) {
+            coinJoinManager.startAsync();
+        }
+        
+        return fResult;
     }
 
     public boolean trySubmitDenominate(MasternodeAddress mnAddr) {

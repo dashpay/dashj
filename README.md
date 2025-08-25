@@ -67,19 +67,21 @@ To perform a full build and install it in the local maven repository:
 
 to generate a website with useful information like JavaDocs.
 
-The outputs are under the `target` directory.
+The outputs are under the `build` directory.
 
 #### Deployment
 
 To deploy to the maven repository:
 ```bash
+./gradlew clean
 ./gradlew publish
+./gradlew jreleaserDeploy
 ```
 #### Building from an IDE
 
 Alternatively, just import the project using your IDE. [IntelliJ](http://www.jetbrains.com/idea/download/) has Gradle integration built-in and has a free Community Edition. Simply use `File | New | Project from Existing Sources` and locate the `build.gradle` in the root of the cloned project source tree.
 
-The dashjbls library must still using the instructions above.
+The dashjbls library must still be built using the instructions above.
 
 ### Example applications
 
