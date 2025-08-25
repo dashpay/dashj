@@ -36,8 +36,6 @@ public class CoinJoinExtensionTest {
     public void testOutpointRoundsCachePersistence() throws Exception {
         // Create a WalletEx with CoinJoin extension
         WalletEx walletEx = new WalletEx(UNITTEST, KeyChainGroup.createBasic(UNITTEST));
-        CoinJoinExtension coinJoinExtension = new CoinJoinExtension(walletEx);
-        walletEx.addExtension(coinJoinExtension);
 
         // Create some fake outpoints and add them to the cache
         Sha256Hash txHash1 = Sha256Hash.of("test1".getBytes());
