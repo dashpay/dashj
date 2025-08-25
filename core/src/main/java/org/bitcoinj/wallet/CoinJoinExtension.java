@@ -52,11 +52,11 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -78,7 +78,7 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
     private static final Logger log = LoggerFactory.getLogger(CoinJoinExtension.class);
     private static final int COINJOIN_LOOKADHEAD = 500;
     private static final int COINJOIN_LOOKADHEAD_THRESHOLD = COINJOIN_LOOKADHEAD - 1;
-    private static final Random random = new Random();
+    private static final SecureRandom random = new SecureRandom();
     protected AnyKeyChainGroup coinJoinKeyChainGroup;
 
     protected int rounds = CoinJoinClientOptions.getRounds();
@@ -150,10 +150,12 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
                     builder.setOutpointRoundsCache(cacheBuilder);
                 }
             }
-            
-            // Serialize coinJoinSalt
+
+            // Serialize coinJoinSalt (ensure it is initialized)
+            if (coinJoinSalt.equals(Sha256Hash.ZERO_HASH)) {
+                calculateCoinJoinSalt();
+            }
             builder.setCoinjoinSalt(ByteString.copyFrom(coinJoinSalt.getBytes()));
-            
             Protos.CoinJoin coinJoinProto = builder.build();
             ByteArrayOutputStream output = new ByteArrayOutputStream();
             final CodedOutputStream codedOutput = CodedOutputStream.newInstance(output);

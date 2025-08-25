@@ -1,5 +1,6 @@
 package org.bitcoinj.wallet;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.bitcoinj.coinjoin.CoinJoin;
@@ -466,6 +467,11 @@ public class WalletEx extends Wallet {
     void clearAnonymizableCaches() {
         anonymizableTallyCachedNonDenom = false;
         anonymizableTallyCached = false;
+    }
+    @VisibleForTesting
+    void clearCachesForTests() {
+        clearAnonymizableCaches();
+        mapOutpointRoundsCache.clear();
     }
     ArrayList<CompactTallyItem> vecAnonymizableTallyCachedNonDenom = new ArrayList<>();
 
@@ -934,6 +940,7 @@ public class WalletEx extends Wallet {
     public void reorganize(StoredBlock splitPoint, List<StoredBlock> oldBlocks, List<StoredBlock> newBlocks) throws VerificationException {
         super.reorganize(splitPoint, oldBlocks, newBlocks);
         clearAnonymizableCaches();
+        mapOutpointRoundsCache.clear();
     }
 
     public CoinJoinExtension getCoinJoin() {
