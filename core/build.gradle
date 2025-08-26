@@ -202,13 +202,13 @@ javadoc {
 assemble.dependsOn(publishToMavenLocal)
 assemble.dependsOn(sourcesJar)
 
-jacocoTestReport {
-    dependsOn test // tests are required to run before generating the report
-    reports {
-        xml.enabled true
-        xml.destination file("${project.projectDir}/build/reports/jacoco/jacoco.xml")
-    }
-}
+//jacocoTestReport {
+//    dependsOn test // tests are required to run before generating the report
+//    reports {
+//        xml.enabled true
+//        xml.destination file("${project.projectDir}/build/reports/jacoco/jacoco.xml")
+//    }
+//}
 
 //tasks.spotbugsMain {
 //    reports.create("html") {

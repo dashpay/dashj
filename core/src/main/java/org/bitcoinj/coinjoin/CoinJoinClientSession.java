@@ -780,7 +780,6 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
             timeLastSuccessfulStep.set(Utils.currentTimeSeconds());
             log.info("coinjoin: start new queue -> pending connection, nSessionDenom: {} ({}), addr={}",
                     sessionDenom, CoinJoin.denominationToString(sessionDenom), dmn.getService());
-            coinJoinManager.startAsync();
             setStatus(PoolStatus.CONNECTING);
             joined = false;
             return true;
