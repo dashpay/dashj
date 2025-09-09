@@ -3033,7 +3033,7 @@ public class Wallet extends BaseTaggableObject
         if (receivingFromFriendsGroup != null)
             receivingFromFriendsGroup.addEventListener(listener, Threading.USER_THREAD);
         for (KeyChainGroupExtension extension : keyChainExtensions.values()) {
-                extension.addEventListener(listener, Threading.USER_THREAD);
+            extension.addEventListener(listener, Threading.USER_THREAD);
         }
     }
 
@@ -6026,11 +6026,11 @@ public class Wallet extends BaseTaggableObject
      */
     public void addKeyChain(ImmutableList<ChildNumber> path)
     {
+        keyChainGroupLock.lock();
         try {
-            keyChainGroupLock.lock();
-
-            if(!hasKeyChain(path))
+            if(!hasKeyChain(path)) {
                 keyChainGroup.addAndActivateHDChain(DeterministicKeyChain.builder().seed(getKeyChainSeed()).accountPath(path).build());
+            }
         }
         finally {
             keyChainGroupLock.unlock();
@@ -6086,71 +6086,101 @@ public class Wallet extends BaseTaggableObject
     }
 
     public List<Transaction> getTransactionsWithFriend(EvolutionContact contact) {
-        FriendKeyChain fromChain = receivingFromFriendsGroup != null  ?
-                receivingFromFriendsGroup.getFriendKeyChain(contact.getEvolutionUserId(), contact.getUserAccount(), contact.getFriendUserId(), contact.getFriendAccountReference(), FriendKeyChain.KeyChainType.RECEIVING_CHAIN) :
-                null;
-        FriendKeyChain toChain = sendingToFriendsGroup != null ?
-                sendingToFriendsGroup.getFriendKeyChain(contact.getEvolutionUserId(), contact.getUserAccount(), contact.getFriendUserId(), contact.getFriendAccountReference(), FriendKeyChain.KeyChainType.SENDING_CHAIN) :
-                null;
+        keyChainGroupLock.lock();
+        try {
+            FriendKeyChain fromChain = receivingFromFriendsGroup != null ?
+                    receivingFromFriendsGroup.getFriendKeyChain(contact.getEvolutionUserId(), contact.getUserAccount(), contact.getFriendUserId(), contact.getFriendAccountReference(), FriendKeyChain.KeyChainType.RECEIVING_CHAIN) :
+                    null;
+            FriendKeyChain toChain = sendingToFriendsGroup != null ?
+                    sendingToFriendsGroup.getFriendKeyChain(contact.getEvolutionUserId(), contact.getUserAccount(), contact.getFriendUserId(), contact.getFriendAccountReference(), FriendKeyChain.KeyChainType.SENDING_CHAIN) :
+                    null;
 
-        ArrayList<Transaction> txs = Lists.newArrayList();
-        if (fromChain == null && toChain == null) {
-            return txs;
-        }
+            ArrayList<Transaction> txs = Lists.newArrayList();
+            if (fromChain == null && toChain == null) {
+                return txs;
+            }
 
-        for(WalletTransaction wtx : getWalletTransactions()) {
-            Transaction tx = wtx.getTransaction();
-            for(TransactionOutput output : tx.getOutputs()) {
-                if(ScriptPattern.isP2PKH(output.getScriptPubKey())) {
-                    byte [] hash160 = ScriptPattern.extractHashFromP2PKH(output.getScriptPubKey());
-                    if((fromChain != null && fromChain.findKeyFromPubHash(hash160) != null) ||
-                            (toChain != null && toChain.findKeyFromPubHash(hash160) != null)) {
-                        txs.add(tx);
+            for (WalletTransaction wtx : getWalletTransactions()) {
+                Transaction tx = wtx.getTransaction();
+                for (TransactionOutput output : tx.getOutputs()) {
+                    if (ScriptPattern.isP2PKH(output.getScriptPubKey())) {
+                        byte[] hash160 = ScriptPattern.extractHashFromP2PKH(output.getScriptPubKey());
+                        if ((fromChain != null && fromChain.findKeyFromPubHash(hash160) != null) ||
+                                (toChain != null && toChain.findKeyFromPubHash(hash160) != null)) {
+                            txs.add(tx);
+                        }
                     }
                 }
             }
+            return txs;
+        } finally {
+            keyChainGroupLock.unlock();
         }
-        return txs;
     }
 
     public EvolutionContact getFriendFromTransaction(Transaction tx) {
-        for(TransactionOutput output : tx.getOutputs()) {
-            if(ScriptPattern.isP2PKH(output.getScriptPubKey())) {
-                byte [] hash160 = ScriptPattern.extractHashFromP2PKH(output.getScriptPubKey());
-                EvolutionContact contact = sendingToFriendsGroup != null ? sendingToFriendsGroup.getFriendFromPublicKeyHash(hash160) : null;
-                if (contact != null) {
-                    return contact;
-                } else {
-                    contact = receivingFromFriendsGroup != null ? receivingFromFriendsGroup.getFriendFromPublicKeyHash(hash160) : null;
+        keyChainGroupLock.lock();
+        try {
+            for(TransactionOutput output : tx.getOutputs()) {
+                if(ScriptPattern.isP2PKH(output.getScriptPubKey())) {
+                    byte [] hash160 = ScriptPattern.extractHashFromP2PKH(output.getScriptPubKey());
+                    EvolutionContact contact = sendingToFriendsGroup != null ? sendingToFriendsGroup.getFriendFromPublicKeyHash(hash160) : null;
                     if (contact != null) {
                         return contact;
+                    } else {
+                        contact = receivingFromFriendsGroup != null ? receivingFromFriendsGroup.getFriendFromPublicKeyHash(hash160) : null;
+                        if (contact != null) {
+                            return contact;
+                        }
                     }
                 }
             }
+            return null;
+        } finally {
+            keyChainGroupLock.unlock();
         }
-        return null;
     }
 
     public boolean hasReceivingKeyChain(EvolutionContact contact) {
-        return receivingFromFriendsGroup != null &&
-                receivingFromFriendsGroup.getFriendKeyChain(contact, FriendKeyChain.KeyChainType.RECEIVING_CHAIN) != null;
+        keyChainGroupLock.lock();
+        try {
+            return receivingFromFriendsGroup != null &&
+                    receivingFromFriendsGroup.getFriendKeyChain(contact, FriendKeyChain.KeyChainType.RECEIVING_CHAIN) != null;
+        } finally {
+            keyChainGroupLock.unlock();
+        }
     }
 
     public DeterministicKey getReceivingExtendedPublicKey(EvolutionContact contact) {
-        FriendKeyChain chain = receivingFromFriendsGroup.getFriendKeyChain(contact, FriendKeyChain.KeyChainType.RECEIVING_CHAIN);
-        if (chain != null) {
-            return chain.getWatchingKey().dropPrivateBytes();
+        keyChainGroupLock.lock();
+        try {
+            FriendKeyChain chain = receivingFromFriendsGroup.getFriendKeyChain(contact, FriendKeyChain.KeyChainType.RECEIVING_CHAIN);
+            if (chain != null) {
+                return chain.getWatchingKey().dropPrivateBytes();
+            }
+            return null;
+        } finally {
+            keyChainGroupLock.unlock();
         }
-        return null;
     }
 
     public boolean hasSendingKeyChain(EvolutionContact contact) {
-        return sendingToFriendsGroup != null &&
-                sendingToFriendsGroup.getFriendKeyChain(contact, FriendKeyChain.KeyChainType.SENDING_CHAIN) != null;
+        keyChainGroupLock.lock();
+        try {
+            return sendingToFriendsGroup != null &&
+                    sendingToFriendsGroup.getFriendKeyChain(contact, FriendKeyChain.KeyChainType.SENDING_CHAIN) != null;
+        } finally {
+            keyChainGroupLock.unlock();
+        }
     }
 
     public boolean hasReceivingFriendKeyChains() {
-        return receivingFromFriendsGroup != null && receivingFromFriendsGroup.hasKeyChains();
+        keyChainGroupLock.lock();
+        try {
+            return receivingFromFriendsGroup != null && receivingFromFriendsGroup.hasKeyChains();
+        } finally {
+            keyChainGroupLock.unlock();
+        }
     }
 
     protected void setReceivingFromFriendsGroup(FriendKeyChainGroup receivingFromFriendsGroup) {
@@ -6325,8 +6355,7 @@ public class Wallet extends BaseTaggableObject
         keyChainGroupLock.lock();
         try {
             List<DeterministicKey> detkeys = receivingFromFriendsGroup.getFriendKeyChain(contact, FriendKeyChain.KeyChainType.RECEIVING_CHAIN).getIssuedReceiveKeys();
-            List<ECKey> keys = new ArrayList<>(detkeys);
-            return keys;
+            return new ArrayList<>(detkeys);
         } finally {
             keyChainGroupLock.unlock();
         }
@@ -6340,8 +6369,7 @@ public class Wallet extends BaseTaggableObject
         keyChainGroupLock.lock();
         try {
             List<DeterministicKey> detkeys = sendingToFriendsGroup.getFriendKeyChain(contact, FriendKeyChain.KeyChainType.SENDING_CHAIN).getIssuedReceiveKeys();
-            List<ECKey> keys = new LinkedList<>(detkeys);
-            return keys;
+            return new LinkedList<>(detkeys);
         } finally {
             keyChainGroupLock.unlock();
         }
