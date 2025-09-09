@@ -469,7 +469,7 @@ public class WalletEx extends Wallet {
         anonymizableTallyCached = false;
     }
     @VisibleForTesting
-    void clearCachesForTests() {
+    public void clearAllCaches() {
         clearAnonymizableCaches();
         mapOutpointRoundsCache.clear();
     }
@@ -1047,5 +1047,11 @@ public class WalletEx extends Wallet {
             }
         }
         return txs;
+    }
+
+    @Override
+    public void reset() {
+        super.reset();
+        clearAllCaches();
     }
 }
