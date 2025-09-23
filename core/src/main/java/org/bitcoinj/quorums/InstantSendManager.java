@@ -163,7 +163,11 @@ public class InstantSendManager implements RecoveredSignatureListener {
     }
 
     public boolean isInstantSendEnabled() {
-        return sporkManager.isSporkActive(SporkId.SPORK_2_INSTANTSEND_ENABLED);
+        if (sporkManager == null) {
+            return false;
+        } else {
+            return sporkManager.isSporkActive(SporkId.SPORK_2_INSTANTSEND_ENABLED);
+        }
     }
 
     public void processInstantSendLock(Peer peer, InstantSendLock isLock) {
