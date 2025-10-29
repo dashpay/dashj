@@ -1988,6 +1988,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
 
     @GuardedBy("lock") private int stallPeriodSeconds = 10;
     @GuardedBy("lock") private int stallMinSpeedBytesSec = Block.HEADER_SIZE * 10;
+    @GuardedBy("lock") private int maxStalls = 3;
 
     /**
      * Configures the stall speed: the speed at which a peer is considered to be serving us the block chain
@@ -2010,6 +2011,36 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         }
     }
 
+    /**
+     * Sets the maximum number of stalls allowed before giving up on stall disconnections.
+     * After this many stalls, the system assumes the network is terminally slow and stops
+     * disconnecting peers for stalls. Defaults to 3.
+     *
+     * @param maxStalls Maximum number of stalls allowed, or 0 to disable stall disconnections entirely
+     */
+    public void setMaxStalls(int maxStalls) {
+        lock.lock();
+        try {
+            this.maxStalls = maxStalls;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    /**
+     * Gets the maximum number of stalls allowed before giving up on stall disconnections.
+     *
+     * @return Maximum number of stalls allowed
+     */
+    public int getMaxStalls() {
+        lock.lock();
+        try {
+            return maxStalls;
+        } finally {
+            lock.unlock();
+        }
+    }
+
     private class ChainDownloadSpeedCalculator implements BlocksDownloadedEventListener, Runnable,
         HeadersDownloadedEventListener, PreBlocksDownloadListener, MasternodeListDownloadedListener {
         private int blocksInLastSecond, txnsInLastSecond, origTxnsInLastSecond;
@@ -2020,7 +2051,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
 
         // If we take more stalls than this, we assume we're on some kind of terminally slow network and the
         // stall threshold just isn't set properly. We give up on stall disconnects after that.
-        private int maxStalls = 3;
+        // This now uses the configurable maxStalls from the outer PeerGroup class.
 
         // How many seconds the peer has until we start measuring its speed.
         private int warmupSeconds = -1;
@@ -2104,7 +2135,8 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
                             bytesInLastSecond / 1024.0, chainHeight, mostCommonChainHeight);
                     String thresholdString = String.format(Locale.US, "(threshold <%.2f KB/sec for %d seconds)",
                             minSpeedBytesPerSec / 1024.0, samples.length);
-                    if (maxStalls <= 0) {
+                    int currentMaxStalls = getMaxStalls();
+                    if (currentMaxStalls <= 0) {
                         log.info(statsString + ", stall disabled " + thresholdString);
                     } else if (warmupSeconds > 0) {
                         warmupSeconds--;
@@ -2112,9 +2144,15 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
                             log.info(statsString
                                     + String.format(Locale.US, " (warming up %d more seconds)", warmupSeconds));
                     } else if (average < minSpeedBytesPerSec && !waitForPreBlockDownload) {
-                        log.info(statsString + ", STALLED " + thresholdString);
-                        maxStalls--;
-                        if (maxStalls == 0) {
+                        log.info("{}, STALLED {}, maxStalls: {}", statsString, thresholdString, currentMaxStalls);
+                        lock.lock();
+                        try {
+                            PeerGroup.this.maxStalls--;
+                            currentMaxStalls = PeerGroup.this.maxStalls;
+                        } finally {
+                            lock.unlock();
+                        }
+                        if (currentMaxStalls == 0) {
                             // We could consider starting to drop the Bloom filtering FP rate at this point, because
                             // we tried a bunch of peers and no matter what we don't seem to be able to go any faster.
                             // This implies we're bandwidth bottlenecked and might want to start using bandwidth
@@ -2127,7 +2165,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
                             Peer peer = getDownloadPeer();
                             log.warn(String.format(Locale.US,
                                     "Chain download stalled: received %.2f KB/sec for %d seconds, require average of %.2f KB/sec, disconnecting %s, %d stalls left",
-                                    average / 1024.0, samples.length, minSpeedBytesPerSec / 1024.0, peer, maxStalls));
+                                    average / 1024.0, samples.length, minSpeedBytesPerSec / 1024.0, peer, currentMaxStalls));
                             if (peer != null) {
                                 peer.close();
                             }
