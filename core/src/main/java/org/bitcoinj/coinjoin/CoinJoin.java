@@ -17,28 +17,22 @@
 package org.bitcoinj.coinjoin;
 
 import com.google.common.collect.Lists;
-import net.jcip.annotations.GuardedBy;
 import org.bitcoinj.core.Block;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Transaction;
-import org.bitcoinj.core.TransactionConfidence;
 import org.bitcoinj.core.TransactionInput;
 import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.quorums.ChainLocksHandler;
 import org.bitcoinj.script.ScriptPattern;
-import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Collections;
-import java.util.HashMap;
-import java.util.Iterator;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.locks.ReentrantLock;
 
 import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_ENTRY_MAX_SIZE;
 
@@ -56,8 +50,7 @@ public class CoinJoin {
             )
     );
 
-    private static final HashMap<Sha256Hash, CoinJoinBroadcastTx> mapDSTX = new HashMap<>();
-    private static final ReentrantLock mapdstxLock = Threading.lock("mapdstx");
+    private static final ConcurrentHashMap<Sha256Hash, CoinJoinBroadcastTx> mapDSTX = new ConcurrentHashMap<>();
 
     public static List<Coin> getStandardDenominations() {
         return standardDenominations;
@@ -228,18 +221,7 @@ public class CoinJoin {
     }
 
     private static void checkDSTXes(StoredBlock block, ChainLocksHandler chainLocksHandler) {
-        mapdstxLock.lock();
-        try {
-            Iterator<Map.Entry<Sha256Hash, CoinJoinBroadcastTx>> it = mapDSTX.entrySet().iterator();
-            while (it.hasNext()) {
-                Map.Entry<Sha256Hash, CoinJoinBroadcastTx> entry = it.next();
-                if (entry.getValue().isExpired(block, chainLocksHandler)) {
-                    it.remove();
-                }
-            }
-        } finally {
-            mapdstxLock.unlock();
-        }
+        mapDSTX.entrySet().removeIf(entry -> entry.getValue().isExpired(block, chainLocksHandler));
     }
 
     public static void addDSTX(CoinJoinBroadcastTx dstx) {
@@ -264,38 +246,22 @@ public class CoinJoin {
 
         broadcastTx.setConfirmedHeight(nHeight);
         log.info("coinjoin: txid={}, nHeight={}", tx.getTxId(), nHeight);
-
     }
     public static void transactionAddedToMempool(Transaction tx) {
-        mapdstxLock.lock();
-        try {
-            updateDSTXConfirmedHeight(tx, -1);
-        } finally {
-            mapdstxLock.unlock();
-        }
+        updateDSTXConfirmedHeight(tx, -1);
     }
     public static void blockConnected(Block block, StoredBlock storedBlock, List<Transaction> vtxConflicted) {
-        mapdstxLock.lock();
-        try {
-            for (Transaction tx : vtxConflicted){
-                updateDSTXConfirmedHeight(tx, -1);
-            }
+        for (Transaction tx : vtxConflicted){
+            updateDSTXConfirmedHeight(tx, -1);
+        }
 
-            for (Transaction tx : block.getTransactions()){
-                updateDSTXConfirmedHeight(tx, storedBlock.getHeight());
-            }
-        } finally {
-            mapdstxLock.unlock();
+        for (Transaction tx : block.getTransactions()){
+            updateDSTXConfirmedHeight(tx, storedBlock.getHeight());
         }
     }
     public static void blockDisconnected(Block block, StoredBlock storedBlock) {
-        mapdstxLock.lock();
-        try {
-            for (Transaction tx : block.getTransactions()){
-                updateDSTXConfirmedHeight(tx, -1);
-            }
-        } finally {
-            mapdstxLock.unlock();
+        for (Transaction tx : block.getTransactions()){
+            updateDSTXConfirmedHeight(tx, -1);
         }
     }
 
@@ -352,7 +318,7 @@ public class CoinJoin {
         }
     }
 
-    private static final HashMap<PoolStatus, String> statusMessageMap = new HashMap<>();
+    private static final ConcurrentHashMap<PoolStatus, String> statusMessageMap = new ConcurrentHashMap<>();
     static {
         statusMessageMap.put(PoolStatus.WARMUP, "Warming up...");
         statusMessageMap.put(PoolStatus.CONNECTING, "Trying to connect...");
@@ -372,7 +338,6 @@ public class CoinJoin {
         return statusMessageMap.get(status);
     }
 
-    @GuardedBy("mapdstxLock")
     public static boolean hasDSTX(Sha256Hash hash) {
         return mapDSTX.containsKey(hash);
     }
