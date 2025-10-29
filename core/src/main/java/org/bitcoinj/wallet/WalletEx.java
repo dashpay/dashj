@@ -614,18 +614,23 @@ public class WalletEx extends Wallet {
      * Count the number of unspent outputs that have a certain value
      */
     public int countInputsWithAmount(Coin inputValue) {
-        int count = 0;
-        for (TransactionOutput output : myUnspents) {
-            TransactionConfidence confidence = output.getParentTransaction().getConfidence(context);
-            // confirmations must be 0 or higher, not conflicted or dead
-            if (confidence != null && (confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.PENDING || confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING)) {
-                // inputValue must match, the TX is mine and is not spent
-                if (output.getValue().equals(inputValue) && output.getSpentBy() == null) {
-                    count++;
+        lock.lock();
+        try {
+            int count = 0;
+            for (TransactionOutput output : myUnspents) {
+                TransactionConfidence confidence = output.getParentTransaction().getConfidence(context);
+                // confirmations must be 0 or higher, not conflicted or dead
+                if (confidence != null && (confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.PENDING || confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING)) {
+                    // inputValue must match, the TX is mine and is not spent
+                    if (output.getValue().equals(inputValue) && output.getSpentBy() == null) {
+                        count++;
+                    }
                 }
             }
+            return count;
+        } finally {
+            lock.unlock();
         }
-        return count;
     }
 
     /** locks an unspent outpoint so that it cannot be spent */
