@@ -1320,6 +1320,44 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         }
     }
 
+    public void forceStop(int waitMsBeforeShutdown) {
+        try {
+            Stopwatch watch = Stopwatch.createStarted();
+            // we may have already called this function
+            if (vRunning) {
+                stopAsync();
+            }
+            Thread.sleep(waitMsBeforeShutdown);
+            log.info("Awaiting PeerGroup shutdown ... (forcing after {} second(s))", waitMsBeforeShutdown/1000);
+            List<Runnable> remainingJobs = executor.shutdownNow();
+            log.info("... took {} (remaining: {})", watch, remainingJobs.size());
+            remainingJobs.forEach(job -> {
+                String jobDescription = getJobDescription(job);
+                log.info("Remaining job: {} (class: {}) - {}", job.toString(), job.getClass().getSimpleName(), jobDescription);
+            });
+        } catch (SecurityException e) {
+            log.info("failure to force stop remaining jobs");
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private String getJobDescription(Runnable job) {
+        if (job == triggerConnectionsJob) {
+            return "Peer connection management";
+        } else if (job instanceof ChainDownloadSpeedCalculator) {
+            return "Chain download speed monitoring";
+        } else if (job.toString().contains("ping")) {
+            return "Peer ping task";
+        } else if (job.toString().contains("recalculate")) {
+            return "Bloom filter recalculation";
+        } else if (job.toString().contains("listener")) {
+            return "Event listener task";
+        } else {
+            return "Unknown task";
+        }
+    }
+
     /**
      * Gracefully drops all connected peers.
      */
