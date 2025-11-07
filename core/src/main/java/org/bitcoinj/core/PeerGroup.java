@@ -1279,6 +1279,56 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     public ListenableFuture stopAsync() {
         checkState(vRunning);
         vRunning = false;
+        
+        // Log executor state and remaining jobs
+        log.info("stopAsync() called - executor shutdown: {}, terminated: {}", 
+                executor.isShutdown(), executor.isTerminated());
+        
+        // The executor is wrapped by MoreExecutors.listeningDecorator, need to access the underlying executor
+        if (executor instanceof ListeningScheduledExecutorService) {
+            // Try to get the underlying ScheduledThreadPoolExecutor
+            try {
+                // Use reflection to access the delegate field in ListeningDecorator
+                java.lang.reflect.Field delegateField = executor.getClass().getDeclaredField("delegate");
+                delegateField.setAccessible(true);
+                Object delegate = delegateField.get(executor);
+                
+                if (delegate instanceof ScheduledThreadPoolExecutor) {
+                    ScheduledThreadPoolExecutor stpe = (ScheduledThreadPoolExecutor) delegate;
+                    log.info("Executor queue size: {}, active threads: {}", 
+                            stpe.getQueue().size(), stpe.getActiveCount());
+                    
+                    // Log remaining jobs in queue
+                    stpe.getQueue().forEach(job -> {
+                        log.info("Remaining job: {} (class: {})", job.toString(), job.getClass().getSimpleName());
+                    });
+                    
+                    // Get call stacks of executor threads
+                    ThreadGroup rootGroup = Thread.currentThread().getThreadGroup();
+                    while (rootGroup.getParent() != null) {
+                        rootGroup = rootGroup.getParent();
+                    }
+                    
+                    Thread[] threads = new Thread[rootGroup.activeCount()];
+                    rootGroup.enumerate(threads);
+                    
+                    for (Thread thread : threads) {
+                        if (thread != null && thread.getName().contains("PeerGroup Thread")) {
+                            log.info("Found PeerGroup thread: {} (state: {})", thread.getName(), thread.getState());
+                            StackTraceElement[] stackTrace = thread.getStackTrace();
+                            log.info("Stack trace for thread {}:", thread.getName());
+                            for (int i = 0; i < Math.min(stackTrace.length, 15); i++) {
+                                log.info("  at {}", stackTrace[i]);
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.info("Could not access underlying executor details: {}", e.getMessage());
+            }
+        }
+        
+        log.info("About to submit shutdown task to executor");
         ListenableFuture future = executor.submit(new Runnable() {
             @Override
             public void run() {
@@ -1327,14 +1377,22 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
             if (vRunning) {
                 stopAsync();
             }
-            Thread.sleep(waitMsBeforeShutdown);
             log.info("Awaiting PeerGroup shutdown ... (forcing after {} second(s))", waitMsBeforeShutdown/1000);
-            List<Runnable> remainingJobs = executor.shutdownNow();
-            log.info("... took {} (remaining: {})", watch, remainingJobs.size());
-            remainingJobs.forEach(job -> {
-                String jobDescription = getJobDescription(job);
-                log.info("Remaining job: {} (class: {}) - {}", job.toString(), job.getClass().getSimpleName(), jobDescription);
-            });
+            boolean result = executor.awaitTermination(waitMsBeforeShutdown, TimeUnit.MILLISECONDS);
+            log.info("... took {} (timed out: {})", watch, !result);
+            if (!result) {
+                log.info("PeerGroup shutdown timed out after {}, forcing shutdown now",
+                        watch);
+                List<Runnable> remainingJobs = executor.shutdownNow();
+                // Optional: wait a brief moment for forced shutdown
+                executor.awaitTermination(500, TimeUnit.MILLISECONDS);
+                remainingJobs.forEach(job -> {
+                    String jobDescription = getJobDescription(job);
+                    log.info("Remaining job: {} (class: {}) - {}", job.toString(), job.getClass().getSimpleName(), jobDescription);
+                });
+            }
+
+            log.info("PeerGroup shutdown completed in {}", watch);
         } catch (SecurityException e) {
             log.info("failure to force stop remaining jobs");
         } catch (InterruptedException e) {

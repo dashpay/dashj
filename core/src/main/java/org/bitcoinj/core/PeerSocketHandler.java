@@ -116,7 +116,24 @@ public abstract class PeerSocketHandler extends AbstractTimeoutHandler implement
 
     @Override
     protected void timeoutOccurred() {
+        Thread currentThread = Thread.currentThread();
         log.info("{}: Timed out", getAddress());
+        log.warn("Peer timeout occurred, current thread: {}, stack trace:", currentThread.getName());
+        for (StackTraceElement element : currentThread.getStackTrace()) {
+            log.warn("  at {}", element);
+        }
+        
+        // Capture stack traces of other important threads
+        Thread.getAllStackTraces().forEach((thread, stackTrace) -> {
+            String threadName = thread.getName();
+            if (threadName.contains("PeerGroup Thread") || threadName.contains("NioClientManager")) {
+                log.warn("Stack trace for thread '{}' (State: {}):", threadName, thread.getState());
+                for (StackTraceElement element : stackTrace) {
+                    log.warn("  at {}", element);
+                }
+            }
+        });
+        
         close();
     }
 

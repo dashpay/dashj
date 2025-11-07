@@ -853,7 +853,20 @@ public class Wallet extends BaseTaggableObject
     public int getKeyChainGroupSize() {
         keyChainGroupLock.lock();
         try {
-            return keyChainGroup.numKeys();
+            AtomicInteger walletKeys = new AtomicInteger(keyChainGroup.numKeys());
+
+            if (receivingFromFriendsGroup != null) {
+                walletKeys.addAndGet(receivingFromFriendsGroup.numKeys());
+            }
+
+            if (sendingToFriendsGroup != null) {
+                walletKeys.addAndGet(sendingToFriendsGroup.numKeys());
+            }
+
+            keyChainExtensions.values().forEach(keyChainGroupExtension ->
+                walletKeys.addAndGet(keyChainGroupExtension.numKeys())
+            );
+            return walletKeys.get();
         } finally {
             keyChainGroupLock.unlock();
         }
@@ -2574,13 +2587,13 @@ public class Wallet extends BaseTaggableObject
             informConfidenceListenersIfNotReorganizing();
             maybeQueueOnWalletChanged();
 
-            if (hardSaveOnNextBlock) {
-                saveNow();
-                hardSaveOnNextBlock = false;
-            } else {
+            //if (hardSaveOnNextBlock) {
+            //    saveNow();
+            //    hardSaveOnNextBlock = false;
+            //} else {
                 // Coalesce writes to avoid throttling on disk access when catching up with the chain.
                 saveLater();
-            }
+            //}
         } finally {
             lock.unlock();
         }
