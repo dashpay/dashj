@@ -16,7 +16,6 @@
 
 package org.bitcoinj.core;
 
-import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
 
 import org.bitcoinj.coinjoin.CoinJoin;
@@ -62,14 +61,11 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nullable;
 import java.net.SocketAddress;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -1115,8 +1111,8 @@ public class Peer extends PeerSocketHandler {
     }
 
     protected void processBlock(Block m) {
-        //if (log.isDebugEnabled())
-            log.info("{}: Received broadcast block {}", getAddress(), m.getHashAsString());
+        if (log.isDebugEnabled())
+            log.debug("{}: Received broadcast block {}", getAddress(), m.getHashAsString());
         // Was this block requested by getBlock()?
         if (maybeHandleRequestedData(m)) return;
         if (blockChain == null) {
@@ -1650,56 +1646,18 @@ public class Peer extends PeerSocketHandler {
             log.info(Throwables.getStackTraceAsString(new Throwable()));
             return;
         }
-        //if (log.isDebugEnabled())
-            log.info("{}: blockChainDownloadLocked({}) current head = {}",
+        if (log.isDebugEnabled())
+            log.debug("{}: blockChainDownloadLocked({}) current head = {}",
                     this, toHash, chainHead.getHeader().getHashAsString());
-        Stopwatch watch = Stopwatch.createStarted();
         StoredBlock cursor = chainHead;
-
-        final BlockLocator finalLocator = blockLocator;
-        final AtomicReference<Thread> asyncThreadRef = new AtomicReference<>();
-        CompletableFuture<BlockLocator> locatorFuture = CompletableFuture.supplyAsync(() -> {
-            asyncThreadRef.set(Thread.currentThread());
-            BlockLocator tempLocator = finalLocator;
-            StoredBlock tempCursor = cursor;
-            log.info("working on the block locators");
-            for (int i = 100; tempCursor != null && i > 0; i--) {
-                tempLocator = tempLocator.add(tempCursor.getHeader().getHash());
-                try {
-                    tempCursor = tempCursor.getPrev(store);
-                } catch (BlockStoreException e) {
-                    log.error("Failed to walk the block chain whilst constructing a locator");
-                    throw new RuntimeException(e);
-                }
+        for (int i = 100; cursor != null && i > 0; i--) {
+            blockLocator = blockLocator.add(cursor.getHeader().getHash());
+            try {
+                cursor = cursor.getPrev(store);
+            } catch (BlockStoreException e) {
+                log.error("Failed to walk the block chain whilst constructing a locator");
+                throw new RuntimeException(e);
             }
-//            try {
-//                Thread.sleep(20_000);
-//            } catch (InterruptedException e) {
-//                throw new RuntimeException(e);
-//            }
-            return tempLocator;
-        });
-        
-        try {
-            blockLocator = locatorFuture.get(3, TimeUnit.SECONDS);
-            log.info("block locator list created: {}: {}" ,blockLocator.size(), watch);
-        } catch (TimeoutException e) {
-            Thread hangingThread = asyncThreadRef.get();
-            if (hangingThread != null) {
-                log.warn("Block locator construction timed out after 3 seconds, async thread stack trace:");
-                for (StackTraceElement element : hangingThread.getStackTrace()) {
-                    log.warn("  at {}", element);
-                }
-            }
-            log.warn("Block locator construction timed out after 4 seconds, falling back to chain head + genesis, chain head: {}", 
-                    chainHead.getHeader().getHashAsString());
-            locatorFuture.cancel(true);
-            blockLocator = new BlockLocator();
-            blockLocator = blockLocator.add(chainHead.getHeader().getHash());
-
-        } catch (Exception e) {
-            log.error("Error constructing block locator", e);
-            throw new RuntimeException(e);
         }
         // Only add the locator if we didn't already do so. If the chain is < 50 blocks we already reached it.
         if (cursor != null)
@@ -1711,12 +1669,10 @@ public class Peer extends PeerSocketHandler {
         lastGetBlocksEnd = toHash;
 
         if (downloadBlockBodies) {
-            log.info("requesting blocks from: {} with {}", this, toHash);
             GetBlocksMessage message = new GetBlocksMessage(params, blockLocator, toHash);
             sendMessage(message);
         } else {
             // Downloading headers for a while instead of full blocks.
-            log.info("requesting headers (instead of blocks) from: {} with {}", this, toHash);
             GetHeadersMessage message = new GetHeadersMessage(params, blockLocator, toHash);
             sendMessage(message);
         }
@@ -1767,48 +1723,18 @@ public class Peer extends PeerSocketHandler {
             log.info(Throwables.getStackTraceAsString(new Throwable()));
             return;
         }
-        //if (log.isDebugEnabled())
-            log.info("{}: blockChainDownloadLocked({}) current head = {}",
+        if (log.isDebugEnabled())
+            log.debug("{}: blockChainDownloadLocked({}) current head = {}",
                     this, toHash, chainHead.getHeader().getHashAsString());
-        Stopwatch watch = Stopwatch.createStarted();
         StoredBlock cursor = chainHead;
-        final BlockLocator finalLocator = blockLocator;
-        final AtomicReference<Thread> asyncThreadRef = new AtomicReference<>();
-        CompletableFuture<BlockLocator> locatorFuture = CompletableFuture.supplyAsync(() -> {
-            asyncThreadRef.set(Thread.currentThread());
-            BlockLocator tempLocator = finalLocator;
-            StoredBlock tempCursor = cursor;
-            for (int i = 100; tempCursor != null && i > 0; i--) {
-                tempLocator = tempLocator.add(tempCursor.getHeader().getHash());
-                try {
-                    tempCursor = tempCursor.getPrev(store);
-                } catch (BlockStoreException e) {
-                    log.error("Failed to walk the block chain whilst constructing a locator");
-                    throw new RuntimeException(e);
-                }
+        for (int i = 100; cursor != null && i > 0; i--) {
+            blockLocator = blockLocator.add(cursor.getHeader().getHash());
+            try {
+                cursor = cursor.getPrev(store);
+            } catch (BlockStoreException e) {
+                log.error("Failed to walk the block chain whilst constructing a locator");
+                throw new RuntimeException(e);
             }
-            return tempLocator;
-        });
-        
-        try {
-            blockLocator = locatorFuture.get(4, TimeUnit.SECONDS);
-            log.info("block locator list created: {}: {}" ,blockLocator.size(), watch);
-        } catch (TimeoutException e) {
-            Thread hangingThread = asyncThreadRef.get();
-            if (hangingThread != null) {
-                log.warn("Block locator construction timed out after 4 seconds, async thread stack trace:");
-                for (StackTraceElement element : hangingThread.getStackTrace()) {
-                    log.warn("  at {}", element);
-                }
-            }
-            log.warn("Block locator construction timed out after 4 seconds, falling back to chain head + genesis, chain head: {}", 
-                    chainHead.getHeader().getHashAsString());
-            locatorFuture.cancel(true);
-            blockLocator = new BlockLocator();
-            blockLocator = blockLocator.add(chainHead.getHeader().getHash());
-        } catch (Exception e) {
-            log.error("Error constructing block locator", e);
-            throw new RuntimeException(e);
         }
 
         // Only add the locator if we didn't already do so. If the chain is < 50 blocks we already reached it.
