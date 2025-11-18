@@ -160,6 +160,8 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
             = new CopyOnWriteArrayList<>();
     protected final CopyOnWriteArrayList<ListenerRegistration<MasternodeListDownloadedListener>> masternodeListDownloadListeners
             = new CopyOnWriteArrayList<>();
+    private final CopyOnWriteArrayList<ListenerRegistration<TimeoutErrorListener>> timeoutErrorListeners
+            = new CopyOnWriteArrayList<>();
     // Peer discovery sources, will be polled occasionally if there aren't enough inactives.
     private final CopyOnWriteArraySet<PeerDiscovery> peerDiscoverers;
     // The version message to use for new connections.
@@ -902,13 +904,21 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         preBlocksDownloadListeners.add(new ListenerRegistration<>(checkNotNull(listener), executor));
     }
 
-    /** See {@link Peer#addOnTransactionBroadcastListener(OnTransactionBroadcastListener)} */
     public void addMasternodeListDownloadListener(Executor executor, MasternodeListDownloadedListener listener) {
         masternodeListDownloadListeners.add(new ListenerRegistration<>(checkNotNull(listener), executor));
         for (Peer peer : getConnectedPeers())
             peer.addMasternodeListDownloadedListener(executor, listener);
         for (Peer peer : getPendingPeers())
             peer.addMasternodeListDownloadedListener(executor, listener);
+    }
+
+    /** See {@link Peer#addOnTransactionBroadcastListener(OnTransactionBroadcastListener)} */
+    public void addTimeoutErrorListener(Executor executor, TimeoutErrorListener listener) {
+        timeoutErrorListeners.add(new ListenerRegistration<>(checkNotNull(listener), executor));
+        for (Peer peer : getConnectedPeers())
+            peer.addTimeoutErrorListener(executor, listener);
+        for (Peer peer : getPendingPeers())
+            peer.addTimeoutErrorListener(executor, listener);
     }
 
     /** See {@link Peer#addPreMessageReceivedEventListener(PreMessageReceivedEventListener)} */
@@ -1019,6 +1029,16 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
             peer.removeMasternodeListDownloadedListener(listener);
         for (Peer peer : getPendingPeers())
             peer.removeMasternodeListDownloadedListener(listener);
+        return result;
+    }
+
+    /** The given event listener will no longer be called with events. */
+    public boolean removeTimeoutErrorListener(TimeoutErrorListener listener) {
+        boolean result = ListenerRegistration.removeFromList(listener, timeoutErrorListeners);
+        for (Peer peer : getConnectedPeers())
+            peer.removeTimeoutErrorListener(listener);
+        for (Peer peer : getPendingPeers())
+            peer.removeTimeoutErrorListener(listener);
         return result;
     }
 
@@ -1703,6 +1723,9 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         peer.addConnectedEventListener(Threading.SAME_THREAD, startupListener);
         peer.addDisconnectedEventListener(Threading.SAME_THREAD, startupListener);
         peer.setMinProtocolVersion(vMinRequiredProtocolVersion);
+        // Add timeout error listeners early so they're available even if peer times out during connection
+        for (ListenerRegistration<TimeoutErrorListener> registration : timeoutErrorListeners)
+            peer.addTimeoutErrorListener(registration.executor, registration.listener);
         pendingPeers.add(peer);
 
         try {
@@ -1879,6 +1902,8 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
                 peer.addPreMessageReceivedEventListener(registration.executor, registration.listener);
             for (ListenerRegistration<MasternodeListDownloadedListener> registration : masternodeListDownloadListeners)
                 peer.addMasternodeListDownloadedListener(registration.executor, registration.listener);
+            //for (ListenerRegistration<TimeoutErrorListener> registration : timeoutErrorListeners)
+            //    peer.addTimeoutErrorListener(registration.executor, registration.listener);
 
             // handle coinjoin related items
             if (shouldSendDsq) {
@@ -2064,6 +2089,8 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
             peer.removePreMessageReceivedEventListener(registration.listener);
         for (ListenerRegistration<MasternodeListDownloadedListener> registration: masternodeListDownloadListeners)
             peer.removeMasternodeListDownloadedListener(registration.listener);
+        for (ListenerRegistration<TimeoutErrorListener> registration: timeoutErrorListeners)
+            peer.removeTimeoutErrorListener(registration.listener);
         for (ListenerRegistration<OnTransactionBroadcastListener> registration : peersTransactionBroadastEventListeners)
             peer.removeOnTransactionBroadcastListener(registration.listener);
         for (final ListenerRegistration<PeerDisconnectedEventListener> registration : peerDisconnectedEventListeners) {
@@ -2426,6 +2453,12 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
                     registration.listener.onMasterNodeListDiffDownloaded(stage, mnlistdiff);
                 }
             });
+        }
+    }
+
+    public void queueTimeoutErrorListeners(TimeoutError error, PeerAddress peerAddress) {
+        for (final ListenerRegistration<TimeoutErrorListener> registration : timeoutErrorListeners) {
+            registration.executor.execute(() -> registration.listener.onTimeout(error, peerAddress));
         }
     }
 
