@@ -125,10 +125,6 @@ public abstract class PeerSocketHandler extends AbstractTimeoutHandler implement
     protected void timeoutOccurred() {
         Thread currentThread = Thread.currentThread();
         log.info("{}: Timed out", getAddress());
-        log.warn("Peer timeout occurred, current thread: {}, stack trace:", currentThread.getName());
-        for (StackTraceElement element : currentThread.getStackTrace()) {
-            log.warn("  at {}", element);
-        }
 
         // Check if any thread is stuck in peekByteArray or SPVBlockStore operations
         boolean blockStoreTimeout = checkForBlockStoreTimeout();
@@ -164,10 +160,7 @@ public abstract class PeerSocketHandler extends AbstractTimeoutHandler implement
 
                     // Check if this thread is stuck in native peekByteArray or SPVBlockStore operations
                     String elementStr = element.toString();
-                    if (elementStr.contains("peekByteArray") ||
-                        //    elementStr.contains("blockChainDownloadLocked") || // only for testing
-                        elementStr.contains("SPVBlockStore.get") ||
-                        elementStr.contains("DirectByteBuffer.get")) {
+                    if (elementStr.contains("peekByteArray")) {
                         foundBlockingCall = true;
                     }
                 }
@@ -182,8 +175,7 @@ public abstract class PeerSocketHandler extends AbstractTimeoutHandler implement
         for (Thread thread : Thread.getAllStackTraces().keySet()) {
             for (StackTraceElement element : thread.getStackTrace()) {
                 String elementStr = element.toString();
-                if (                            //elementStr.contains("blockChainDownloadLocked") || // only for testing
-                        elementStr.contains("peekByteArray") || elementStr.contains("SPVBlockStore.get")) {
+                if (elementStr.contains("peekByteArray")) {
                     log.error("CRITICAL: Detected SPVBlockStore timeout - native I/O freeze detected in thread: {}", thread.getName());
                     return true;
                 }
