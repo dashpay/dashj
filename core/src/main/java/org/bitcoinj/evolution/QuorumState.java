@@ -192,7 +192,20 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
                 blockChain.getBlockAncestor(quorumBaseBlock, quorumBaseBlock.getHeight() - 8) :
                 quorumBaseBlock;
 
+        // workBlock can be null if the ancestor block doesn't exist
+        if (workBlock == null) {
+            log.warn("Cannot compute quorum members: ancestor block not found for quorum at height {}",
+                    quorumBaseBlock.getHeight());
+            return null;
+        }
+
         Sha256Hash modifier = getHashModifier(llmqParameters, quorumBaseBlock);
+        if (modifier == null) {
+            log.warn("Cannot compute quorum members: hash modifier is null for quorum at height {}",
+                    quorumBaseBlock.getHeight());
+            return null;
+        }
+
         SimplifiedMasternodeList allMns = getListForBlock(workBlock.getHeader().getHash());
         return allMns != null ? allMns.calculateQuorum(llmqParameters.getSize(), modifier, evoOnly) : null;
     }
