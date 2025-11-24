@@ -314,16 +314,13 @@ public abstract class PeerSocketHandler extends AbstractTimeoutHandler implement
     /** Registers a listener that is called immediately before a message is received */
     public void addTimeoutErrorListener(Executor executor, TimeoutErrorListener listener) {
         timeoutErrorListeners.add(new ListenerRegistration<>(listener, executor));
-        log.info("timeout error listener added: {}, {}", timeoutErrorListeners.size(), getAddress());
     }
 
     public boolean removeTimeoutErrorListener(TimeoutErrorListener listener) {
-        log.info("timeout error listener removed: {}, {}", timeoutErrorListeners.size() - 1, getAddress());
         return ListenerRegistration.removeFromList(listener, timeoutErrorListeners);
     }
 
     public void queueTimeoutErrorListeners(TimeoutError error, PeerAddress peer) {
-        log.info("timeout error listener queued: {}, {}", timeoutErrorListeners.size(), getAddress());
         for (final ListenerRegistration<TimeoutErrorListener> registration : timeoutErrorListeners) {
             registration.executor.execute(new Runnable() {
                 @Override

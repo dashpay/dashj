@@ -145,6 +145,7 @@ public class WalletProtobufSerializer {
      */
     public void setWalletWriteBufferSize(int walletWriteBufferSize) {
         this.walletWriteBufferSize = walletWriteBufferSize;
+        this.useAdaptiveBufferSizing = false;
     }
 
     /**
