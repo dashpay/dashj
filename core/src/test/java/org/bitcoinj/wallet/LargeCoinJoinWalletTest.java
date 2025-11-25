@@ -293,30 +293,30 @@ public class LargeCoinJoinWalletTest {
         
         File originalFile = new File(tempDir, "wallet-original-4kb.dat");
         File adaptiveFile = new File(tempDir, "wallet-adaptive.dat");
-        
-        Stopwatch originalFileWatch = Stopwatch.createStarted();
-        try (FileOutputStream originalFileStream = new FileOutputStream(originalFile)) {
-            originalSerializer.writeWallet(wallet, originalFileStream);
+        try {
+            Stopwatch originalFileWatch = Stopwatch.createStarted();
+            try (FileOutputStream originalFileStream = new FileOutputStream(originalFile)) {
+                originalSerializer.writeWallet(wallet, originalFileStream);
+            }
+            originalFileWatch.stop();
+
+            Stopwatch adaptiveFileWatch = Stopwatch.createStarted();
+            try (FileOutputStream adaptiveFileStream = new FileOutputStream(adaptiveFile)) {
+                adaptiveSerializer.writeWallet(wallet, adaptiveFileStream);
+            }
+            adaptiveFileWatch.stop();
+
+            info("Original 4KB file save: {} ms", originalFileWatch.elapsed().toMillis());
+            info("Adaptive file save: {} ms", adaptiveFileWatch.elapsed().toMillis());
+            info("File sizes - Original: {} bytes, Adaptive: {} bytes", originalFile.length(), adaptiveFile.length());
+
+            double fileImprovementPercent = ((double) (originalFileWatch.elapsed().toMillis() - adaptiveFileWatch.elapsed().toMillis()) / originalFileWatch.elapsed().toMillis()) * 100;
+            info("File I/O improvement: {:.1f}%", fileImprovementPercent);
+        } finally {
+            // Clean up temp files
+            if (originalFile.exists()) originalFile.delete();
+            if (adaptiveFile.exists()) adaptiveFile.delete();
         }
-        originalFileWatch.stop();
-        
-        Stopwatch adaptiveFileWatch = Stopwatch.createStarted();
-        try (FileOutputStream adaptiveFileStream = new FileOutputStream(adaptiveFile)) {
-            adaptiveSerializer.writeWallet(wallet, adaptiveFileStream);
-        }
-        adaptiveFileWatch.stop();
-        
-        info("Original 4KB file save: {} ms", originalFileWatch.elapsed().toMillis());
-        info("Adaptive file save: {} ms", adaptiveFileWatch.elapsed().toMillis());
-        info("File sizes - Original: {} bytes, Adaptive: {} bytes", originalFile.length(), adaptiveFile.length());
-        
-        double fileImprovementPercent = ((double)(originalFileWatch.elapsed().toMillis() - adaptiveFileWatch.elapsed().toMillis()) / originalFileWatch.elapsed().toMillis()) * 100;
-        info("File I/O improvement: {:.1f}%", fileImprovementPercent);
-        
-        // Clean up temp files
-        if (originalFile.exists()) originalFile.delete();
-        if (adaptiveFile.exists()) adaptiveFile.delete();
-        
         // Final summary
         info("\n=== CONCLUSION ===");
         if (adaptiveAvg <= bestFixedTime) {
@@ -472,7 +472,7 @@ public class LargeCoinJoinWalletTest {
         long bestSubsequentTime = Math.min(saveTimes[1], saveTimes[2]);
         long avgSubsequentTime = (saveTimes[1] + saveTimes[2]) / 2;
         
-        info("\\n=== Performance Analysis ===");
+        info("\n=== Performance Analysis ===");
         info("First save (cache misses): {} ms", firstSaveTime);
         info("Second save: {} ms", saveTimes[1]);
         info("Third save: {} ms", saveTimes[2]);
@@ -493,7 +493,7 @@ public class LargeCoinJoinWalletTest {
         assertEquals("Final wallet balance should match original", 
             wallet.getBalance(Wallet.BalanceType.ESTIMATED), reloadedWallets[2].getBalance(Wallet.BalanceType.ESTIMATED));
         
-        info("\\n=== Test Results ===");
+        info("\n=== Test Results ===");
         info("✓ All saves produced identical results");
         info("✓ Loaded wallet matches original wallet properties");
         info("✓ Transaction protobuf caching is working correctly");
