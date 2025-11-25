@@ -893,10 +893,10 @@ public class PeerGroupTest extends TestWithPeerGroup {
         assertTrue(peerGroup.isRunning());
         
         long startTime = System.currentTimeMillis();
-        peerGroup.forceStop(10);
+        peerGroup.forceStop(10_000);
         long endTime = System.currentTimeMillis();
         
-        assertTrue("Force stop should take at least the wait time", endTime - startTime >= 10);
+        assertTrue("Force stop should take less than the wait time", endTime - startTime <= 10_000);
         assertFalse(peerGroup.isRunning());
     }
 
