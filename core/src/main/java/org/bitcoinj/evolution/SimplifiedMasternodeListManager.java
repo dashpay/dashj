@@ -446,13 +446,22 @@ public class SimplifiedMasternodeListManager extends MasternodeListManager {
 
             peerGroup.removePreMessageReceivedEventListener(preMessageReceivedEventListener);
             threadPool.shutdown();
-            // Don't wait at all - let it die naturally
-            if (!threadPool.isTerminated()) {
-                log.info("ThreadPool shutdown initiated, not waiting");
-                threadPool.shutdownNow(); // Send interrupt signal but don't wait
-            } else {
-                saveNow();
+            try {
+                // Wait briefly for tasks to complete gracefully
+                if (!threadPool.awaitTermination(5, TimeUnit.SECONDS)) {
+                    log.warn("ThreadPool did not terminate in time, forcing shutdown");
+                    threadPool.shutdownNow();
+                    // Allow time for cancellation
+                    if (!threadPool.awaitTermination(2, TimeUnit.SECONDS)) {
+                        log.error("ThreadPool did not terminate after shutdownNow");
+                    }
+                }
+            } catch (InterruptedException e) {
+                log.warn("Interrupted while waiting for threadPool termination");
+                threadPool.shutdownNow();
+                Thread.currentThread().interrupt();
             }
+            saveNow();
             super.close();
 
         }
