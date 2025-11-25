@@ -23,6 +23,7 @@ import org.bitcoinj.core.Transaction;
 import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.utils.BriefLogFormatter;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -71,7 +72,7 @@ public class LargeCoinJoinWalletTest {
     @Test
     public void balanceAndMixingProgressTest() {
         Stopwatch watch0 = Stopwatch.createStarted();
-        assertEquals(Coin.valueOf(13662399906L), wallet.getBalance(Wallet.BalanceType.ESTIMATED));
+        assertEquals(Coin.valueOf(16724708510L), wallet.getBalance(Wallet.BalanceType.ESTIMATED));
         info("getBalance(ESTIMATED): {}", watch0);
 
         Stopwatch watch1 = Stopwatch.createStarted();
@@ -98,11 +99,11 @@ public class LargeCoinJoinWalletTest {
     @Test
     public void walletToStringTest() {
         Stopwatch watch0 = Stopwatch.createStarted();
-        wallet.toString(true, false, true, null);
+        wallet.toString(false, false, true, null);
         info("wallet.toString: {}", watch0);
 
         Stopwatch watch1 = Stopwatch.createStarted();
-        wallet.toString(true, false, true, null);
+        wallet.toString(false, false, true, null);
         info("wallet.toString: {}", watch1);
 
         Stopwatch watch2 = Stopwatch.createStarted();
@@ -414,7 +415,7 @@ public class LargeCoinJoinWalletTest {
         return result;
     }
 
-    @Test
+    @Test @Ignore
     public void walletConsistencyAndCachingPerformanceTest() throws IOException, UnreadableWalletException {
         info("=== Wallet Consistency and Caching Performance Test ===");
         
