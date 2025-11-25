@@ -912,7 +912,6 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
             peer.addMasternodeListDownloadedListener(executor, listener);
     }
 
-    /** See {@link Peer#addOnTransactionBroadcastListener(OnTransactionBroadcastListener)} */
     public void addTimeoutErrorListener(Executor executor, TimeoutErrorListener listener) {
         timeoutErrorListeners.add(new ListenerRegistration<>(checkNotNull(listener), executor));
         for (Peer peer : getConnectedPeers())
@@ -1902,8 +1901,6 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
                 peer.addPreMessageReceivedEventListener(registration.executor, registration.listener);
             for (ListenerRegistration<MasternodeListDownloadedListener> registration : masternodeListDownloadListeners)
                 peer.addMasternodeListDownloadedListener(registration.executor, registration.listener);
-            //for (ListenerRegistration<TimeoutErrorListener> registration : timeoutErrorListeners)
-            //    peer.addTimeoutErrorListener(registration.executor, registration.listener);
 
             // handle coinjoin related items
             if (shouldSendDsq) {
