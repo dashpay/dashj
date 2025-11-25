@@ -260,6 +260,8 @@ public class Wallet extends BaseTaggableObject
     @Nullable protected volatile UTXOProvider vUTXOProvider;
     // keep track of locked outputs to prevent double spends
     @GuardedBy("lock") protected HashSet<TransactionOutPoint> lockedOutputs = Sets.newHashSet();
+    // save now on blocks with transactions
+    private boolean saveOnNextBlock = true;
 
 
     /**
@@ -851,11 +853,20 @@ public class Wallet extends BaseTaggableObject
      * Returns the number of keys in the key chain group, including lookahead keys.
      */
     public int getKeyChainGroupSize() {
-        keyChainGroupLock.lock();
+        lock.lock();
         try {
-            return keyChainGroup.numKeys();
+            keyChainGroupLock.lock();
+            try {
+                int walletKeys = keyChainGroup.numKeys();
+                if (receivingFromFriendsGroup != null) walletKeys += receivingFromFriendsGroup.numKeys();
+                if (sendingToFriendsGroup != null) walletKeys += sendingToFriendsGroup.numKeys();
+                for (KeyChainGroupExtension ext : keyChainExtensions.values()) walletKeys += ext.numKeys();
+                return walletKeys;
+            } finally {
+                keyChainGroupLock.unlock();
+            }
         } finally {
-            keyChainGroupLock.unlock();
+            lock.unlock();
         }
     }
 
@@ -1841,6 +1852,14 @@ public class Wallet extends BaseTaggableObject
         }
     }
 
+    public void setSaveOnNextBlock(boolean saveOnNextBlock) {
+        this.saveOnNextBlock = saveOnNextBlock;
+    }
+
+    public boolean getSaveOnNextBlock() {
+        return saveOnNextBlock;
+    }
+
     /**
      * Uses protobuf serialization to save the wallet to the given file stream. To learn more about this file format, see
      * {@link WalletProtobufSerializer}.
@@ -2574,7 +2593,7 @@ public class Wallet extends BaseTaggableObject
             informConfidenceListenersIfNotReorganizing();
             maybeQueueOnWalletChanged();
 
-            if (hardSaveOnNextBlock) {
+            if (hardSaveOnNextBlock && saveOnNextBlock) {
                 saveNow();
                 hardSaveOnNextBlock = false;
             } else {

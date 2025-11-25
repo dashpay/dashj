@@ -45,7 +45,11 @@ public class RestoreFromSeedThenDump {
             System.out.println("RestoreFromSeedThenDump network \"seed phrase\"");
             System.out.println("  missing the network");
         }
-        BriefLogFormatter.initWithSilentBitcoinJ();
+        if (args.length == 3 && args[2].equals("--debuglog")) {
+            BriefLogFormatter.initVerbose();
+        } else {
+            BriefLogFormatter.initWithSilentBitcoinJ();
+        }
         String network = args[0];
         NetworkParameters params;
 

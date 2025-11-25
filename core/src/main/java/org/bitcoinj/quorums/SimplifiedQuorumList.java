@@ -430,7 +430,7 @@ public class SimplifiedQuorumList extends Message {
             List<Masternode> members = manager.getAllQuorumMembers(llmqParameters.type, commitment.quorumHash);
 
             if (members == null) {
-                //no information about this quorum because it is before we were downloading
+                // no information about this quorum because it is before we were downloading
                 log.warn("masternode list is missing to verify quorum: {}", commitment.quorumHash/*, manager.getBlockHeight(commitment.quorumHash)*/);
                 return false;
             }

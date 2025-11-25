@@ -57,7 +57,7 @@ public class BriefLogFormatter extends Formatter {
     @Override
     public String format(LogRecord logRecord) {
         Object[] arguments = new Object[6];
-        arguments[0] = logRecord.getThreadID();
+        arguments[0] = String.format("[%s]", Thread.currentThread().getName());
         String fullClassName = logRecord.getSourceClassName();
         int lastDot = fullClassName.lastIndexOf('.');
         String className = fullClassName.substring(lastDot + 1);
