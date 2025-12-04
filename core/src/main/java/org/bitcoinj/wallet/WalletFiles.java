@@ -138,7 +138,7 @@ public class WalletFiles {
         if (listener != null)
             listener.onAfterAutoSave(file);
         watch.stop();
-        log.info("Save completed in {}", watch);
+        log.info("Save completed in {} ({} bytes); {}", watch, file.length(), file);
     }
 
     /** Queues up a save in the background. Useful for not very important wallet changes. */

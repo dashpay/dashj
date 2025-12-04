@@ -884,4 +884,31 @@ public class PeerGroupTest extends TestWithPeerGroup {
         assertEquals(1, PeerGroup.maxOfMostFreq(Arrays.asList(1, 1, 2, 2, 1)));
         assertEquals(-1, PeerGroup.maxOfMostFreq(Arrays.asList(-1, -1, 2, 2, -1)));
     }
+
+    @Test
+    public void testForceStop() throws Exception {
+        peerGroup.start();
+        connectPeer(1);
+        
+        assertTrue(peerGroup.isRunning());
+        
+        long startTime = System.currentTimeMillis();
+        peerGroup.forceStop(10_000);
+        long endTime = System.currentTimeMillis();
+        
+        assertTrue("Force stop should take less than the wait time", endTime - startTime <= 10_000);
+        assertFalse(peerGroup.isRunning());
+    }
+
+    @Test
+    public void testForceStopWhenNotRunning() throws Exception {
+        assertFalse(peerGroup.isRunning());
+        
+        long startTime = System.currentTimeMillis();
+        peerGroup.forceStop(50);
+        long endTime = System.currentTimeMillis();
+        
+        assertTrue("Force stop should still wait even when not running", endTime - startTime >= 50);
+        assertFalse(peerGroup.isRunning());
+    }
 }

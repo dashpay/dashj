@@ -167,6 +167,11 @@ public class Wallet extends BaseTaggableObject
     // Used to speed up various calculations.
     protected final HashSet<TransactionOutput> myUnspents = Sets.newHashSet();
 
+    // Index mapping outpoints to transaction hashes that spend them.
+    // Used to make findDoubleSpendsAgainst() O(I) instead of O(W × I).
+    @GuardedBy("lock")
+    private final Map<TransactionOutPoint, Set<Sha256Hash>> spentOutpointsIndex = new HashMap<>();
+
     // Transactions that were dropped by the risk analysis system. These are not in any pools and not serialized
     // to disk. We have to keep them around because if we ignore a tx because we think it will never confirm, but
     // then it actually does confirm and does so within the same network session, remote peers will not resend us
@@ -260,6 +265,8 @@ public class Wallet extends BaseTaggableObject
     @Nullable protected volatile UTXOProvider vUTXOProvider;
     // keep track of locked outputs to prevent double spends
     @GuardedBy("lock") protected HashSet<TransactionOutPoint> lockedOutputs = Sets.newHashSet();
+    // save now on blocks with transactions
+    private boolean saveOnNextBlock = true;
 
 
     /**
@@ -851,11 +858,20 @@ public class Wallet extends BaseTaggableObject
      * Returns the number of keys in the key chain group, including lookahead keys.
      */
     public int getKeyChainGroupSize() {
-        keyChainGroupLock.lock();
+        lock.lock();
         try {
-            return keyChainGroup.numKeys();
+            keyChainGroupLock.lock();
+            try {
+                int walletKeys = keyChainGroup.numKeys();
+                if (receivingFromFriendsGroup != null) walletKeys += receivingFromFriendsGroup.numKeys();
+                if (sendingToFriendsGroup != null) walletKeys += sendingToFriendsGroup.numKeys();
+                for (KeyChainGroupExtension ext : keyChainExtensions.values()) walletKeys += ext.numKeys();
+                return walletKeys;
+            } finally {
+                keyChainGroupLock.unlock();
+            }
         } finally {
-            keyChainGroupLock.unlock();
+            lock.unlock();
         }
     }
 
@@ -1841,6 +1857,14 @@ public class Wallet extends BaseTaggableObject
         }
     }
 
+    public void setSaveOnNextBlock(boolean saveOnNextBlock) {
+        this.saveOnNextBlock = saveOnNextBlock;
+    }
+
+    public boolean getSaveOnNextBlock() {
+        return saveOnNextBlock;
+    }
+
     /**
      * Uses protobuf serialization to save the wallet to the given file stream. To learn more about this file format, see
      * {@link WalletProtobufSerializer}.
@@ -1911,21 +1935,16 @@ public class Wallet extends BaseTaggableObject
     public void isConsistentOrThrow() throws IllegalStateException {
         lock.lock();
         try {
+            // Calculate expected size first (no object allocation)
+            int expectedSize = unspent.size() + spent.size() + pending.size() + dead.size();
+
+            // getTransactions() returns a Set which automatically deduplicates by txId
+            // since Transaction.equals() and hashCode() are based on getTxId()
             Set<Transaction> transactions = getTransactions(true);
 
-            Set<Sha256Hash> hashes = new HashSet<>();
-            for (Transaction tx : transactions) {
-                hashes.add(tx.getTxId());
-            }
-
-            int size1 = transactions.size();
-            if (size1 != hashes.size()) {
+            // If sizes differ, there were duplicate transactions
+            if (transactions.size() != expectedSize) {
                 throw new IllegalStateException("Two transactions with same hash");
-            }
-
-            int size2 = unspent.size() + spent.size() + pending.size() + dead.size();
-            if (size1 != size2) {
-                throw new IllegalStateException("Inconsistent wallet sizes: " + size1 + ", " + size2);
             }
 
             for (Transaction tx : unspent.values()) {
@@ -2233,28 +2252,39 @@ public class Wallet extends BaseTaggableObject
     private Set<Transaction> findDoubleSpendsAgainst(Transaction tx, Map<Sha256Hash, Transaction> candidates) {
         checkState(lock.isHeldByCurrentThread());
         if (tx.isCoinBase()) return Sets.newHashSet();
-        // Compile a set of outpoints that are spent by tx.
-        HashSet<TransactionOutPoint> outpoints = new HashSet<>();
-        for (TransactionInput input : tx.getInputs()) {
-            outpoints.add(input.getOutpoint());
-        }
-        // Now for each pending transaction, see if it shares any outpoints with this tx.
+
+        // Use the index for O(I) lookup instead of O(W × I) scan
+        // For each input in tx, look up which transactions spend the same outpoint
         Set<Transaction> doubleSpendTxns = Sets.newHashSet();
-        for (Transaction p : candidates.values()) {
-            if (p.equals(tx))
-                continue;
-            for (TransactionInput input : p.getInputs()) {
-                // This relies on the fact that TransactionOutPoint equality is defined at the protocol not object
-                // level - outpoints from two different inputs that point to the same output compare the same.
-                TransactionOutPoint outpoint = input.getOutpoint();
-                if (outpoints.contains(outpoint)) {
-                    // It does, it's a double spend against the candidates, which makes it relevant.
-                    doubleSpendTxns.add(p);
+        for (TransactionInput input : tx.getInputs()) {
+            TransactionOutPoint outpoint = input.getOutpoint();
+            Set<Sha256Hash> txHashes = spentOutpointsIndex.get(outpoint);
+            if (txHashes != null) {
+                for (Sha256Hash hash : txHashes) {
+                    Transaction walletTx = candidates.get(hash);
+                    if (walletTx != null && !walletTx.equals(tx)) {
+                        doubleSpendTxns.add(walletTx);
+                    }
                 }
             }
         }
         return doubleSpendTxns;
     }
+
+    private void removeFromSpentOutpointsIndex(Transaction tx) {
+        checkState(lock.isHeldByCurrentThread());
+        for (TransactionInput input : tx.getInputs()) {
+            TransactionOutPoint outpoint = input.getOutpoint();
+            Set<Sha256Hash> txHashes = spentOutpointsIndex.get(outpoint);
+            if (txHashes != null) {
+                txHashes.remove(tx.getTxId());
+                if (txHashes.isEmpty()) {
+                    spentOutpointsIndex.remove(outpoint);
+                }
+            }
+        }
+    }
+
 
     /**
      * Adds to txSet all the txns in txPool spending outputs of txns in txSet,
@@ -2574,7 +2604,7 @@ public class Wallet extends BaseTaggableObject
             informConfidenceListenersIfNotReorganizing();
             maybeQueueOnWalletChanged();
 
-            if (hardSaveOnNextBlock) {
+            if (hardSaveOnNextBlock && saveOnNextBlock) {
                 saveNow();
                 hardSaveOnNextBlock = false;
             } else {
@@ -2773,6 +2803,7 @@ public class Wallet extends BaseTaggableObject
             pending.remove(tx.getTxId());
             unspent.remove(tx.getTxId());
             spent.remove(tx.getTxId());
+            removeFromSpentOutpointsIndex(tx);
             addWalletTransaction(Pool.DEAD, tx);
             for (TransactionInput deadInput : tx.getInputs()) {
                 Transaction connected = deadInput.getConnectedTransaction();
@@ -3398,6 +3429,11 @@ public class Wallet extends BaseTaggableObject
                     myUnspents.add(output);
             }
         }
+        // Update spent outpoints index
+        for (TransactionInput input : tx.getInputs()) {
+            TransactionOutPoint outpoint = input.getOutpoint();
+            spentOutpointsIndex.computeIfAbsent(outpoint, k -> new HashSet<>()).add(tx.getTxId());
+        }
         // This is safe even if the listener has been added before, as TransactionConfidence ignores duplicate
         // registration requests. That makes the code in the wallet simpler.
         tx.getConfidence().addEventListener(Threading.SAME_THREAD, txConfidenceListener);
@@ -3508,6 +3544,7 @@ public class Wallet extends BaseTaggableObject
         lock.lock();
         try {
             clearTransactions();
+            spentOutpointsIndex.clear();
             lastBlockSeenHash = null;
             lastBlockSeenHeight = -1; // Magic value for 'never'.
             lastBlockSeenTimeSecs = 0;

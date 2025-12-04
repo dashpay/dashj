@@ -51,7 +51,6 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -129,43 +128,76 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
      */
     @Override
     public byte[] serializeWalletExtension() {
-        try {
-            Protos.CoinJoin.Builder builder = Protos.CoinJoin.newBuilder();
-            List<Protos.Key> keys = coinJoinKeyChainGroup != null ? coinJoinKeyChainGroup.serializeToProtobuf() : Lists.newArrayList();
-            builder.addAllKey(keys);
-            builder.setRounds(rounds);
-            
-            // Serialize outpoint rounds cache for WalletEx
-            if (wallet instanceof WalletEx) {
-                WalletEx walletEx = (WalletEx) wallet;
-                if (!walletEx.mapOutpointRoundsCache.isEmpty()) {
-                    Protos.OutpointRoundsCache.Builder cacheBuilder = Protos.OutpointRoundsCache.newBuilder();
-                    for (Map.Entry<TransactionOutPoint, Integer> entry : walletEx.mapOutpointRoundsCache.entrySet()) {
-                        Protos.OutpointRoundsEntry.Builder entryBuilder = Protos.OutpointRoundsEntry.newBuilder();
-                        entryBuilder.setTransactionHash(ByteString.copyFrom(entry.getKey().getHash().getBytes()));
-                        entryBuilder.setOutputIndex(entry.getKey().getIndex());
-                        entryBuilder.setRounds(entry.getValue());
-                        cacheBuilder.addEntries(entryBuilder);
-                    }
-                    builder.setOutpointRoundsCache(cacheBuilder);
-                }
-            }
+        long startTime = System.nanoTime();
 
-            // Serialize coinJoinSalt (ensure it is initialized)
-            if (coinJoinSalt.equals(Sha256Hash.ZERO_HASH)) {
-                calculateCoinJoinSalt();
+        Protos.CoinJoin.Builder builder = Protos.CoinJoin.newBuilder();
+
+        // Time key chain serialization
+        long keysStartTime = System.nanoTime();
+        List<Protos.Key> keys = coinJoinKeyChainGroup != null ? coinJoinKeyChainGroup.serializeToProtobuf() : Lists.newArrayList();
+        builder.addAllKey(keys);
+        builder.setRounds(rounds);
+        long keysEndTime = System.nanoTime();
+        long keysMs = (keysEndTime - keysStartTime) / 1_000_000;
+
+        // Time outpoint rounds cache serialization
+        long cacheStartTime = System.nanoTime();
+        int cacheEntries = 0;
+        if (wallet instanceof WalletEx) {
+            WalletEx walletEx = (WalletEx) wallet;
+            if (!walletEx.mapOutpointRoundsCache.isEmpty()) {
+                Protos.OutpointRoundsCache.Builder cacheBuilder = Protos.OutpointRoundsCache.newBuilder();
+                for (Map.Entry<TransactionOutPoint, Integer> entry : walletEx.mapOutpointRoundsCache.entrySet()) {
+                    Protos.OutpointRoundsEntry.Builder entryBuilder = Protos.OutpointRoundsEntry.newBuilder();
+                    entryBuilder.setTransactionHash(ByteString.copyFrom(entry.getKey().getHash().getBytes()));
+                    entryBuilder.setOutputIndex(entry.getKey().getIndex());
+                    entryBuilder.setRounds(entry.getValue());
+                    cacheBuilder.addEntries(entryBuilder);
+                    cacheEntries++;
+                }
+                builder.setOutpointRoundsCache(cacheBuilder);
             }
-            builder.setCoinjoinSalt(ByteString.copyFrom(coinJoinSalt.getBytes()));
-            Protos.CoinJoin coinJoinProto = builder.build();
-            ByteArrayOutputStream output = new ByteArrayOutputStream();
-            final CodedOutputStream codedOutput = CodedOutputStream.newInstance(output);
+        }
+        long cacheEndTime = System.nanoTime();
+        long cacheMs = (cacheEndTime - cacheStartTime) / 1_000_000;
+
+        // Time salt operations
+        long saltStartTime = System.nanoTime();
+        if (coinJoinSalt.equals(Sha256Hash.ZERO_HASH)) {
+            calculateCoinJoinSalt();
+        }
+        builder.setCoinjoinSalt(ByteString.copyFrom(coinJoinSalt.getBytes()));
+        long saltEndTime = System.nanoTime();
+        long saltMs = (saltEndTime - saltStartTime) / 1_000_000;
+
+        // Time protobuf building and optimized I/O
+        long ioStartTime = System.nanoTime();
+        Protos.CoinJoin coinJoinProto = builder.build();
+        
+        // Use optimized buffer size based on actual serialized size
+        int serializedSize = coinJoinProto.getSerializedSize();
+        ByteArrayOutputStream output = new ByteArrayOutputStream(serializedSize);
+        
+        // Use optimized CodedOutputStream buffer size - larger than default for better performance
+        int bufferSize = Math.max(64 * 1024, serializedSize / 4); // At least 64KB or 25% of data size
+        try {
+            final CodedOutputStream codedOutput = CodedOutputStream.newInstance(output, bufferSize);
             coinJoinProto.writeTo(codedOutput);
             codedOutput.flush();
-            return output.toByteArray();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+            byte[] result = output.toByteArray();
+            long ioEndTime = System.nanoTime();
+            long ioMs = (ioEndTime - ioStartTime) / 1_000_000;
 
+            long totalTime = System.nanoTime();
+            long totalMs = (totalTime - startTime) / 1_000_000;
+
+            log.info("CoinJoinExtension serialization: {}ms total (keys:{}ms[{}], cache:{}ms[{}], salt:{}ms, io:{}ms, size:{}bytes, buffer:{}KB)",
+                    totalMs, keysMs, keys.size(), cacheMs, cacheEntries, saltMs, ioMs, result.length, bufferSize/1024);
+
+            return result;
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to serialize CoinJoinExtension", e);
+        }
     }
 
     /**

@@ -95,6 +95,7 @@ public class WalletProtobufSerializer {
     private boolean requireMandatoryExtensions = true;
     private boolean requireAllExtensionsKnown = false;
     private int walletWriteBufferSize = CodedOutputStream.DEFAULT_BUFFER_SIZE;
+    private boolean useAdaptiveBufferSizing = true;
 
     public interface WalletFactory {
         Wallet create(NetworkParameters params, KeyChainGroup keyChainGroup);
@@ -144,6 +145,47 @@ public class WalletProtobufSerializer {
      */
     public void setWalletWriteBufferSize(int walletWriteBufferSize) {
         this.walletWriteBufferSize = walletWriteBufferSize;
+        this.useAdaptiveBufferSizing = false;
+    }
+
+    /**
+     * Enable or disable adaptive buffer sizing based on wallet size. When enabled, buffer size
+     * is automatically chosen based on the number of transactions and size of the wallet.
+     * @param useAdaptiveBufferSizing true to enable adaptive sizing, false to use fixed buffer size
+     */
+    public void setUseAdaptiveBufferSizing(boolean useAdaptiveBufferSizing) {
+        this.useAdaptiveBufferSizing = useAdaptiveBufferSizing;
+    }
+
+    /**
+     * Calculate optimal buffer size based on wallet characteristics.
+     * Small wallets: 8KB, Medium wallets: 16KB, Large wallets: 64KB+
+     */
+    private int calculateOptimalBufferSize(Wallet wallet) {
+        if (!useAdaptiveBufferSizing) {
+            return walletWriteBufferSize;
+        }
+
+        int transactionCount = wallet.getTransactions(false).size();
+        int watchedScriptCount = wallet.getWatchedScripts().size();
+        int keyCount = wallet.getKeyChainGroupSize();
+
+        // Estimate wallet complexity score
+        int complexityScore = transactionCount + (watchedScriptCount * 2) + keyCount;
+
+        if (complexityScore < 100) {
+            // Small wallet: 8KB buffer
+            return 8 * 1024;
+        } else if (complexityScore < 1000) {
+            // Medium wallet: 16KB buffer
+            return 16 * 1024;
+        } else if (complexityScore < 5000) {
+            // Large wallet: 32KB buffer
+            return 32 * 1024;
+        } else {
+            // Very large wallet: 64KB buffer
+            return 64 * 1024;
+        }
     }
 
     /**
@@ -152,10 +194,29 @@ public class WalletProtobufSerializer {
      * Equivalent to {@code walletToProto(wallet).writeTo(output);}
      */
     public void writeWallet(Wallet wallet, OutputStream output) throws IOException {
+        // Measure serialization time (wallet -> protobuf)
+        long serializationStart = System.nanoTime();
         Protos.Wallet walletProto = walletToProto(wallet);
-        final CodedOutputStream codedOutput = CodedOutputStream.newInstance(output, this.walletWriteBufferSize);
+        long serializationEnd = System.nanoTime();
+        long serializationMs = (serializationEnd - serializationStart) / 1_000_000;
+        
+        // Measure I/O time (protobuf -> stream)
+        final int bufferSize = calculateOptimalBufferSize(wallet);
+        final CodedOutputStream codedOutput = CodedOutputStream.newInstance(output, bufferSize);
+        
+        long ioStart = System.nanoTime();
         walletProto.writeTo(codedOutput);
         codedOutput.flush();
+        long ioEnd = System.nanoTime();
+        long ioMs = (ioEnd - ioStart) / 1_000_000;
+        
+        // Log detailed timing breakdown
+        long totalMs = serializationMs + ioMs;
+        int serializationPercent = (int)((serializationMs * 100) / Math.max(totalMs, 1));
+        int ioPercent = (int)((ioMs * 100) / Math.max(totalMs, 1));
+        
+        log.info("writeWallet timing: {}ms total ({}ms/{}% serialization, {}ms/{}% I/O) buffer={}KB", 
+            totalMs, serializationMs, serializationPercent, ioMs, ioPercent, bufferSize/1024);
     }
 
     /**
