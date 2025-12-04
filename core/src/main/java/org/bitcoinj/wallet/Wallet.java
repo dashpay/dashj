@@ -1930,21 +1930,16 @@ public class Wallet extends BaseTaggableObject
     public void isConsistentOrThrow() throws IllegalStateException {
         lock.lock();
         try {
+            // Calculate expected size first (no object allocation)
+            int expectedSize = unspent.size() + spent.size() + pending.size() + dead.size();
+
+            // getTransactions() returns a Set which automatically deduplicates by txId
+            // since Transaction.equals() and hashCode() are based on getTxId()
             Set<Transaction> transactions = getTransactions(true);
 
-            Set<Sha256Hash> hashes = new HashSet<>();
-            for (Transaction tx : transactions) {
-                hashes.add(tx.getTxId());
-            }
-
-            int size1 = transactions.size();
-            if (size1 != hashes.size()) {
+            // If sizes differ, there were duplicate transactions
+            if (transactions.size() != expectedSize) {
                 throw new IllegalStateException("Two transactions with same hash");
-            }
-
-            int size2 = unspent.size() + spent.size() + pending.size() + dead.size();
-            if (size1 != size2) {
-                throw new IllegalStateException("Inconsistent wallet sizes: " + size1 + ", " + size2);
             }
 
             for (Transaction tx : unspent.values()) {
