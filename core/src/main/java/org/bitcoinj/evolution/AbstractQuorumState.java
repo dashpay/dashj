@@ -861,6 +861,13 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
     Sha256Hash getHashModifier(LLMQParameters llmqParams, StoredBlock quorumBaseBlock) {
         StoredBlock workBlock = blockChain.getBlockAncestor(quorumBaseBlock, quorumBaseBlock.getHeight() - 8);
 
+        // workBlock can be null if the ancestor block doesn't exist yet (during sync)
+        if (workBlock == null) {
+            log.warn("Cannot calculate hash modifier: ancestor block at height {} not found for quorum base block {}",
+                    quorumBaseBlock.getHeight() - 8, quorumBaseBlock.getHeader().getHash());
+            return null;
+        }
+
         if (params.isV20Active(workBlock.getHeight())) {
             // v20 is active: calculate modifier using the new way.
             BLSSignature bestCLSignature = getCoinbaseChainlock(workBlock);

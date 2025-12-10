@@ -253,22 +253,39 @@ public class DashSystem {
 
     public void close() {
         if (initializedObjects) {
+            log.info("Closing network spork configuration manager");
             sporkManager.close(peerGroup);
+            log.info("Closing masternode synchronization state");
             masternodeSync.close();
+            log.info("Closing masternode list manager (includes thread pool shutdown)");
             masternodeListManager.close();
+            log.info("Closing InstantSend transaction lock manager");
             instantSendManager.close(peerGroup);
+            log.info("Closing LLMQ signature signing manager");
             signingManager.close();
+            log.info("Closing ChainLock verification handler");
             chainLockHandler.close();
+            log.info("Closing quorum state manager");
             quorumManager.close();
+            log.info("Closing CoinJoin mixing manager");
             coinJoinManager.close();
-            if(masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_INSTANTSENDLOCKS))
+            if(masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_INSTANTSENDLOCKS)) {
+                log.info("Stopping LLMQ background thread");
                 llmqBackgroundThread.interrupt();
+            }
+            log.info("Removing block chain event listener");
             blockChain.removeNewBestBlockListener(newBestBlockListener);
-            if (scheduledMasternodeSync != null)
+            if (scheduledMasternodeSync != null) {
+                log.info("Cancelling scheduled masternode sync task");
                 scheduledMasternodeSync.cancel(true);
+            }
+            log.info("Closing main block chain");
             blockChain.close();
-            if (headerChain != null)
+            if (headerChain != null) {
+                log.info("Closing header chain");
                 headerChain.close();
+            }
+            log.info("Clearing peer group reference");
             peerGroup = null;
         }
     }

@@ -5,6 +5,8 @@ import org.bitcoinj.core.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -24,6 +26,8 @@ public class FlatDB<Type extends AbstractManager> {
     private String fileName;
     private String directory;
     private String magicMessage;
+    private int ioBufferSize = 64 * 1024; // Default 64KB buffer for optimal performance
+    private boolean useAdaptiveBufferSizing = true;
     public enum ReadResult {
         Ok,
         FileError,
@@ -90,6 +94,46 @@ public class FlatDB<Type extends AbstractManager> {
         return directory;
     }
 
+    /**
+     * Set the I/O buffer size for file operations. Default is 64KB.
+     * @param bufferSize buffer size in bytes
+     */
+    public void setIOBufferSize(int bufferSize) {
+        this.ioBufferSize = bufferSize;
+    }
+
+    /**
+     * Enable or disable adaptive buffer sizing based on file size.
+     * @param useAdaptive true to enable adaptive sizing, false to use fixed buffer size
+     */
+    public void setUseAdaptiveBufferSizing(boolean useAdaptive) {
+        this.useAdaptiveBufferSizing = useAdaptive;
+    }
+
+    /**
+     * Calculate optimal buffer size based on data size.
+     */
+    private int calculateOptimalBufferSize(long dataSize) {
+        if (!useAdaptiveBufferSizing) {
+            return ioBufferSize;
+        }
+
+        // Adaptive buffer sizing based on file size
+        if (dataSize < 16 * 1024) {
+            // Small files: 4KB buffer
+            return 4 * 1024;
+        } else if (dataSize < 256 * 1024) {
+            // Medium files: 16KB buffer
+            return 16 * 1024;
+        } else if (dataSize < 2 * 1024 * 1024) {
+            // Large files: 64KB buffer
+            return 64 * 1024;
+        } else {
+            // Very large files: 128KB buffer
+            return 128 * 1024;
+        }
+    }
+
     boolean write(Type object) {
 
         try {
@@ -116,11 +160,13 @@ public class FlatDB<Type extends AbstractManager> {
 
             stream.write(hash.getReversedBytes());
 
-            FileOutputStream fileStream = new FileOutputStream(pathDB);
-
-            fileStream.write(stream.toByteArray());
-
-            fileStream.close();
+            byte[] data = stream.toByteArray();
+            int bufferSize = calculateOptimalBufferSize(data.length);
+            
+            try (FileOutputStream fileStream = new FileOutputStream(pathDB);
+                 BufferedOutputStream bufferedStream = new BufferedOutputStream(fileStream, bufferSize)) {
+                bufferedStream.write(data);
+            }
 
             log.info("Written info to {}  {}ms", pathDB, watch.elapsed(TimeUnit.MILLISECONDS));
             log.info("  {}", object);
@@ -150,8 +196,6 @@ public class FlatDB<Type extends AbstractManager> {
                 previousPathDB = directory + File.separator + object.getPreviousDefaultFileName();
             }
 
-            FileInputStream fileStream = new FileInputStream(pathDB);
-
             File file = new File(pathDB);
             // try loading the previous file
             if (!file.exists() && previousPathDB != null) {
@@ -165,20 +209,21 @@ public class FlatDB<Type extends AbstractManager> {
             if (dataSize < 0)
                 dataSize = 0;
             if(dataSize == 0) {
-                fileStream.close();
                 return ReadResult.FileError;
             }
 
             byte [] hashIn = new byte[32];
             byte [] vchData = new byte[(int)dataSize];
+            
+            int bufferSize = calculateOptimalBufferSize(fileSize);
 
-            try {
-                fileStream.read(vchData);
-                fileStream.read(hashIn);
+            try (FileInputStream fileStream = new FileInputStream(file);
+                 BufferedInputStream bufferedStream = new BufferedInputStream(fileStream, bufferSize)) {
+                bufferedStream.read(vchData);
+                bufferedStream.read(hashIn);
             } catch (IOException x) {
                 return ReadResult.HashReadError;
             }
-            fileStream.close();
 
             // verify stored checksum matches input data
             Sha256Hash hashTmp = Sha256Hash.twiceOf(vchData);

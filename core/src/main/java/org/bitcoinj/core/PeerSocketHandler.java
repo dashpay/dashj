@@ -18,11 +18,14 @@ package org.bitcoinj.core;
 
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import org.bitcoinj.core.listeners.TimeoutError;
+import org.bitcoinj.core.listeners.TimeoutErrorListener;
 import org.bitcoinj.net.AbstractTimeoutHandler;
 import org.bitcoinj.net.MessageWriteTarget;
 import org.bitcoinj.net.NioClient;
 import org.bitcoinj.net.NioClientManager;
 import org.bitcoinj.net.StreamConnection;
+import org.bitcoinj.utils.ListenerRegistration;
 import org.bitcoinj.utils.Threading;
 import com.google.common.annotations.VisibleForTesting;
 import org.slf4j.Logger;
@@ -35,6 +38,8 @@ import java.net.InetSocketAddress;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.channels.NotYetConnectedException;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Executor;
 import java.util.concurrent.locks.Lock;
 
 import static com.google.common.base.Preconditions.*;
@@ -59,6 +64,8 @@ public abstract class PeerSocketHandler extends AbstractTimeoutHandler implement
     private byte[] largeReadBuffer;
     private int largeReadBufferPos;
     private BitcoinSerializer.BitcoinPacketHeader header;
+    private final CopyOnWriteArrayList<ListenerRegistration<TimeoutErrorListener>> timeoutErrorListeners
+            = new CopyOnWriteArrayList<>();
 
     private Lock lock = Threading.lock("PeerSocketHandler");
 
@@ -116,8 +123,65 @@ public abstract class PeerSocketHandler extends AbstractTimeoutHandler implement
 
     @Override
     protected void timeoutOccurred() {
+        Thread currentThread = Thread.currentThread();
         log.info("{}: Timed out", getAddress());
+
+        // Check if any thread is stuck in peekByteArray or SPVBlockStore operations
+        boolean blockStoreTimeout = checkForBlockStoreTimeout();
+
+        if (blockStoreTimeout) {
+            log.error("TIMEOUT CAUSE: Native I/O operation (peekByteArray) is frozen - this requires app-level recovery");
+            // The timeoutFlag and timeoutFuture in AbstractTimeoutHandler are already set
+            // Upstream code should check hasTimedOut() or listen to getTimeoutFuture() to handle this
+            queueTimeoutErrorListeners(TimeoutError.BLOCKSTORE_MEMORY_ACCESS, peerAddress);
+        } else {
+            // General timeout (not blockstore-specific)
+            log.warn("TIMEOUT CAUSE: General peer timeout - no response received within timeout period");
+            queueTimeoutErrorListeners(TimeoutError.UNKNOWN, peerAddress);
+        }
+
         close();
+    }
+
+    /**
+     * Checks all thread stacks to detect if any thread is stuck in native I/O operations
+     * (peekByteArray or SPVBlockStore operations that freeze on Android).
+     * @return true if a blockstore timeout is detected
+     */
+    private boolean checkForBlockStoreTimeout() {
+        Thread.getAllStackTraces().forEach((thread, stackTrace) -> {
+            String threadName = thread.getName();
+            if (threadName.contains("PeerGroup Thread") || threadName.contains("NioClientManager")) {
+                log.warn("Stack trace for thread '{}' (State: {}):", threadName, thread.getState());
+
+                boolean foundBlockingCall = false;
+                for (StackTraceElement element : stackTrace) {
+                    log.warn("  at {}", element);
+
+                    // Check if this thread is stuck in native peekByteArray or SPVBlockStore operations
+                    String elementStr = element.toString();
+                    if (elementStr.contains("peekByteArray")) {
+                        foundBlockingCall = true;
+                    }
+                }
+
+                if (foundBlockingCall) {
+                    log.error("CRITICAL: Thread '{}' is stuck in native I/O operation (peekByteArray/SPVBlockStore)", threadName);
+                }
+            }
+        });
+
+        // Check all threads for blocking SPVBlockStore calls
+        for (Thread thread : Thread.getAllStackTraces().keySet()) {
+            for (StackTraceElement element : thread.getStackTrace()) {
+                String elementStr = element.toString();
+                if (elementStr.contains("peekByteArray")) {
+                    log.error("CRITICAL: Detected SPVBlockStore timeout - native I/O freeze detected in thread: {}", thread.getName());
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /**
@@ -245,5 +309,25 @@ public abstract class PeerSocketHandler extends AbstractTimeoutHandler implement
 
     protected void setMessageSerializer(MessageSerializer messageSerializer) {
         this.serializer = messageSerializer;
+    }
+
+    /** Registers a listener that is called immediately before a message is received */
+    public void addTimeoutErrorListener(Executor executor, TimeoutErrorListener listener) {
+        timeoutErrorListeners.add(new ListenerRegistration<>(listener, executor));
+    }
+
+    public boolean removeTimeoutErrorListener(TimeoutErrorListener listener) {
+        return ListenerRegistration.removeFromList(listener, timeoutErrorListeners);
+    }
+
+    public void queueTimeoutErrorListeners(TimeoutError error, PeerAddress peer) {
+        for (final ListenerRegistration<TimeoutErrorListener> registration : timeoutErrorListeners) {
+            registration.executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    registration.listener.onTimeout(error, peer);
+                }
+            });
+        }
     }
 }

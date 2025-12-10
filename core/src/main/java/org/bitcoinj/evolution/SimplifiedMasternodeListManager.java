@@ -445,13 +445,13 @@ public class SimplifiedMasternodeListManager extends MasternodeListManager {
             quorumRotationState.close();
 
             peerGroup.removePreMessageReceivedEventListener(preMessageReceivedEventListener);
-            try {
-                threadPool.shutdown();
-                threadPool.awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
-            } catch (InterruptedException x) {
-                // swallow
+            threadPool.shutdown();
+            // Don't wait at all - let it die naturally to avoid blocking
+            if (!threadPool.isTerminated()) {
+                log.info("ThreadPool shutdown initiated, not waiting");
+                threadPool.shutdownNow(); // Send interrupt signal but don't wait
             }
-            saveNow();
+            saveNow(); // Always save, regardless of thread pool state
             super.close();
 
         }

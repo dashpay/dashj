@@ -205,7 +205,7 @@ public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
 
     @Override
     public String toString() {
-        return String.format("Simplified MNList Diff{ %s }", getAddRemovedString());
+        return String.format("Simplified MNList Diff{ %s }%n  %s -> %s", getAddRemovedString(), prevBlockHash, blockHash);
     }
 
     public String toString(DualBlockChain blockChain) {
