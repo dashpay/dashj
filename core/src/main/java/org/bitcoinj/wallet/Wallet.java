@@ -2708,7 +2708,7 @@ public class Wallet extends BaseTaggableObject
                     // included once again. We could have a separate was-in-chain-and-now-isn't confidence type
                     // but this way is backwards compatible with existing software, and the new state probably
                     // wouldn't mean anything different to just remembering peers anyway.
-                    confidence.setDepthInBlocks(lastBlockSeenHeight - confidence.getAppearedAtChainHeight());
+                    confidence.setDepthInBlocks(lastBlockSeenHeight - confidence.getAppearedAtChainHeight() + 1);
                     if (confidence.getDepthInBlocks() > context.getEventHorizon())
                         confidence.clearBroadcastBy();
                     confidenceChanged.put(tx, TransactionConfidence.Listener.ChangeReason.DEPTH);
@@ -6584,10 +6584,20 @@ public class Wallet extends BaseTaggableObject
     }
 
     public void addManualNotifyConfidenceChangeTransaction(Transaction tx) {
-        manualConfidenceChangeTransactions.add(tx);
+        lock.lock();
+        try {
+            manualConfidenceChangeTransactions.add(tx);
+        } finally {
+            lock.unlock();
+        }
     }
 
     public void removeManualNotifyConfidenceChangeTransaction(Transaction tx) {
-        manualConfidenceChangeTransactions.remove(tx);
+        lock.lock();
+        try {
+            manualConfidenceChangeTransactions.remove(tx);
+        } finally {
+            lock.unlock();
+        }
     }
 }
