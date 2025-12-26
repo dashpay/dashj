@@ -1982,6 +1982,7 @@ public class Wallet extends BaseTaggableObject
      * @return true if the transaction is consistent with its current pool state
      * @throws IllegalStateException if the transaction is in an inconsistent state
      */
+    // TODO: a test fails when using this in receive()
     public boolean validateTransaction(Transaction tx) {
         lock.lock();
         try {
@@ -2542,8 +2543,8 @@ public class Wallet extends BaseTaggableObject
         for (KeyChainGroupExtension extension : keyChainExtensions.values()) {
             extension.processTransaction(tx, block, blockType);
         }
-//        isConsistentOrThrow();
-        validateTransaction(tx);
+        isConsistentOrThrow();
+//        validateTransaction(tx);
         // Optimization for the case where a block has tons of relevant transactions.
         saveLater();
         hardSaveOnNextBlock = true;
