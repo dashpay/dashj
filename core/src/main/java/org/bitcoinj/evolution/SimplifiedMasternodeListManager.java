@@ -300,9 +300,8 @@ public class SimplifiedMasternodeListManager extends MasternodeListManager {
     }
 
     protected boolean shouldProcessMNListDiff() {
-
-        return masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_DMN_LIST) ||
-                masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_QUORUM_LIST);
+        return masternodeSync != null && (masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_DMN_LIST) ||
+                masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_QUORUM_LIST));
     }
 
     @Override
@@ -444,7 +443,9 @@ public class SimplifiedMasternodeListManager extends MasternodeListManager {
             quorumState.close();
             quorumRotationState.close();
 
-            peerGroup.removePreMessageReceivedEventListener(preMessageReceivedEventListener);
+            if (peerGroup != null) {
+                peerGroup.removePreMessageReceivedEventListener(preMessageReceivedEventListener);
+            }
             threadPool.shutdown();
             // Don't wait at all - let it die naturally to avoid blocking
             if (!threadPool.isTerminated()) {

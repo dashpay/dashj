@@ -130,7 +130,9 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
     public void close() {
         blockChain = null;
         headerChain = null;
-        peerGroup.removePreMessageReceivedEventListener(preMessageReceivedEventListener);
+        if (peerGroup != null) {
+            peerGroup.removePreMessageReceivedEventListener(preMessageReceivedEventListener);
+        }
         peerGroup = null;
         super.close();
     }
