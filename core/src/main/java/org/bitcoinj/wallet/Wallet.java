@@ -236,6 +236,7 @@ public class Wallet extends BaseTaggableObject
     private int onWalletChangedSuppressions;
     private boolean insideReorg;
     private Map<Transaction, TransactionConfidence.Listener.ChangeReason> confidenceChanged;
+    private final ArrayList<Transaction> manualConfidenceChangeTransactions = Lists.newArrayList();
     protected volatile WalletFiles vFileManager;
     // Object that is used to send transactions asynchronously when the wallet requires it.
     protected volatile TransactionBroadcaster vTransactionBroadcaster;
@@ -267,7 +268,7 @@ public class Wallet extends BaseTaggableObject
     @GuardedBy("lock") protected HashSet<TransactionOutPoint> lockedOutputs = Sets.newHashSet();
     // save now on blocks with transactions
     private boolean saveOnNextBlock = true;
-
+    private boolean notifyTxOnNextBlock = true;
 
     /**
      * Creates a new, empty wallet with a randomly chosen seed and no transactions. Make sure to provide for sufficient
@@ -1865,6 +1866,14 @@ public class Wallet extends BaseTaggableObject
         return saveOnNextBlock;
     }
 
+    public void setNotifyTxOnNextBlock(boolean notifyTxOnNextBlock) {
+        this.notifyTxOnNextBlock = notifyTxOnNextBlock;
+    }
+
+    public boolean isNotifyTxOnNextBlock() {
+        return notifyTxOnNextBlock;
+    }
+
     /**
      * Uses protobuf serialization to save the wallet to the given file stream. To learn more about this file format, see
      * {@link WalletProtobufSerializer}.
@@ -1962,6 +1971,47 @@ public class Wallet extends BaseTaggableObject
             lock.unlock();
         }
     }
+
+    /**
+     * Validates that a single transaction is internally consistent within the wallet.
+     * This is a lightweight alternative to {@link #isConsistentOrThrow()} for cases where
+     * the wallet is already known to be consistent and we only need to verify one
+     transaction.
+     *
+     * @param tx The transaction to validate
+     * @return true if the transaction is consistent with its current pool state
+     * @throws IllegalStateException if the transaction is in an inconsistent state
+     */
+    public boolean validateTransaction(Transaction tx) {
+        lock.lock();
+        try {
+            Sha256Hash txHash = tx.getTxId();
+
+            // Determine which pool the transaction is in and validate accordingly
+            if (spent.containsKey(txHash)) {
+                if (!isTxConsistent(tx, true)) {
+                    throw new IllegalStateException("Inconsistent spent tx: " + txHash);
+                }
+            } else if (unspent.containsKey(txHash)) {
+                if (!isTxConsistent(tx, false)) {
+                    throw new IllegalStateException("Inconsistent unspent tx: " + txHash);
+                }
+            } else if (pending.containsKey(txHash) || dead.containsKey(txHash)) {
+                // For pending/dead transactions, check as unspent
+                if (!isTxConsistent(tx, false)) {
+                    throw new IllegalStateException("Inconsistent pending/dead tx: " +
+                            txHash);
+                }
+            }
+            // If not in any pool, nothing to validate
+
+            return true;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+
 
     /*
      * If isSpent - check that all my outputs spent, otherwise check that there at least
@@ -2492,7 +2542,8 @@ public class Wallet extends BaseTaggableObject
         for (KeyChainGroupExtension extension : keyChainExtensions.values()) {
             extension.processTransaction(tx, block, blockType);
         }
-        isConsistentOrThrow();
+//        isConsistentOrThrow();
+        validateTransaction(tx);
         // Optimization for the case where a block has tons of relevant transactions.
         saveLater();
         hardSaveOnNextBlock = true;
@@ -2578,29 +2629,52 @@ public class Wallet extends BaseTaggableObject
             setLastBlockSeenTimeSecs(block.getHeader().getTimeSeconds());
             // Notify all the BUILDING transactions of the new block.
             // This is so that they can update their depth.
-            Set<Transaction> transactions = getTransactions(true);
-            for (Transaction tx : transactions) {
-                if (ignoreNextNewBlock.contains(tx.getTxId())) {
-                    // tx was already processed in receive() due to it appearing in this block, so we don't want to
-                    // increment the tx confidence depth twice, it'd result in miscounting.
-                    ignoreNextNewBlock.remove(tx.getTxId());
-                } else {
-                    TransactionConfidence confidence = tx.getConfidence();
-                    if (confidence.getConfidenceType() == ConfidenceType.BUILDING) {
-                        // Erase the set of seen peers once the tx is so deep that it seems unlikely to ever go
-                        // pending again. We could clear this data the moment a tx is seen in the block chain, but
-                        // in cases where the chain re-orgs, this would mean that wallets would perceive a newly
-                        // pending tx has zero confidence at all, which would not be right: we expect it to be
-                        // included once again. We could have a separate was-in-chain-and-now-isn't confidence type
-                        // but this way is backwards compatible with existing software, and the new state probably
-                        // wouldn't mean anything different to just remembering peers anyway.
-                        if (confidence.incrementDepthInBlocks() > context.getEventHorizon())
-                            confidence.clearBroadcastBy();
-                        confidenceChanged.put(tx, TransactionConfidence.Listener.ChangeReason.DEPTH);
+            if (notifyTxOnNextBlock) {
+                Set<Transaction> transactions = getTransactions(true);
+                for (Transaction tx : transactions) {
+                    if (ignoreNextNewBlock.contains(tx.getTxId())) {
+                        // tx was already processed in receive() due to it appearing in this block, so we don't want to
+                        // increment the tx confidence depth twice, it'd result in miscounting.
+                        ignoreNextNewBlock.remove(tx.getTxId());
+                    } else {
+                        TransactionConfidence confidence = tx.getConfidence();
+                        if (confidence.getConfidenceType() == ConfidenceType.BUILDING) {
+                            // Erase the set of seen peers once the tx is so deep that it seems unlikely to ever go
+                            // pending again. We could clear this data the moment a tx is seen in the block chain, but
+                            // in cases where the chain re-orgs, this would mean that wallets would perceive a newly
+                            // pending tx has zero confidence at all, which would not be right: we expect it to be
+                            // included once again. We could have a separate was-in-chain-and-now-isn't confidence type
+                            // but this way is backwards compatible with existing software, and the new state probably
+                            // wouldn't mean anything different to just remembering peers anyway.
+                            if (confidence.incrementDepthInBlocks() > context.getEventHorizon())
+                                confidence.clearBroadcastBy();
+                            confidenceChanged.put(tx, TransactionConfidence.Listener.ChangeReason.DEPTH);
+                        }
+                    }
+                }
+            } else {
+                for (Transaction tx : manualConfidenceChangeTransactions) {
+                    if (ignoreNextNewBlock.contains(tx.getTxId())) {
+                        // tx was already processed in receive() due to it appearing in this block, so we don't want to
+                        // increment the tx confidence depth twice, it'd result in miscounting.
+                        ignoreNextNewBlock.remove(tx.getTxId());
+                    } else {
+                        TransactionConfidence confidence = tx.getConfidence();
+                        if (confidence.getConfidenceType() == ConfidenceType.BUILDING) {
+                            // Erase the set of seen peers once the tx is so deep that it seems unlikely to ever go
+                            // pending again. We could clear this data the moment a tx is seen in the block chain, but
+                            // in cases where the chain re-orgs, this would mean that wallets would perceive a newly
+                            // pending tx has zero confidence at all, which would not be right: we expect it to be
+                            // included once again. We could have a separate was-in-chain-and-now-isn't confidence type
+                            // but this way is backwards compatible with existing software, and the new state probably
+                            // wouldn't mean anything different to just remembering peers anyway.
+                            if (confidence.incrementDepthInBlocks() > context.getEventHorizon())
+                                confidence.clearBroadcastBy();
+                            confidenceChanged.put(tx, TransactionConfidence.Listener.ChangeReason.DEPTH);
+                        }
                     }
                 }
             }
-
             informConfidenceListenersIfNotReorganizing();
             maybeQueueOnWalletChanged();
 
@@ -2615,6 +2689,36 @@ public class Wallet extends BaseTaggableObject
             lock.unlock();
         }
     }
+
+    /**
+     * update transaction depths and notify
+     */
+    public void updateTransactionDepth() {
+        lock.lock();
+        try {
+            Set<Transaction> transactions = getTransactions(true);
+            for (Transaction tx : transactions) {
+                TransactionConfidence confidence = tx.getConfidence();
+                if (confidence.getConfidenceType() == ConfidenceType.BUILDING) {
+                    // Erase the set of seen peers once the tx is so deep that it seems unlikely to ever go
+                    // pending again. We could clear this data the moment a tx is seen in the block chain, but
+                    // in cases where the chain re-orgs, this would mean that wallets would perceive a newly
+                    // pending tx has zero confidence at all, which would not be right: we expect it to be
+                    // included once again. We could have a separate was-in-chain-and-now-isn't confidence type
+                    // but this way is backwards compatible with existing software, and the new state probably
+                    // wouldn't mean anything different to just remembering peers anyway.
+                    confidence.setDepthInBlocks(lastBlockSeenHeight - confidence.getAppearedAtChainHeight());
+                    if (confidence.getDepthInBlocks() > context.getEventHorizon())
+                        confidence.clearBroadcastBy();
+                    confidenceChanged.put(tx, TransactionConfidence.Listener.ChangeReason.DEPTH);
+                }
+            }
+            informConfidenceListenersIfNotReorganizing();
+        } finally {
+            lock.unlock();
+        }
+    }
+
 
     /**
      * Handle when a transaction becomes newly active on the best chain, either due to receiving a new block or a
@@ -6476,5 +6580,13 @@ public class Wallet extends BaseTaggableObject
         } finally {
             lock.unlock();
         }
+    }
+
+    public void addManualNotifyConfidenceChangeTransaction(Transaction tx) {
+        manualConfidenceChangeTransactions.add(tx);
+    }
+
+    public void removeManualNotifyConfidenceChangeTransaction(Transaction tx) {
+        manualConfidenceChangeTransactions.remove(tx);
     }
 }
