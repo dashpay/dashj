@@ -2544,7 +2544,8 @@ public class Wallet extends BaseTaggableObject
             extension.processTransaction(tx, block, blockType);
         }
         isConsistentOrThrow();
-//        validateTransaction(tx);
+        // TODO: fix issues in this function as a replacement for isConsistentOrThrow()
+        // validateTransaction(tx);
         // Optimization for the case where a block has tons of relevant transactions.
         saveLater();
         hardSaveOnNextBlock = true;
