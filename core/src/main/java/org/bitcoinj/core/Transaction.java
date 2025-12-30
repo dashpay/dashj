@@ -1569,7 +1569,12 @@ public class Transaction extends ChildMessage {
         }
 
         if (isCoinBase()) {
-            if (inputs.get(0).getScriptBytes().length < 2 || inputs.get(0).getScriptBytes().length > 100)
+            final int scriptLength = inputs.get(0).getScriptBytes().length;
+            int scriptMaxLength = 2;
+            if (getType() == Type.TRANSACTION_COINBASE) {
+                scriptMaxLength = 1;
+            }
+            if (scriptLength < scriptMaxLength || scriptLength > 100)
                 throw new VerificationException.CoinbaseScriptSizeOutOfRange();
         } else {
             for (TransactionInput input : inputs)

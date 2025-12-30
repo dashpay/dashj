@@ -145,7 +145,9 @@ public class InstantSendManager implements RecoveredSignatureListener {
             peerGroup.removeOnTransactionBroadcastListener(this.transactionBroadcastListener);
             peerGroup.removePreMessageReceivedEventListener(preMessageReceivedEventListener);
         }
-        chainLocksHandler.removeChainLockListener(this.chainLockListener);
+        if (chainLocksHandler != null) {
+            chainLocksHandler.removeChainLockListener(this.chainLockListener);
+        }
         wallets.forEach(wallet -> wallet.removeCoinsSentEventListener(coinsSentEventListener));
         try {
             if (!scheduledExecutorService.awaitTermination(3000, TimeUnit.MILLISECONDS)) {
