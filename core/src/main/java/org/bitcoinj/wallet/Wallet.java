@@ -235,8 +235,8 @@ public class Wallet extends BaseTaggableObject
     // side effect of how the code is written (e.g. during re-orgs confidence data gets adjusted multiple times).
     private int onWalletChangedSuppressions;
     private boolean insideReorg;
-    private Map<Transaction, TransactionConfidence.Listener.ChangeReason> confidenceChanged;
-    private final ArrayList<Transaction> manualConfidenceChangeTransactions = Lists.newArrayList();
+    private final Map<Transaction, TransactionConfidence.Listener.ChangeReason> confidenceChanged;
+    private final HashMap<Transaction, Integer> manualConfidenceChangeTransactions = Maps.newHashMap();
     protected volatile WalletFiles vFileManager;
     // Object that is used to send transactions asynchronously when the wallet requires it.
     protected volatile TransactionBroadcaster vTransactionBroadcaster;
@@ -2655,7 +2655,7 @@ public class Wallet extends BaseTaggableObject
                     }
                 }
             } else {
-                for (Transaction tx : manualConfidenceChangeTransactions) {
+                for (Transaction tx : manualConfidenceChangeTransactions.keySet()) {
                     if (ignoreNextNewBlock.contains(tx.getTxId())) {
                         // tx was already processed in receive() due to it appearing in this block, so we don't want to
                         // increment the tx confidence depth twice, it'd result in miscounting.
@@ -2670,7 +2670,8 @@ public class Wallet extends BaseTaggableObject
                             // included once again. We could have a separate was-in-chain-and-now-isn't confidence type
                             // but this way is backwards compatible with existing software, and the new state probably
                             // wouldn't mean anything different to just remembering peers anyway.
-                            if (confidence.incrementDepthInBlocks() > context.getEventHorizon())
+                            confidence.setDepthInBlocks(lastBlockSeenHeight - confidence.getAppearedAtChainHeight() + 1);
+                            if (confidence.getDepthInBlocks() > context.getEventHorizon())
                                 confidence.clearBroadcastBy();
                             confidenceChanged.put(tx, TransactionConfidence.Listener.ChangeReason.DEPTH);
                         }
@@ -6587,7 +6588,7 @@ public class Wallet extends BaseTaggableObject
     public void addManualNotifyConfidenceChangeTransaction(Transaction tx) {
         lock.lock();
         try {
-            manualConfidenceChangeTransactions.add(tx);
+            manualConfidenceChangeTransactions.merge(tx, 1, Integer::sum);
         } finally {
             lock.unlock();
         }
@@ -6596,7 +6597,14 @@ public class Wallet extends BaseTaggableObject
     public void removeManualNotifyConfidenceChangeTransaction(Transaction tx) {
         lock.lock();
         try {
-            manualConfidenceChangeTransactions.remove(tx);
+            Integer count = manualConfidenceChangeTransactions.get(tx);
+            if (count != null) {
+                if (count == 1) {
+                    manualConfidenceChangeTransactions.remove(tx);
+                } else {
+                    manualConfidenceChangeTransactions.put(tx, count - 1);
+                }
+            }
         } finally {
             lock.unlock();
         }
