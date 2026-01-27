@@ -111,12 +111,9 @@ public class CoinJoinClientQueueManager extends CoinJoinBaseManager {
 
                 log.info("coinjoin: DSQUEUE: new {} from mn {}", dsq, dmn.getService().getAddr());
 
-                coinJoinManager.coinJoinClientManagers.values().stream().anyMatch(new Predicate<CoinJoinClientManager>() {
-                    @Override
-                    public boolean test(CoinJoinClientManager coinJoinClientManager) {
-                        return coinJoinClientManager.markAlreadyJoinedQueueAsTried(dsq);
-                    }
-                });
+                coinJoinManager.coinJoinClientManagers.values().stream().anyMatch(
+                        coinJoinClientManager -> coinJoinClientManager.markAlreadyJoinedQueueAsTried(dsq)
+                );
 
                 if (queueLock.tryLock()) {
                     try {

@@ -82,9 +82,17 @@ public class TestNet3Params extends AbstractBitcoinNetParams {
 
         // updated with Dash Core 21.0.0 seed list
         addrSeeds = new int[] {
-                0x2e4de52b,
-                0xf7a74d2d,
-                0xf9cb3eb2
+                0xaef43c3e,
+                0xd85ed536,
+                0x8992bf36,
+                0x5945bc36,
+                0x309a5934,
+                0x7412a223,
+                0x078f5c23,
+                0xdac55b23,
+                0x59865b23,
+                0x1e86dc22,
+                0xc31ad222
         };
 
         bip32HeaderP2PKHpub = 0x043587cf;
