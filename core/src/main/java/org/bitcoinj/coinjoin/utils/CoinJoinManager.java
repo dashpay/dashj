@@ -57,6 +57,7 @@ import org.bitcoinj.evolution.SimplifiedMasternodeListDiff;
 import org.bitcoinj.evolution.SimplifiedMasternodeListManager;
 import org.bitcoinj.quorums.ChainLocksHandler;
 import org.bitcoinj.quorums.QuorumRotationInfo;
+import org.bitcoinj.utils.ContextPropagatingThreadFactory;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletEx;
@@ -68,6 +69,8 @@ import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -94,6 +97,8 @@ public class CoinJoinManager {
     private RequestKeyParameter requestKeyParameter;
     private RequestDecryptedKey requestDecryptedKey;
     private final ScheduledExecutorService scheduledExecutorService;
+    private final ExecutorService messageProcessingExecutor = Executors.newFixedThreadPool(5,
+            new ContextPropagatingThreadFactory("CoinJoin-MessageProcessor"));
     protected final ReentrantLock lock = Threading.lock("coinjoin-manager");
 
     private boolean finishCurrentSessions = false;
@@ -206,6 +211,19 @@ public class CoinJoinManager {
             }
             stopAsync();
             finishCurrentSessions = false;
+
+            // Shutdown the message processing executor
+            messageProcessingExecutor.shutdown();
+            try {
+                if (!messageProcessingExecutor.awaitTermination(10, TimeUnit.SECONDS)) {
+                    log.warn("CoinJoin message processing executor did not terminate in time, forcing shutdown");
+                    messageProcessingExecutor.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                log.warn("Interrupted while waiting for message processing executor to terminate", e);
+                messageProcessingExecutor.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
         } finally {
             lock.unlock();
         }
@@ -261,6 +279,10 @@ public class CoinJoinManager {
         }
         if (masternodeGroup != null) {
             masternodeGroup.removePreMessageReceivedEventListener(preMessageReceivedEventListener);
+        }
+        // Ensure executor is shut down
+        if (!messageProcessingExecutor.isShutdown()) {
+            messageProcessingExecutor.shutdown();
         }
     }
 
@@ -483,7 +505,15 @@ public class CoinJoinManager {
     }
 
     public final PreMessageReceivedEventListener preMessageReceivedEventListener = (peer, m) -> {
-        if (isCoinJoinMessage(m)) {
+        if (m instanceof CoinJoinQueue) {
+            // Offload DSQueue message processing to thread pool to avoid blocking network I/O thread
+            messageProcessingExecutor.execute(() -> {
+                processMessage(peer, m);
+            });
+            // Return null as dsq meessages are only processed above
+            return null;
+        } else if (isCoinJoinMessage(m)) {
+            // Process other CoinJoin messages synchronously
             return processMessage(peer, m);
         }
         return m;

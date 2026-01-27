@@ -1762,6 +1762,7 @@ public class Transaction extends ChildMessage {
     }
 
     /* returns false if inputs > 4 or there are less than the required confirmations */
+    @Deprecated
     public boolean isSimple() {
         if(inputs.size() > MAX_INPUTS_FOR_AUTO_IX)
             return false;

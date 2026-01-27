@@ -368,7 +368,7 @@ public class CoinJoinClientManager implements WalletCoinsReceivedEventListener {
     public boolean markAlreadyJoinedQueueAsTried(CoinJoinQueue dsq) {
         lock.lock();
         try {
-            for (CoinJoinClientSession session :deqSessions){
+            for (CoinJoinClientSession session : deqSessions) {
                 Masternode mnMixing;
                 if ((mnMixing = session.getMixingMasternodeInfo()) != null && mnMixing.getProTxHash().equals(dsq.getProTxHash())) {
                     dsq.setTried(true);
