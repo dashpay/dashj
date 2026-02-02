@@ -859,7 +859,7 @@ public class Wallet extends BaseTaggableObject
      * Returns the number of keys in the key chain group, including lookahead keys.
      */
     public int getKeyChainGroupSize() {
-        lock.lock();
+        lock.readLock().lock();
         try {
             keyChainGroupLock.lock();
             try {
@@ -872,7 +872,7 @@ public class Wallet extends BaseTaggableObject
                 keyChainGroupLock.unlock();
             }
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
@@ -1984,7 +1984,7 @@ public class Wallet extends BaseTaggableObject
      */
     // TODO: a test fails when using this in receive()
     public boolean validateTransaction(Transaction tx) {
-        lock.lock();
+        lock.readLock().lock();
         try {
             Sha256Hash txHash = tx.getTxId();
 
@@ -2008,7 +2008,7 @@ public class Wallet extends BaseTaggableObject
 
             return true;
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
@@ -2323,7 +2323,7 @@ public class Wallet extends BaseTaggableObject
     }
 
     private void removeFromSpentOutpointsIndex(Transaction tx) {
-        checkState(lock.isHeldByCurrentThread());
+        checkState(lock.writeLock().isHeldByCurrentThread());
         for (TransactionInput input : tx.getInputs()) {
             TransactionOutPoint outpoint = input.getOutpoint();
             Set<Sha256Hash> txHashes = spentOutpointsIndex.get(outpoint);
@@ -2697,7 +2697,7 @@ public class Wallet extends BaseTaggableObject
      * update transaction depths and notify
      */
     public void updateTransactionDepth() {
-        lock.lock();
+        lock.writeLock().lock();
         try {
             Set<Transaction> transactions = getTransactions(true);
             for (Transaction tx : transactions) {
@@ -2718,7 +2718,7 @@ public class Wallet extends BaseTaggableObject
             }
             informConfidenceListenersIfNotReorganizing();
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
     }
 
@@ -6586,16 +6586,16 @@ public class Wallet extends BaseTaggableObject
     }
 
     public void addManualNotifyConfidenceChangeTransaction(Transaction tx) {
-        lock.lock();
+        lock.writeLock().lock();
         try {
             manualConfidenceChangeTransactions.merge(tx, 1, Integer::sum);
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
     }
 
     public void removeManualNotifyConfidenceChangeTransaction(Transaction tx) {
-        lock.lock();
+        lock.writeLock().lock();
         try {
             Integer count = manualConfidenceChangeTransactions.get(tx);
             if (count != null) {
@@ -6606,7 +6606,7 @@ public class Wallet extends BaseTaggableObject
                 }
             }
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
     }
 }
