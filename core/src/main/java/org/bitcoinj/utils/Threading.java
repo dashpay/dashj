@@ -197,7 +197,7 @@ public class Threading {
         if (Utils.isAndroidRuntime() && useDefaultAndroidPolicy)
             return new ReentrantReadWriteLock(true);
         else
-            return factory.newReentrantReadWriteLock(name);
+            return factory.newReentrantReadWriteLock(name, true);
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
