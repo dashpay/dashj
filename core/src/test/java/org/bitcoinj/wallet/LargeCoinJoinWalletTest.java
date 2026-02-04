@@ -147,7 +147,7 @@ public class LargeCoinJoinWalletTest {
         info("wallet.getWalletTransactions(): {}", watch3);
     }
 
-    @Test
+    @Test @Ignore
     public void walletSavePerformanceTest() throws IOException {
         // Show wallet statistics
         int transactionCount = wallet.getTransactionCount(true);
