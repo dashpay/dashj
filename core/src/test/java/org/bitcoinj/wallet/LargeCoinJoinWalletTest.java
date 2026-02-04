@@ -17,10 +17,12 @@
 package org.bitcoinj.wallet;
 
 import com.google.common.base.Stopwatch;
+import com.google.common.collect.Lists;
 import org.bitcoinj.coinjoin.CoinJoinCoinSelector;
 import org.bitcoinj.core.Address;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.Context;
+import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.InsufficientMoneyException;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionInput;
@@ -38,6 +40,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
@@ -53,7 +56,7 @@ public class LargeCoinJoinWalletTest {
     @Before
     public void setup() {
         BriefLogFormatter.initVerbose();
-        try (InputStream is = getClass().getResourceAsStream("coinjoin-cache.wallet")) {
+        try (InputStream is = getClass().getResourceAsStream("coinjoin-decrypted.wallet")) {
             Stopwatch watch = Stopwatch.createStarted();
             wallet = (WalletEx) new WalletProtobufSerializer().readWallet(is);
             info("loading wallet: {}; {} transactions", watch, wallet.getTransactionCount(true));
@@ -670,5 +673,44 @@ public class LargeCoinJoinWalletTest {
         info("For amounts < 0.001 DASH, inputs can be larger than send amount");
         assertTrue("Should have at least one input", tx.getInputs().size() > 0);
         info("Small amount greedy algorithm test completed in: {}", watch);
+    }
+
+    /**
+     * Creates a transaction using the greedy algorithm with returnChange = false
+     */
+    private Transaction createTestTransaction(Coin sendAmount, boolean useGreedyAlgorithm) throws InsufficientMoneyException {
+        Address toAddress = Address.fromKey(wallet.getParams(), new ECKey());
+        SendRequest req = SendRequest.to(toAddress, sendAmount);
+        req.coinSelector = new CoinJoinCoinSelector(wallet, false, useGreedyAlgorithm); // Use greedy algorithm
+        req.returnChange = !useGreedyAlgorithm; // No change output
+        req.feePerKb = Coin.valueOf(1000L); // Set fee rate
+
+        System.out.println("\n=== Creating Transaction ===");
+        System.out.println("Send amount: " + sendAmount.toFriendlyString());
+        System.out.println("Return change: " + req.returnChange);
+
+        wallet.completeTx(req);
+        return req.tx;
+    }
+
+    @Test
+    public void selectionTest() throws InsufficientMoneyException {
+        createTestTransaction(Coin.valueOf(5,50), true);
+        createTestTransaction(Coin.valueOf(5,50), false);
+    }
+
+    @Test
+    public void selectionOverRangeTest() throws InsufficientMoneyException {
+        ArrayList<Transaction> list = Lists.newArrayList();
+        for (int i = 0; i < 100; i++) {
+            for (int j = 0; j < 10; ++j) {
+                if (i == 0 && j == 0) j = 1;
+                Transaction tx = createTestTransaction(Coin.valueOf(i, j * 10), true);
+                list.add(tx);
+            }
+        }
+        list.forEach(tx -> {
+            System.out.println("" + tx.getValue(wallet).toFriendlyString() + " fee: " + tx.getFee().toFriendlyString());
+        });
     }
 }
