@@ -863,10 +863,10 @@ public class Wallet extends BaseTaggableObject
         try {
             keyChainGroupLock.lock();
             try {
-                int walletKeys = keyChainGroup.numKeys();
-                if (receivingFromFriendsGroup != null) walletKeys += receivingFromFriendsGroup.numKeys();
-                if (sendingToFriendsGroup != null) walletKeys += sendingToFriendsGroup.numKeys();
-                for (KeyChainGroupExtension ext : keyChainExtensions.values()) walletKeys += ext.numKeys();
+                int walletKeys = keyChainGroup.getTotalIssuedKeys();
+                if (receivingFromFriendsGroup != null) walletKeys += receivingFromFriendsGroup.getTotalIssuedKeys();
+                if (sendingToFriendsGroup != null) walletKeys += sendingToFriendsGroup.getTotalIssuedKeys();
+                for (KeyChainGroupExtension ext : keyChainExtensions.values()) walletKeys += ext.getTotalIssuedKeys();
                 return walletKeys;
             } finally {
                 keyChainGroupLock.unlock();
