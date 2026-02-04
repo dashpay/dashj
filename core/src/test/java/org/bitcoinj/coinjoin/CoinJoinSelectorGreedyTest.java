@@ -20,22 +20,11 @@ import org.bitcoinj.params.TestNet3Params;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.wallet.CoinSelection;
-import org.bitcoinj.wallet.AnyKeyChainGroup;
-import org.bitcoinj.wallet.KeyChainGroup;
-import org.bitcoinj.wallet.SendRequest;
-import org.bitcoinj.wallet.UnreadableWalletException;
-import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletEx;
-import org.bitcoinj.wallet.WalletProtobufSerializer;
-import org.bitcoinj.utils.BriefLogFormatter;
-import org.bouncycastle.util.test.FixedSecureRandom;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
-
-import java.io.IOException;
-import java.io.InputStream;
 import java.math.BigInteger;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -47,13 +36,12 @@ public class CoinJoinSelectorGreedyTest {
     
     private static final TestNet3Params PARAMS = TestNet3Params.get();
     private static final Context CONTEXT = new Context(PARAMS);
-    
-    private Wallet wallet;
+
+    private WalletEx wallet;
     private List<Denomination> availableOutputs;
     private Coin sendAmount;
     private List<Denomination> expectedGreedyOutputs;
     private String testName;
-    private List<TransactionOutput> notSpentOutputs;
     public CoinJoinSelectorGreedyTest(String testName, List<Denomination> availableOutputs,
                                      Coin sendAmount, List<Denomination> expectedGreedyOutputs) {
         this.testName = testName;
@@ -67,13 +55,16 @@ public class CoinJoinSelectorGreedyTest {
         
         return Arrays.asList(new Object[][]{
             {
-                "Perfect match with 0.1 denominations",
+                "Nearly perfect match with 0.1 denominations and 0.001 for fee",
                 Arrays.asList(
                     Denomination.TENTH,  // 0.1 DASH
                     Denomination.TENTH,  // 0.1 DASH
                     Denomination.TENTH,  // 0.1 DASH
                     Denomination.TENTH,  // 0.1 DASH
                     Denomination.TENTH,  // 0.1 DASH
+                    Denomination.THOUSANDTH,
+                    Denomination.THOUSANDTH,
+                    Denomination.THOUSANDTH,
                     Denomination.ONE  // 1.0 DASH
                 ),
                 Coin.valueOf(50000000L),      // Send 0.5 DASH
@@ -82,7 +73,8 @@ public class CoinJoinSelectorGreedyTest {
                     Denomination.TENTH,
                     Denomination.TENTH,
                     Denomination.TENTH,
-                    Denomination.TENTH
+                    Denomination.TENTH,
+                        Denomination.THOUSANDTH
                 )
             },
             {
@@ -91,12 +83,10 @@ public class CoinJoinSelectorGreedyTest {
                     Denomination.TENTH,  // 0.1 DASH
                     Denomination.TENTH,  // 0.1 DASH
                     Denomination.ONE, // 1.0 DASH
-                        Denomination.TEN // 10.0 DASH
+                    Denomination.TEN // 10.0 DASH
                 ),
                 Coin.valueOf(50000000L),      // Send 0.5 DASH
-                Arrays.asList(
-                    Denomination.TENTH,  // Use 2 × 0.1 DASH
-                    Denomination.TENTH,
+                Collections.singletonList(
                     Denomination.ONE  // Then 1 × 1.0 DASH to cover remaining
                 )
             },
@@ -106,6 +96,13 @@ public class CoinJoinSelectorGreedyTest {
                     Denomination.HUNDREDTH,   // 0.01 DASH
                     Denomination.HUNDREDTH,   // 0.01 DASH
                     Denomination.HUNDREDTH,   // 0.01 DASH
+                    Denomination.HUNDREDTH,   // 0.01 DASH
+                    Denomination.HUNDREDTH,   // 0.01 DASH
+                    Denomination.HUNDREDTH,   // 0.01 DASH
+                    Denomination.TENTH,  // 0.1 DASH
+                    Denomination.TENTH,  // 0.1 DASH
+                    Denomination.TENTH,  // 0.1 DASH
+                    Denomination.TENTH,  // 0.1 DASH
                     Denomination.TENTH,  // 0.1 DASH
                     Denomination.ONE  // 1.0 DASH
                 ),
@@ -114,7 +111,9 @@ public class CoinJoinSelectorGreedyTest {
                     Denomination.HUNDREDTH,   // Should use 5 × 0.01 DASH
                     Denomination.HUNDREDTH,
                     Denomination.HUNDREDTH,
-                    Denomination.TENTH   // Need 1 × 0.1 DASH for remaining
+                    Denomination.HUNDREDTH,
+                    Denomination.HUNDREDTH,
+                    Denomination.HUNDREDTH
                 )
             },
             {
@@ -158,9 +157,9 @@ public class CoinJoinSelectorGreedyTest {
     public void setUp() {
         Context.propagate(CONTEXT);
         wallet = WalletEx.createDeterministic(PARAMS, Script.ScriptType.P2PKH);
-        
+        wallet.initializeCoinJoin(0);
+
         // Create transactions with the specified outputs and add them to wallet
-        notSpentOutputs = new ArrayList<>();
         for (Denomination outputValue : availableOutputs) {
             Transaction tx = createCoinJoinTransaction(outputValue.value);
             wallet.receivePending(tx, null);
@@ -235,9 +234,9 @@ public class CoinJoinSelectorGreedyTest {
             .sorted()
             .collect(Collectors.toList());
         List<Coin> expectedSorted = expectedGreedyOutputs.stream()
-            .sorted()
                 .map(a -> a.value)
-            .collect(Collectors.toList());
+                .sorted()
+                .collect(Collectors.toList());
         
         // Check if greedy selection minimizes change better than normal selection
         Coin greedyChange = greedySelection.valueGathered.subtract(sendAmount);
@@ -251,6 +250,7 @@ public class CoinJoinSelectorGreedyTest {
         // Greedy should generally produce less or equal change
         assertTrue("Greedy algorithm should minimize change", 
                   greedyChange.isLessThanOrEqualTo(normalChange));
+        assertEquals(expectedSorted, actualGreedyValues);
     }
     
     private Transaction createCoinJoinTransaction(Coin outputValue) {
@@ -261,13 +261,14 @@ public class CoinJoinSelectorGreedyTest {
         tx.addInput(input);
         
         // Create the output with specified value
-        Address address = wallet.freshReceiveAddress();
+        Address address = wallet.getCoinJoin().freshReceiveAddress();
         TransactionOutput output = new TransactionOutput(PARAMS, tx, outputValue, address);
         
         // Mark as CoinJoin output (this is what the selector looks for)
         //output.markAsCoinJoin();
         tx.addOutput(output);
-        
+        wallet.markAsFullyMixed(new TransactionOutPoint(PARAMS, output));
+
         // Set confidence to building (confirmed)
         tx.getConfidence().setConfidenceType(TransactionConfidence.ConfidenceType.BUILDING);
         tx.getConfidence().setAppearedAtChainHeight(100);

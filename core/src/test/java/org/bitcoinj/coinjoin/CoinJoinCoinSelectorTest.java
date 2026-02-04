@@ -36,6 +36,7 @@ import java.util.List;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 public class CoinJoinCoinSelectorTest extends TestWithCoinJoinWallet {
 
@@ -107,6 +108,7 @@ public class CoinJoinCoinSelectorTest extends TestWithCoinJoinWallet {
         } catch (Exception e) {
             System.out.println("Exception during coin selection: " + e.getMessage());
             e.printStackTrace();
+            fail();
         }
     }
 
@@ -208,6 +210,7 @@ public class CoinJoinCoinSelectorTest extends TestWithCoinJoinWallet {
                 System.out.println("Exception creating transaction for " + sendAmount.toFriendlyString() + ": " + e.getMessage());
                 e.printStackTrace();
                 // Don't fail the test, just log and continue
+                fail();
             }
         }
     }
