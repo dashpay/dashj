@@ -107,6 +107,7 @@ public class WalletProtobufSerializer {
 
     private final WalletFactory factory;
     private KeyChainFactory keyChainFactory;
+    private boolean lastSaveParallel = false;
 
     public WalletProtobufSerializer() {
         this(new WalletFactory() {
@@ -193,8 +194,7 @@ public class WalletProtobufSerializer {
         int keyCount = wallet.getKeyChainGroupSize();
 
         // Estimate wallet complexity score
-        int complexityScore = transactionCount + (watchedScriptCount * 2) + keyCount;
-        return complexityScore;
+        return transactionCount + (watchedScriptCount * 2) + keyCount;
     }
 
     /**
@@ -244,8 +244,17 @@ public class WalletProtobufSerializer {
      * additional data fields set, before serialization takes place.
      */
     public Protos.Wallet walletToProto(Wallet wallet) {
+        // Timing variables for profiling
         long methodStart = System.currentTimeMillis();
-        boolean isLargeWallet = getComplexityScore(wallet) > 10_000;
+        final long[] txTime = {0};
+        final long[] keysTime = {0};
+        final long[] extensionsTime = {0};
+        final long[] friendRecvTime = {0};
+        final long[] friendSendTime = {0};
+        final int[] txCount = {0};
+
+        int complexityScore = getComplexityScore(wallet);
+        boolean isLargeWallet = complexityScore > 10_000;
         if (isLargeWallet) {
             // Capture all data from wallet on main thread (which holds the lock) to avoid deadlock
             Iterable<WalletTransaction> walletTransactions = wallet.getWalletTransactions();
@@ -253,14 +262,6 @@ public class WalletProtobufSerializer {
             Collection<KeyChainGroupExtension> keyChainExtensions = wallet.getKeyChainExtensions().values();
             FriendKeyChainGroup receivingFromFriends = wallet.receivingFromFriendsGroup;
             FriendKeyChainGroup sendingToFriends = wallet.sendingToFriendsGroup;
-
-            // Timing variables for profiling
-            final long[] txTime = {0};
-            final long[] keysTime = {0};
-            final long[] extensionsTime = {0};
-            final long[] friendRecvTime = {0};
-            final long[] friendSendTime = {0};
-            final int[] txCount = {0};
 
             ExecutorService executor = Executors.newFixedThreadPool(4,
                     new ContextPropagatingThreadFactory("wallet-serializer"));
@@ -389,39 +390,54 @@ public class WalletProtobufSerializer {
                 long buildTime = System.currentTimeMillis() - buildStart;
 
                 long totalTime = System.currentTimeMillis() - methodStart;
-                log.info("walletToProto timing: {}ms total, transactions={}ms[{}tx], keys={}ms, extensions={}ms, " +
+                log.info("walletToProto (parallel={}) timing: {}ms total, transactions={}ms[{}tx], keys={}ms, extensions={}ms, " +
                                 "friendRecv={}ms, friendSend={}ms, build={}ms",
+                        complexityScore,
                         totalTime, txTime[0], txCount[0], keysTime[0], extensionsTime[0],
                         friendRecvTime[0], friendSendTime[0], buildTime);
-
+                lastSaveParallel = true;
                 return result;
             } finally {
                 executor.shutdown();
             }
         } else {
+            // Serial mode - use nanoTime for sub-millisecond precision
+            long serialStart = System.nanoTime();
+
             Protos.Wallet.Builder walletBuilder = Protos.Wallet.newBuilder();
             walletBuilder.setNetworkIdentifier(wallet.getNetworkParameters().getId());
             if (wallet.getDescription() != null) {
                 walletBuilder.setDescription(wallet.getDescription());
             }
+            long initTime = System.nanoTime() - serialStart;
 
+            long txStart = System.nanoTime();
+            int txCountSerial = 0;
             for (WalletTransaction wtx : wallet.getWalletTransactions()) {
                 Protos.Transaction txProto = makeTxProto(wtx);
                 walletBuilder.addTransaction(txProto);
+                txCountSerial++;
             }
+            long txTimeSerial = System.nanoTime() - txStart;
 
+            long keysStart = System.nanoTime();
             walletBuilder.addAllKey(wallet.serializeKeyChainGroupToProtobuf());
+            long keysTimeSerial = System.nanoTime() - keysStart;
 
+            long scriptsStart = System.nanoTime();
+            int scriptCount = 0;
             for (Script script : wallet.getWatchedScripts()) {
                 Protos.Script protoScript =
                         Protos.Script.newBuilder()
                                 .setProgram(ByteString.copyFrom(script.getProgram()))
                                 .setCreationTimestamp(script.getCreationTimeSeconds() * 1000)
                                 .build();
-
                 walletBuilder.addWatchedScript(protoScript);
+                scriptCount++;
             }
+            long scriptsTime = System.nanoTime() - scriptsStart;
 
+            long metadataStart = System.nanoTime();
             // Populate the lastSeenBlockHash field.
             Sha256Hash lastSeenBlockHash = wallet.getLastBlockSeenHash();
             if (lastSeenBlockHash != null) {
@@ -434,16 +450,13 @@ public class WalletProtobufSerializer {
             // Populate the scrypt parameters.
             KeyCrypter keyCrypter = wallet.getKeyCrypter();
             if (keyCrypter == null) {
-                // The wallet is unencrypted.
                 walletBuilder.setEncryptionType(EncryptionType.UNENCRYPTED);
             } else {
-                // The wallet is encrypted.
                 walletBuilder.setEncryptionType(keyCrypter.getUnderstoodEncryptionType());
                 if (keyCrypter instanceof KeyCrypterScrypt) {
                     KeyCrypterScrypt keyCrypterScrypt = (KeyCrypterScrypt) keyCrypter;
                     walletBuilder.setEncryptionParameters(keyCrypterScrypt.getScryptParameters());
                 } else {
-                    // Some other form of encryption has been specified that we do not know how to persist.
                     throw new RuntimeException("The wallet has encryption of type '" + keyCrypter.getUnderstoodEncryptionType() + "' but this WalletProtobufSerializer does not know how to persist this.");
                 }
             }
@@ -453,29 +466,45 @@ public class WalletProtobufSerializer {
                 walletBuilder.setKeyRotationTime(timeSecs);
             }
 
-            populateExtensions(wallet, walletBuilder);
-
             for (Map.Entry<String, ByteString> entry : wallet.getTags().entrySet()) {
                 Protos.Tag.Builder tag = Protos.Tag.newBuilder().setTag(entry.getKey()).setData(entry.getValue());
                 walletBuilder.addTags(tag);
             }
-
-            // Populate the wallet version.
             walletBuilder.setVersion(wallet.getVersion());
+            long metadataTime = System.nanoTime() - metadataStart;
 
-            //Add FriendKeyChains:  Receiving
+            long extStart = System.nanoTime();
+            populateExtensions(wallet, walletBuilder);
+            long extTimeSerial = System.nanoTime() - extStart;
+
+            long friendRecvStart = System.nanoTime();
             if(wallet.receivingFromFriendsGroup != null && wallet.receivingFromFriendsGroup.hasKeyChains()) {
                 List<Protos.Key> keys = wallet.receivingFromFriendsGroup.serializeToProtobuf();
                 walletBuilder.addAllKeysForFriends(keys);
             }
+            long friendRecvTimeSerial = System.nanoTime() - friendRecvStart;
 
-            //Add FriendKeyChains:  Sending
+            long friendSendStart = System.nanoTime();
             if(wallet.sendingToFriendsGroup != null && wallet.sendingToFriendsGroup.hasKeyChains()) {
                 List<Protos.Key> keys = wallet.sendingToFriendsGroup.serializeToProtobuf();
                 walletBuilder.addAllKeysFromFriends(keys);
             }
+            long friendSendTimeSerial = System.nanoTime() - friendSendStart;
 
-            return walletBuilder.build();
+            long buildStart = System.nanoTime();
+            Protos.Wallet result = walletBuilder.build();
+            long buildTimeSerial = System.nanoTime() - buildStart;
+
+            long totalTime = System.currentTimeMillis() - methodStart;
+            // Convert nanoTime to milliseconds for logging
+            log.info("walletToProto (serial={}) timing: {}ms total, init={}ms, tx={}ms[{}], keys={}ms, " +
+                            "scripts={}ms[{}], metadata={}ms, ext={}ms, friendRecv={}ms, friendSend={}ms, build={}ms",
+                    complexityScore,
+                    totalTime, initTime/1_000_000, txTimeSerial/1_000_000, txCountSerial, keysTimeSerial/1_000_000,
+                    scriptsTime/1_000_000, scriptCount, metadataTime/1_000_000, extTimeSerial/1_000_000,
+                    friendRecvTimeSerial/1_000_000, friendSendTimeSerial/1_000_000, buildTimeSerial/1_000_000);
+            lastSaveParallel = false;
+            return result;
         }
     }
 
@@ -1350,5 +1379,9 @@ public class WalletProtobufSerializer {
         } catch (IOException x) {
             return false;
         }
+    }
+
+    public boolean isLastSaveParallel() {
+        return lastSaveParallel;
     }
 }
