@@ -379,11 +379,15 @@ public class WalletProtobufSerializer {
                 if (!friendKeysSending.isEmpty()) {
                     walletBuilder.addAllKeysFromFriends(friendKeysSending);
                 }
-                // join extensions second to last
-                walletBuilder.addAllExtension(extensionsFuture.join());
-
-                // Join transactions last since it takes the longest
-                walletBuilder.addAllTransaction(txFuture.join());
+                // Join extensions and transactions in completion order - whichever finishes first gets added first
+                CompletableFuture.anyOf(extensionsFuture, txFuture).join();
+                if (extensionsFuture.isDone()) {
+                    walletBuilder.addAllExtension(extensionsFuture.join());
+                    walletBuilder.addAllTransaction(txFuture.join());
+                } else {
+                    walletBuilder.addAllTransaction(txFuture.join());
+                    walletBuilder.addAllExtension(extensionsFuture.join());
+                }
 
                 long buildStart = System.currentTimeMillis();
                 Protos.Wallet result = walletBuilder.build();
