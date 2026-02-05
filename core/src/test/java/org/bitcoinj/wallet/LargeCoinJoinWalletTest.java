@@ -21,6 +21,7 @@ import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.params.TestNet3Params;
+import org.bitcoinj.script.Script;
 import org.bitcoinj.utils.BriefLogFormatter;
 import org.junit.Before;
 import org.junit.Ignore;
@@ -37,6 +38,9 @@ import java.io.InputStream;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertTrue;
 
 public class LargeCoinJoinWalletTest {
     private WalletEx wallet;
@@ -504,6 +508,25 @@ public class LargeCoinJoinWalletTest {
         } else {
             info("⚠ Expected subsequent saves to be faster due to caching");
         }
+    }
+
+    @Test
+    public void walletProtoSaveTest() {
+        WalletProtobufSerializer serializer = new WalletProtobufSerializer();
+        Protos.Wallet fullWalletProto = serializer.walletToProto(wallet);
+        assertTrue(serializer.isLastSaveParallel());
+
+        wallet.reset();
+        Protos.Wallet resetWalletProto = serializer.walletToProto(wallet);
+        assertTrue(serializer.isLastSaveParallel());
+
+        assertNotEquals(0, fullWalletProto.getTransactionCount());
+        assertEquals(0, resetWalletProto.getTransactionCount());
+
+        Wallet smallWallet = Wallet.createDeterministic(wallet.getParams(), Script.ScriptType.P2PKH);
+        Protos.Wallet smallWalletProto = serializer.walletToProto(smallWallet);
+        assertFalse(serializer.isLastSaveParallel());
+        assertEquals(0, smallWalletProto.getTransactionCount());
     }
     
     /**
