@@ -70,14 +70,14 @@ public class CoinJoinGreedyCustomTest {
         for (Coin denomination : denominations) {
             tx.addSignedInput(new TransactionOutPoint(PARAMS, 0, Sha256Hash.of(new byte[index++])), inputScript, key, Transaction.SigHash.ALL, true);
         }
+        
+        // Add transaction to wallet
+        wallet.receivePending(tx, null);
 
         // Set confidence to building (confirmed)
         tx.getConfidence().setConfidenceType(TransactionConfidence.ConfidenceType.BUILDING);
         tx.getConfidence().setAppearedAtChainHeight(100);
         tx.getConfidence().setDepthInBlocks(10);
-        
-        // Add transaction to wallet
-        wallet.receivePending(tx, null);
         
         // Mark all outputs as fully mixed by setting high round count
         for (int i = 0; i < outputs.size(); i++) {
@@ -304,5 +304,29 @@ public class CoinJoinGreedyCustomTest {
         // Verify transaction
         assertEquals("Should have exactly one output (no change)", 1, tx.getOutputs().size());
         assertEquals("Output should equal send amount", sendAmount, tx.getOutput(0).getValue());
+    }
+
+    @Test(timeout = 3000) // guards against the pre-fix infinite loop
+    public void recipientsPayFees_noChange_exactMatch_standardDenom_doesNotLoop() throws Exception {
+        // 1) Fund wallet with exactly one standard denom UTXO (1 DASH + 1000 satoshis)
+        addCoinJoinTransaction(Denomination.ONE.value); // 1.00001000 DASH
+
+        // 2) Build a send that exactly matches inputs, with no change and recipients paying fees
+        Address dest = Address.fromKey(PARAMS, new ECKey());
+        SendRequest req = SendRequest.to(dest, Denomination.ONE.value); // 1.00001 DASH
+        req.returnChange = false;
+        req.recipientsPayFees = true;
+        req.feePerKb = Transaction.REFERENCE_DEFAULT_MIN_TX_FEE; // any non-zero fee works
+        req.shuffleOutputs = false;
+        req.sortByBIP69 = false;
+
+        wallet.completeTx(req); // before fix: loops; after fix: completes
+
+        // 3) Assertions: single recipient output, no change, fee > 0
+        assertEquals(1, req.tx.getOutputs().size());
+        Coin inputSum = req.tx.getInputSum();
+        Coin outputSum = req.tx.getOutputSum();
+        assertEquals(Denomination.ONE.value, inputSum); // spent exactly the ONE denom
+        assertTrue(inputSum.isGreaterThan(outputSum));  // recipient paid the fee
     }
 }

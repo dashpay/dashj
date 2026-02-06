@@ -103,9 +103,9 @@ public class CoinJoinCoinSelector extends ZeroConfCoinSelector {
                 log.info("found candidates({}): {}, {}", useGreedyAlgorithm, watch, bestSelection.size());
                 return new CoinSelection(Coin.valueOf(bestTotal), bestSelection);
             } else {
-                // Fallback to all available outputs
+                // Fallback to all available outputs (use original denomMap, not depleted workingDenomMap)
                 ArrayList<TransactionOutput> allOutputs = new ArrayList<>();
-                workingDenomMap.values().forEach(allOutputs::addAll);
+                denomMap.values().forEach(allOutputs::addAll);
                 long bestTotal = allOutputs.stream().mapToLong(o -> o.getValue().value).sum();
                 log.info("found candidates({}): {}, {}", useGreedyAlgorithm, watch, allOutputs.size());
                 return new CoinSelection(Coin.valueOf(bestTotal), allOutputs);
@@ -237,8 +237,23 @@ public class CoinJoinCoinSelector extends ZeroConfCoinSelector {
                         log.info("Using 1 of " + denom.toFriendlyString() +
                                          " to cover remaining " + Coin.valueOf(remaining).toFriendlyString());
                         selection.add(availableOutputs.remove(availableOutputs.size() - 1));
-                        remaining = 0;
-                        break;
+                        remaining -= denom.value;
+
+                        // Recalculate fee as we add more inputs
+                        numInputs = selection.size();
+                        txSize = 10 + (numInputs * 148) + 34;
+                        long newFee = (feePerKb.value * txSize) / 1000;
+                        long additionalFee = newFee - calculatedFee;
+                        if (additionalFee > 0) {
+                            remaining += additionalFee;
+                            calculatedFee = newFee;
+                            log.info("Fee increased to: " + Coin.valueOf(calculatedFee).toFriendlyString());
+                        }
+
+                        if (remaining <= 0) {
+                            break;
+                        }
+                        // Continue loop if still need more after fee adjustment
                     }
                 }
             }
