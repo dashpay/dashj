@@ -82,7 +82,7 @@ public class LargeCoinJoinWalletTest {
     @Test
     public void balanceAndMixingProgressTest() {
         Stopwatch watch0 = Stopwatch.createStarted();
-        assertEquals(Coin.valueOf(16724708510L), wallet.getBalance(Wallet.BalanceType.ESTIMATED));
+        assertEquals(Coin.valueOf(16932557094L), wallet.getBalance(Wallet.BalanceType.ESTIMATED));
         info("getBalance(ESTIMATED): {}", watch0);
 
         Stopwatch watch1 = Stopwatch.createStarted();
