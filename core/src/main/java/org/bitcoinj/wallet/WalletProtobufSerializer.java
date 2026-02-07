@@ -107,7 +107,7 @@ public class WalletProtobufSerializer {
 
     private final WalletFactory factory;
     private KeyChainFactory keyChainFactory;
-    private boolean lastSaveParallel = false;
+    private volatile boolean lastSaveParallel = false;
 
     public WalletProtobufSerializer() {
         this(new WalletFactory() {
