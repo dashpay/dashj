@@ -2301,7 +2301,7 @@ public class Wallet extends BaseTaggableObject
      * @return The set of transactions that double spend "tx".
      */
     private Set<Transaction> findDoubleSpendsAgainst(Transaction tx, Map<Sha256Hash, Transaction> candidates) {
-        // checkState(lock.writeLock().isHeldByCurrentThread());
+        checkState(lock.getReadHoldCount() > 0 || lock.writeLock().isHeldByCurrentThread());
         if (tx.isCoinBase()) return Sets.newHashSet();
 
         // Use the index for O(I) lookup instead of O(W × I) scan
@@ -4552,6 +4552,7 @@ public class Wallet extends BaseTaggableObject
         // Should not be locked here, as we're going to call into the broadcaster and that might want to hold its
         // own lock. sendCoinsOffline handles everything that needs to be locked.
         checkState(!lock.writeLock().isHeldByCurrentThread());
+        checkState(lock.getReadHoldCount() == 0, "Cannot hold read lock when calling sendCoins (would deadlock on write lock upgrade)");
 
         // Commit the TX to the wallet immediately so the spent coins won't be reused.
         // TODO: We should probably allow the request to specify tx commit only after the network has accepted it.
@@ -6006,6 +6007,7 @@ public class Wallet extends BaseTaggableObject
             lock.writeLock().unlock();
         }
         checkState(!lock.writeLock().isHeldByCurrentThread());
+        checkState(lock.getReadHoldCount() == 0, "Cannot hold read lock when broadcasting (would deadlock on write lock upgrade)");
         ArrayList<ListenableFuture<Transaction>> futures = new ArrayList<>(txns.size());
         TransactionBroadcaster broadcaster = vTransactionBroadcaster;
         for (Transaction tx : txns) {
