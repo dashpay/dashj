@@ -25,9 +25,9 @@ import org.bitcoinj.wallet.WalletEx;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.Assert.*;
 
@@ -53,7 +53,6 @@ public class CoinJoinGreedyCustomTest {
         Transaction tx = new Transaction(PARAMS);
         
         // Create a dummy coinbase input
-        TransactionInput input = new TransactionInput(PARAMS, tx, new byte[0]);
         ECKey key = wallet.currentKey(KeyChain.KeyPurpose.RECEIVE_FUNDS);
 
         // Create outputs with specified denominations using CoinJoin addresses
@@ -100,8 +99,8 @@ public class CoinJoinGreedyCustomTest {
             java.lang.reflect.Field field = WalletEx.class.getDeclaredField("mapOutpointRoundsCache");
             field.setAccessible(true);
             @SuppressWarnings("unchecked")
-            java.util.Map<TransactionOutPoint, Integer> cache = 
-                (java.util.Map<TransactionOutPoint, Integer>) field.get(wallet);
+            Map<TransactionOutPoint, Integer> cache =
+                (Map<TransactionOutPoint, Integer>) field.get(wallet);
             cache.put(outPoint, rounds);
             System.out.println("Set rounds for " + outPoint + " to " + rounds);
         } catch (Exception e) {
@@ -142,7 +141,7 @@ public class CoinJoinGreedyCustomTest {
             Denomination.HUNDREDTH.value,  // 0.01 DASH
             Denomination.TENTH.value, // 0.1 DASH
             Denomination.TENTH.value, // 0.1 DASH
-            Coin.valueOf(100000000L) // 1.0 DASH
+            Denomination.ONE.value // 1.0 DASH
         );
         
         // Test sending 0.05 DASH (should use optimal combination)
@@ -176,7 +175,7 @@ public class CoinJoinGreedyCustomTest {
         System.out.println("Transaction fee: " + tx.getFee().toFriendlyString());
         
         // Verify transaction properties
-        assertTrue("Should have at least one input", tx.getInputs().size() > 0);
+        assertFalse("Should have at least one input", tx.getInputs().isEmpty());
         assertEquals("Should have exactly one output (no change)", 1, tx.getOutputs().size());
         assertEquals("Output should equal send amount", sendAmount, tx.getOutput(0).getValue());
         assertTrue("Total input should be >= send amount", totalInput.isGreaterThanOrEqualTo(sendAmount));
@@ -241,12 +240,12 @@ public class CoinJoinGreedyCustomTest {
         addCoinJoinTransaction(denominations);
         addCoinJoinTransaction(
             Denomination.HUNDREDTH.value,  // 0.01 DASH
-                Denomination.HUNDREDTH.value,  // 0.01 DASH
-                Denomination.TENTH.value  // 0.1 DASH
+            Denomination.HUNDREDTH.value,  // 0.01 DASH
+            Denomination.TENTH.value  // 0.1 DASH
         );
         
         // Test sending amount that should trigger consolidation
-        Coin sendAmount = Coin.valueOf(12000000L); // 0.012 DASH
+        Coin sendAmount = Coin.valueOf(12000000L); // 0.12 DASH
         Transaction tx = createGreedyTransaction(sendAmount);
         
         // Print results
@@ -272,8 +271,8 @@ public class CoinJoinGreedyCustomTest {
         // Add transaction with larger denominations
         addCoinJoinTransaction(
             Denomination.TEN.value, // 10.0 DASH
-                Denomination.ONE.value,  // 1.0 DASH
-                Denomination.ONE.value,  // 1.0 DASH
+            Denomination.ONE.value,  // 1.0 DASH
+            Denomination.ONE.value,  // 1.0 DASH
             Denomination.TENTH.value,   // 0.1 DASH
             Denomination.TENTH.value,   // 0.1 DASH
             Denomination.HUNDREDTH.value,    // 0.01 DASH

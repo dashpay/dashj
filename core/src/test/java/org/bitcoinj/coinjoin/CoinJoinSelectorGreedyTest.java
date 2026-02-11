@@ -149,6 +149,18 @@ public class CoinJoinSelectorGreedyTest {
                 Arrays.asList(
                     Denomination.ONE   // Must use 1 × 1.0 DASH (no smaller available)
                 )
+            },
+            {
+                "Send amount less than 0.001 denomination",
+                Arrays.asList(
+                        Denomination.ONE,  // 1.0 DASH
+                        Denomination.THOUSANDTH,  // 1.0 DASH
+                        Denomination.THOUSANDTH   // 1.0 DASH
+                ),
+                Coin.valueOf(50000L),       // Send 0.5 DASH
+                Arrays.asList(
+                        Denomination.THOUSANDTH   // Must use 1 × 1.0 DASH (no smaller available)
+                )
             }
         });
     }

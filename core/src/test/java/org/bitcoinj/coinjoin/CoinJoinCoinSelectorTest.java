@@ -35,6 +35,7 @@ import java.io.InputStream;
 import java.util.List;
 
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
@@ -78,32 +79,29 @@ public class CoinJoinCoinSelectorTest extends TestWithCoinJoinWallet {
         try {
             CoinSelection greedySelection = greedySelector.select(sendAmount, candidates);
             CoinSelection normalSelection = normalSelector.select(sendAmount, candidates);
+            assertNotNull( "greedy selections failed", greedySelection);
+            assertNotNull( "normal selections failed", normalSelection);
+            Coin greedyChange = greedySelection.valueGathered.subtract(sendAmount);
+            Coin normalChange = normalSelection.valueGathered.subtract(sendAmount);
 
-            if (greedySelection != null && normalSelection != null) {
-                Coin greedyChange = greedySelection.valueGathered.subtract(sendAmount);
-                Coin normalChange = normalSelection.valueGathered.subtract(sendAmount);
+            System.out.println("Greedy Selection:");
+            System.out.println("  Inputs: " + greedySelection.gathered.size());
+            System.out.println("  Total: " + greedySelection.valueGathered.toFriendlyString());
+            System.out.println("  Change: " + greedyChange.toFriendlyString());
 
-                System.out.println("Greedy Selection:");
-                System.out.println("  Inputs: " + greedySelection.gathered.size());
-                System.out.println("  Total: " + greedySelection.valueGathered.toFriendlyString());
-                System.out.println("  Change: " + greedyChange.toFriendlyString());
+            System.out.println("Normal Selection:");
+            System.out.println("  Inputs: " + normalSelection.gathered.size());
+            System.out.println("  Total: " + normalSelection.valueGathered.toFriendlyString());
+            System.out.println("  Change: " + normalChange.toFriendlyString());
 
-                System.out.println("Normal Selection:");
-                System.out.println("  Inputs: " + normalSelection.gathered.size());
-                System.out.println("  Total: " + normalSelection.valueGathered.toFriendlyString());
-                System.out.println("  Change: " + normalChange.toFriendlyString());
+            System.out.println("Comparison:");
+            System.out.println("  Greedy change: " + greedyChange.toFriendlyString());
+            System.out.println("  Normal change: " + normalChange.toFriendlyString());
+            System.out.println("  Greedy is better: " + greedyChange.isLessThanOrEqualTo(normalChange));
 
-                System.out.println("Comparison:");
-                System.out.println("  Greedy change: " + greedyChange.toFriendlyString());
-                System.out.println("  Normal change: " + normalChange.toFriendlyString());
-                System.out.println("  Greedy is better: " + greedyChange.isLessThanOrEqualTo(normalChange));
-
-                // Verify greedy minimizes change
-                assertTrue("Greedy algorithm should minimize change",
-                        greedyChange.isLessThanOrEqualTo(normalChange));
-            } else {
-                System.out.println("One or both coin selections failed");
-            }
+            // Verify greedy minimizes change
+            assertTrue("Greedy algorithm should minimize change",
+                    greedyChange.isLessThanOrEqualTo(normalChange));
 
         } catch (Exception e) {
             System.out.println("Exception during coin selection: " + e.getMessage());
