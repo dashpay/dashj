@@ -340,6 +340,16 @@ public class WalletEx extends Wallet {
         return false;
     }
 
+    @VisibleForTesting
+    public void markAsFullyMixed(TransactionOutPoint outPoint) {
+        lock.lock();
+        try {
+            mapOutpointRoundsCache.put(outPoint, 19);
+        } finally {
+            lock.unlock();
+        }
+    }
+
     int getRealOutpointCoinJoinRounds(TransactionOutPoint outpoint, int rounds) {
         checkState(lock.isHeldByCurrentThread());
 

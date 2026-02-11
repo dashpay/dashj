@@ -13,7 +13,7 @@ obj/
 libs/
 *.chain
 *.spvchain
-*.wallet
+/*.wallet
 *.tmp
 checkpoints
 checkpoints-testnet
@@ -21,7 +21,8 @@ checkpoints-testnet.txt
 checkpoints.txt
 checkpoints-krupnik
 checkpoints-krupnik.txt
-*.mnlist
-*.chainlocks
+/*.mnlist
+/*.chainlocks
 *.gobjects
-*.log
+/*.log
+.DS_Store

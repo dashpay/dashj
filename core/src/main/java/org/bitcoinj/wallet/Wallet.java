@@ -5770,6 +5770,12 @@ public class Wallet extends BaseTaggableObject
                     tx.addOutput(changeOutput);
                     result.bestChangeOutput = changeOutput;
                 }
+            } else if (!req.returnChange) {
+                Coin outputSum = Coin.ZERO;
+                for (TransactionOutput output : tx.getOutputs()) {
+                    outputSum = outputSum.add(output.getValue());
+                }
+                fee = result.bestCoinSelection.valueGathered.subtract(outputSum);
             }
 
             for (TransactionOutput selectedOutput : selection.gathered) {
