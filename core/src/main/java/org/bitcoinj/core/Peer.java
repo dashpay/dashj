@@ -140,6 +140,8 @@ public class Peer extends PeerSocketHandler {
     @GuardedBy("lock") private boolean useFilteredBlocks = false;
     // The current Bloom filter set on the connection, used to tell the remote peer what transactions to send us.
     private volatile BloomFilter vBloomFilter;
+    // Whether to use compressed headers (DIP-0025) when downloading headers from this peer.
+    private volatile boolean useCompressedHeaders = false;
     // The last filtered block we received, we're waiting to fill it out with transactions.
     private FilteredBlock currentFilteredBlock = null;
     // If non-null, we should discard incoming filtered blocks because we ran out of keys and are awaiting a new filter
@@ -562,6 +564,8 @@ public class Peer extends PeerSocketHandler {
             processAddressMessage((AddressMessage) m);
         } else if (m instanceof HeadersMessage) {
             processHeaders((HeadersMessage) m);
+        } else if (m instanceof Headers2Message) {
+            processHeaders2((Headers2Message) m);
         } else if (m instanceof AlertMessage) {
             processAlert((AlertMessage) m);
         } else if (m instanceof VersionMessage) {
@@ -575,6 +579,9 @@ public class Peer extends PeerSocketHandler {
         }
         else if (m instanceof SendHeadersMessage) {
             // We ignore this message, because we don't announce new blocks.
+        } else if (m instanceof SendHeaders2Message) {
+            // We ignore this message, because we don't announce new blocks.
+            log.info("{}: Peer requested compressed header announcements (sendheaders2)", this);
         } else if (m instanceof SendAddressMessageV2) {
             // We ignore this message, because we don't reply to sendaddrv2 message.
         } else {
@@ -846,6 +853,17 @@ public class Peer extends PeerSocketHandler {
             // Unreachable when in SPV mode.
             throw new RuntimeException(e);
         }
+    }
+
+    /**
+     * Process compressed headers message (DIP-0025).
+     * The Headers2Message.parse() already decompresses headers to Block objects,
+     * so we can reuse the same logic as processHeaders().
+     */
+    protected void processHeaders2(Headers2Message m) throws ProtocolException {
+        // Headers2Message already decompresses to Block objects in its parse() method
+        HeadersMessage converted = new HeadersMessage(params, m.getBlockHeaders());
+        processHeaders(converted);
     }
 
     public void startMasternodeListDownload() {
@@ -1673,8 +1691,13 @@ public class Peer extends PeerSocketHandler {
             sendMessage(message);
         } else {
             // Downloading headers for a while instead of full blocks.
-            GetHeadersMessage message = new GetHeadersMessage(params, blockLocator, toHash);
-            sendMessage(message);
+            if (useCompressedHeaders && peerSupportsCompressedHeaders()) {
+                GetHeaders2Message message = new GetHeaders2Message(params, blockLocator, toHash);
+                sendMessage(message);
+            } else {
+                GetHeadersMessage message = new GetHeadersMessage(params, blockLocator, toHash);
+                sendMessage(message);
+            }
         }
     }
 
@@ -1746,9 +1769,15 @@ public class Peer extends PeerSocketHandler {
         lastGetHeadersBegin = chainHeadHash;
         lastGetHeadersEnd = toHash;
 
-        log.info("Requesting headers from : {}", this);
-        GetHeadersMessage message = new GetHeadersMessage(params, blockLocator, toHash);
-        sendMessage(message);
+        if (useCompressedHeaders && peerSupportsCompressedHeaders()) {
+            log.info("Requesting compressed headers from: {}", this);
+            GetHeaders2Message message = new GetHeaders2Message(params, blockLocator, toHash);
+            sendMessage(message);
+        } else {
+            log.info("Requesting headers from: {}", this);
+            GetHeadersMessage message = new GetHeadersMessage(params, blockLocator, toHash);
+            sendMessage(message);
+        }
     }
 
     /**
@@ -2004,6 +2033,36 @@ public class Peer extends PeerSocketHandler {
             return true;
         }
         return false;
+    }
+
+    /**
+     * Returns true if this peer advertises support for compressed headers (DIP-0025).
+     *
+     * @see <a href="https://github.com/dashpay/dips/blob/master/dip-0025.md">DIP-0025</a>
+     */
+    public boolean peerSupportsCompressedHeaders() {
+        VersionMessage peerVersion = getPeerVersionMessage();
+        return peerVersion != null && peerVersion.isCompressedHeadersSupported();
+    }
+
+    /**
+     * Sets whether to use compressed headers (DIP-0025) when downloading headers from this peer.
+     * Only effective if the peer advertises NODE_HEADERS_COMPRESSED support.
+     *
+     * @param use true to use compressed headers when supported
+     * @see <a href="https://github.com/dashpay/dips/blob/master/dip-0025.md">DIP-0025</a>
+     */
+    public void setUseCompressedHeaders(boolean use) {
+        this.useCompressedHeaders = use;
+    }
+
+    /**
+     * Returns whether compressed headers are enabled for this peer.
+     *
+     * @return true if compressed headers are enabled
+     */
+    public boolean isUseCompressedHeaders() {
+        return useCompressedHeaders;
     }
 
     /**
