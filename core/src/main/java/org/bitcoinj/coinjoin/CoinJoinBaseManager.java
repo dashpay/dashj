@@ -18,6 +18,7 @@ package org.bitcoinj.coinjoin;
 
 import com.google.common.collect.Lists;
 import com.google.errorprone.annotations.concurrent.GuardedBy;
+import org.bitcoinj.core.InventoryItem;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.utils.Threading;
 import org.slf4j.Logger;
@@ -80,5 +81,14 @@ public class CoinJoinBaseManager {
             }
         }
         return null;
+    }
+
+    public boolean alreadyHave(InventoryItem item) {
+        queueLock.lock();
+        try {
+            return coinJoinQueue.stream().anyMatch(queue -> item.hash.equals(queue.getHash()));
+        } finally {
+            queueLock.unlock();
+        }
     }
 }

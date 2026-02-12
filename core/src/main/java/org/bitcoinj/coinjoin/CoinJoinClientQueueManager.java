@@ -17,6 +17,7 @@ package org.bitcoinj.coinjoin;
 
 import org.bitcoinj.coinjoin.utils.CoinJoinManager;
 import org.bitcoinj.core.Context;
+import org.bitcoinj.core.InventoryItem;
 import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.core.Peer;
 import org.bitcoinj.core.Sha256Hash;
