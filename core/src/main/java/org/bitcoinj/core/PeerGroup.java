@@ -354,6 +354,9 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     /** Whether bloom filter support is enabled when using a non FullPrunedBlockchain*/
     private volatile boolean vBloomFilteringEnabled = true;
 
+    /** Whether to use compressed headers (DIP-0025) for header downloads */
+    private volatile boolean vUseCompressedHeaders = false;
+
     /** See {@link #PeerGroup(Context)} */
     public PeerGroup(NetworkParameters params) {
         this(params, null);
@@ -1906,6 +1909,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
             if (shouldSendDsq) {
                 peer.sendMessage(new SendCoinJoinQueue(params, true));
             }
+            peer.setUseCompressedHeaders(isUseCompressedHeaders());
         } finally {
             lock.unlock();
         }
@@ -3028,6 +3032,28 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     /** Returns whether the Bloom filtering protocol optimisation is in use: defaults to true. */
     public boolean isBloomFilteringEnabled() {
         return vBloomFilteringEnabled;
+    }
+
+    /**
+     * Sets whether to use compressed headers (DIP-0025) for header downloads.
+     * When enabled, getheaders2/headers2 messages will be used instead of getheaders/headers
+     * when connected to peers that advertise NODE_HEADERS_COMPRESSED support.
+     *
+     * @param useCompressedHeaders true to enable compressed header downloads
+     * @see <a href="https://github.com/dashpay/dips/blob/master/dip-0025.md">DIP-0025</a>
+     */
+    public void setUseCompressedHeaders(boolean useCompressedHeaders) {
+        this.vUseCompressedHeaders = useCompressedHeaders;
+    }
+
+    /**
+     * Returns whether compressed header downloads are enabled (DIP-0025).
+     * Defaults to false.
+     *
+     * @see <a href="https://github.com/dashpay/dips/blob/master/dip-0025.md">DIP-0025</a>
+     */
+    public boolean isUseCompressedHeaders() {
+        return vUseCompressedHeaders;
     }
 
     public void setMinRequiredProtocolVersionAndDisconnect(int protocolVersion) {

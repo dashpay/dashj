@@ -116,6 +116,11 @@ public class CoinJoinQueue extends Message {
         }
     }
 
+    @Override
+    public Sha256Hash getHash() {
+        return getSignatureHash();
+    }
+
     public boolean checkSignature(BLSPublicKey pubKey) {
         Sha256Hash hash = getSignatureHash();
 

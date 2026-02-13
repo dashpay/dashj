@@ -99,6 +99,9 @@ public class BitcoinSerializer extends MessageSerializer {
         names.put(InstantSendLock.class, "isdlock");
         names.put(ChainLockSignature.class, "clsig");
         names.put(SendHeadersMessage.class, "sendheaders");
+        names.put(SendHeaders2Message.class, "sendheaders2");
+        names.put(GetHeaders2Message.class, "getheaders2");
+        names.put(Headers2Message.class, "headers2");
         names.put(SendAddressMessageV2.class, "sendaddrv2");
         names.put(GetMasternodePaymentRequestSyncMessage.class, "mnget");
         names.put(AssetLockTransaction.class, "tx");
@@ -264,6 +267,12 @@ public class BitcoinSerializer extends MessageSerializer {
             return new VersionAck(params, payloadBytes);
         } else if (command.equals("headers")) {
             return new HeadersMessage(params, payloadBytes);
+        } else if (command.equals("headers2")) {
+            return new Headers2Message(params, payloadBytes);
+        } else if (command.equals("getheaders2")) {
+            return new GetHeaders2Message(params, payloadBytes);
+        } else if (command.equals("sendheaders2")) {
+            return new SendHeaders2Message(params, payloadBytes);
         } else if (command.equals("alert")) {
             return makeAlertMessage(payloadBytes);
         } else if (command.equals("filterload")) {

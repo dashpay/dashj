@@ -68,6 +68,11 @@ public class VersionMessage extends Message {
     public static final int NODE_COMPACT_FILTERS = 1 << 6;
     /** A service bit that denotes whether the peer has at least the last two days worth of blockchain (BIP159). */
     public static final int NODE_NETWORK_LIMITED = 1 << 10;
+    /**
+     * NODE_HEADERS_COMPRESSED indicates the node supports compressed headers (DIP-0025).
+     * @see <a href="https://github.com/dashpay/dips/blob/master/dip-0025.md">DIP-0025</a>
+     */
+    public static final int NODE_HEADERS_COMPRESSED = 1 << 11;
 
     /**
      * The version number of the protocol spoken.
@@ -322,6 +327,14 @@ public class VersionMessage extends Message {
         return hasBlockChain() || (localServices & NODE_NETWORK_LIMITED) == NODE_NETWORK_LIMITED;
     }
 
+    /**
+     * Returns true if the peer supports compressed headers (DIP-0025).
+     * @see <a href="https://github.com/dashpay/dips/blob/master/dip-0025.md">DIP-0025</a>
+     */
+    public boolean isCompressedHeadersSupported() {
+        return (localServices & NODE_HEADERS_COMPRESSED) == NODE_HEADERS_COMPRESSED;
+    }
+
     public static String toStringServices(long services) {
         List<String> a = new LinkedList<>();
         if ((services & VersionMessage.NODE_NETWORK) == VersionMessage.NODE_NETWORK) {
@@ -347,6 +360,10 @@ public class VersionMessage extends Message {
         if ((services & VersionMessage.NODE_XTHIN) == VersionMessage.NODE_XTHIN) {
             a.add("XTHIN");
             services &= ~VersionMessage.NODE_XTHIN;
+        }
+        if ((services & VersionMessage.NODE_HEADERS_COMPRESSED) == VersionMessage.NODE_HEADERS_COMPRESSED) {
+            a.add("HEADERS_COMPRESSED");
+            services &= ~VersionMessage.NODE_HEADERS_COMPRESSED;
         }
         if (services != 0)
             a.add("remaining: " + Long.toBinaryString(services));
