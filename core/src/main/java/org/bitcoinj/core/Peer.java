@@ -769,7 +769,7 @@ public class Peer extends PeerSocketHandler {
                 StoredBlock lastHeader = headerChain.getChainHead();//new StoredBlock(previous, work, previousBlock.getHeight() + m.getBlockHeaders().size());
                 invokeOnHeadersDownloaded(lastHeader);
                 log.info("processing headers till {}", lastHeader.getHeight());
-                if (m.getBlockHeaders().size() < HeadersMessage.MAX_HEADERS) {
+                if (m.getBlockHeaders().size() < getMaxHeaders()) {
                     system.triggerHeadersDownloadComplete();
                 } else {
                     lock.lock();
@@ -839,7 +839,7 @@ public class Peer extends PeerSocketHandler {
             }
             // We added all headers in the message to the chain. Request some more if we got up to the limit, otherwise
             // we are at the end of the chain.
-            if (m.getBlockHeaders().size() >= HeadersMessage.MAX_HEADERS) {
+            if (m.getBlockHeaders().size() >= getMaxHeaders()) {
                 lock.lock();
                 try {
                     blockChainDownloadLocked(Sha256Hash.ZERO_HASH);
@@ -852,6 +852,14 @@ public class Peer extends PeerSocketHandler {
         } catch (PrunedException e) {
             // Unreachable when in SPV mode.
             throw new RuntimeException(e);
+        }
+    }
+
+    private int getMaxHeaders() {
+        if (isUseCompressedHeaders()) {
+            return Headers2Message.MAX_HEADERS;
+        } else {
+            return HeadersMessage.MAX_HEADERS;
         }
     }
 
