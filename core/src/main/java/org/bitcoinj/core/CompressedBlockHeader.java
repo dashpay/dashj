@@ -22,24 +22,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.OutputStream;
 
-/**
- * Represents a compressed block header as defined in DIP-0025.
- *
- * <p>The compression uses a 1-byte bitfield to indicate which fields are present:</p>
- * <ul>
- *   <li>Bits 0-2: Version handling (index 0-6 into last 7 distinct versions, or 7 = new version follows)</li>
- *   <li>Bit 3: Previous block hash (0=omitted, 1=included)</li>
- *   <li>Bit 4: Timestamp (0=2-byte signed offset from previous, 1=full 4-byte value)</li>
- *   <li>Bit 5: nBits (0=same as previous, 1=new 4-byte value follows)</li>
- *   <li>Bits 6-7: Reserved (must be 0)</li>
- * </ul>
- *
- * <p>The first header in a batch MUST include all fields (no compression).</p>
- *
- * <p>Instances of this class are not safe for use by multiple threads.</p>
- *
- * @see <a href="https://github.com/dashpay/dips/blob/master/dip-0025.md">DIP-0025</a>
- */
 public class CompressedBlockHeader extends Message {
     private static final Logger log = LoggerFactory.getLogger(CompressedBlockHeader.class);
 
