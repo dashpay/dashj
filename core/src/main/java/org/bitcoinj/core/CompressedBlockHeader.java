@@ -144,12 +144,9 @@ public class CompressedBlockHeader extends Message {
                 // Mark this version as most recently used (moves to front of LRU list)
                 context.markVersionAsMostRecent(tableIndex);
             } else {
-                // Table doesn't have this index yet - this shouldn't happen in normal operation
-                // but handle gracefully by reading from stream
-                log.warn("Version table index {} not available (table size {}), versionBits={}",
-                        tableIndex, context.getVersionTableSize(), versionBits);
-                version = readUint32();
-                context.saveVersionAsMostRecent(version);
+                throw new ProtocolException("Invalid version table index " + tableIndex +
+                        " (versionBits=" + versionBits + ", table size=" +
+                        context.getVersionTableSize() + ")");
             }
         }
 
