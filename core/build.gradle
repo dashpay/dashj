@@ -66,6 +66,7 @@ test {
     exclude 'org/bitcoinj/protocols/channels/ChannelConnectionTest*'
     exclude 'org/bitcoinj/core/LevelDBFullPrunedBlockChainTest*'
     exclude 'org/bitcoinj/store/LevelDBBlockStoreTest*'
+    maxHeapSize = "2g"  // Increase heap for large wallet tests
     testLogging {
         events "failed"
         exceptionFormat "full"

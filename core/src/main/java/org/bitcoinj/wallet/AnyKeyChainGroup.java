@@ -652,6 +652,17 @@ public class AnyKeyChainGroup implements IKeyBag {
     }
 
     /**
+     * Returns number of keys used on external and internal paths.
+     */
+    public int getTotalIssuedKeys() {
+        int result = basic.numKeys();
+        if (chains != null)
+            for (AnyDeterministicKeyChain chain : chains)
+                result += chain.numLeafKeysIssued();
+        return result;
+    }
+
+    /**
      * Removes a key that was imported into the basic key chain. You cannot remove deterministic keys.
      * @throws IllegalArgumentException if the key is deterministic.
      */

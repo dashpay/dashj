@@ -201,7 +201,7 @@ public class WalletEx extends Wallet {
      */
     @Override
     public Coin getBalance(BalanceType balanceType) {
-        lock.lock();
+        lock.readLock().lock();
         try {
             if (balanceType == BalanceType.AVAILABLE || balanceType == BalanceType.AVAILABLE_SPENDABLE) {
                 List<TransactionOutput> candidates = calculateAllSpendCandidates(true, balanceType == BalanceType.AVAILABLE_SPENDABLE);
@@ -236,7 +236,7 @@ public class WalletEx extends Wallet {
                 throw new AssertionError("Unknown balance type");  // Unreachable.
             }
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
@@ -284,7 +284,7 @@ public class WalletEx extends Wallet {
     }
 
     public boolean isSpent(Sha256Hash hash, long index) {
-        lock.lock();
+        lock.readLock().lock();
         try {
             // TODO: should this be spent.contains(hash)?
             Transaction tx = unspent.get(hash);
@@ -294,18 +294,18 @@ public class WalletEx extends Wallet {
 
             return tx.getOutput(index).getSpentBy() != null;
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
     HashMap<TransactionOutPoint, Integer> mapOutpointRoundsCache = new HashMap<>();
     // Recursively determine the rounds of a given input (How deep is the CoinJoin chain for a given input)
     public int getRealOutpointCoinJoinRounds(TransactionOutPoint outPoint) {
-        lock.lock();
+        lock.readLock().lock();
         try {
             return getRealOutpointCoinJoinRounds(outPoint, 0);
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
@@ -326,7 +326,7 @@ public class WalletEx extends Wallet {
     }
 
     boolean isMine(TransactionInput input) {
-        lock.lock();
+        lock.readLock().lock();
         try {
             Transaction tx = getTransaction(input.getOutpoint().getHash());
             if (tx != null) {
@@ -335,14 +335,13 @@ public class WalletEx extends Wallet {
                 }
             }
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
         return false;
     }
 
+    // only call from other getRealOutputCoinJoinRounds
     int getRealOutpointCoinJoinRounds(TransactionOutPoint outpoint, int rounds) {
-        checkState(lock.isHeldByCurrentThread());
-
         final int roundsMax = CoinJoinConstants.MAX_COINJOIN_ROUNDS + CoinJoinClientOptions.getRandomRounds();
         if (rounds >= roundsMax) {
             // there can only be roundsMax rounds max
@@ -491,7 +490,7 @@ public class WalletEx extends Wallet {
                 DefaultCoinSelector.get().select(MAX_MONEY, candidates) :
                 ZeroConfCoinSelector.get().select(MAX_MONEY, candidates);
 
-        lock.lock();
+        lock.readLock().lock();
         try {
             // Try using the cache for already confirmed mixable inputs.
             // This should only be used if maxOupointsPerAddress was NOT specified.
@@ -605,7 +604,7 @@ public class WalletEx extends Wallet {
 
             return vecTallyRet;
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
@@ -614,7 +613,7 @@ public class WalletEx extends Wallet {
      * Count the number of unspent outputs that have a certain value
      */
     public int countInputsWithAmount(Coin inputValue) {
-        lock.lock();
+        lock.readLock().lock();
         try {
             int count = 0;
             for (TransactionOutput output : myUnspents) {
@@ -629,7 +628,7 @@ public class WalletEx extends Wallet {
             }
             return count;
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
@@ -700,11 +699,11 @@ public class WalletEx extends Wallet {
     }
 
     boolean isUsedDestination(TransactionDestination destination) {
-        lock.lock();
+        lock.readLock().lock();
         try {
             return isMine(destination) && getDestData(destination, "used", null);
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
@@ -738,7 +737,7 @@ public class WalletEx extends Wallet {
                                Coin nMinimumSumAmount, int maximumCount,
                                int minDepth, int maxDepth
     ) {
-        lock.lock();
+        lock.readLock().lock();
         try {
             vCoins.clear();
             CoinType nCoinType = coinControl != null ? coinControl.getCoinType() : CoinType.ALL_COINS;
@@ -831,7 +830,7 @@ public class WalletEx extends Wallet {
                 }
             }
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 
@@ -895,7 +894,7 @@ public class WalletEx extends Wallet {
         }
     }
     public boolean selectDenominatedAmounts(Coin valueMax, Set<Coin> setAmountsRet) {
-        lock.lock();
+        lock.readLock().lock();
         try {
 
             Coin valueTotal = Coin.ZERO;
@@ -918,7 +917,7 @@ public class WalletEx extends Wallet {
 
             return valueTotal.isGreaterThanOrEqualTo(CoinJoin.getSmallestDenomination());
         } finally {
-            lock.unlock();
+            lock.readLock().unlock();
         }
     }
 

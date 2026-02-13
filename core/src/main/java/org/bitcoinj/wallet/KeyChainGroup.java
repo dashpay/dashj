@@ -628,6 +628,17 @@ public class KeyChainGroup implements KeyBag {
     }
 
     /**
+     * Returns number of keys used on external and internal paths.
+     */
+    public int getTotalIssuedKeys() {
+        int result = basic.numKeys();
+        if (chains != null)
+            for (DeterministicKeyChain chain : chains)
+                result += chain.numLeafKeysIssued();
+        return result;
+    }
+
+    /**
      * Removes a key that was imported into the basic key chain. You cannot remove deterministic keys.
      * @throws java.lang.IllegalArgumentException if the key is deterministic.
      */
