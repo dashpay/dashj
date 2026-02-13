@@ -563,7 +563,7 @@ public class Peer extends PeerSocketHandler {
             // properly explore the network.
             processAddressMessage((AddressMessage) m);
         } else if (m instanceof HeadersMessage) {
-            processHeaders((HeadersMessage) m);
+            processHeaders((HeadersMessage) m, HeadersMessage.MAX_HEADERS);
         } else if (m instanceof Headers2Message) {
             processHeaders2((Headers2Message) m);
         } else if (m instanceof AlertMessage) {
@@ -728,7 +728,7 @@ public class Peer extends PeerSocketHandler {
         }
     }
 
-    protected void processHeaders(HeadersMessage m) throws ProtocolException {
+    protected void processHeaders(HeadersMessage m, int maxHeaders) throws ProtocolException {
         // Runs in network loop thread for this peer.
         //
         // This method can run if a peer just randomly sends us a "headers" message (should never happen), or more
@@ -769,7 +769,7 @@ public class Peer extends PeerSocketHandler {
                 StoredBlock lastHeader = headerChain.getChainHead();//new StoredBlock(previous, work, previousBlock.getHeight() + m.getBlockHeaders().size());
                 invokeOnHeadersDownloaded(lastHeader);
                 log.info("processing headers till {}", lastHeader.getHeight());
-                if (m.getBlockHeaders().size() < getMaxHeaders()) {
+                if (m.getBlockHeaders().size() < maxHeaders) {
                     system.triggerHeadersDownloadComplete();
                 } else {
                     lock.lock();
@@ -839,7 +839,7 @@ public class Peer extends PeerSocketHandler {
             }
             // We added all headers in the message to the chain. Request some more if we got up to the limit, otherwise
             // we are at the end of the chain.
-            if (m.getBlockHeaders().size() >= getMaxHeaders()) {
+            if (m.getBlockHeaders().size() >= maxHeaders) {
                 lock.lock();
                 try {
                     blockChainDownloadLocked(Sha256Hash.ZERO_HASH);
@@ -855,14 +855,6 @@ public class Peer extends PeerSocketHandler {
         }
     }
 
-    private int getMaxHeaders() {
-        if (isUseCompressedHeaders()) {
-            return Headers2Message.MAX_HEADERS;
-        } else {
-            return HeadersMessage.MAX_HEADERS;
-        }
-    }
-
     /**
      * Process compressed headers message (DIP-0025).
      * The Headers2Message.parse() already decompresses headers to Block objects,
@@ -871,7 +863,7 @@ public class Peer extends PeerSocketHandler {
     protected void processHeaders2(Headers2Message m) throws ProtocolException {
         // Headers2Message already decompresses to Block objects in its parse() method
         HeadersMessage converted = new HeadersMessage(params, m.getBlockHeaders());
-        processHeaders(converted);
+        processHeaders(converted, Headers2Message.MAX_HEADERS);
     }
 
     public void startMasternodeListDownload() {
