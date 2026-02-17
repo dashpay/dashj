@@ -4486,6 +4486,8 @@ public class Wallet extends BaseTaggableObject
      * @throws MultipleOpReturnRequested if there is more than one OP_RETURN output for the resultant transaction.
      */
     public Transaction sendCoinsOffline(SendRequest request) throws InsufficientMoneyException {
+        checkState(lock.getReadHoldCount() == 0,
+                "Cannot hold read lock when calling sendCoinsOffline (would deadlock on write lock upgrade)");
         lock.writeLock().lock();
         try {
             completeTx(request);
