@@ -227,6 +227,9 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
         if (containingWallet instanceof WalletEx && coinJoinProto.hasOutpointRoundsCache()) {
             WalletEx walletEx = (WalletEx) containingWallet;
             Protos.OutpointRoundsCache cacheProto = coinJoinProto.getOutpointRoundsCache();
+            // Pre-size HashMap to avoid resizing during deserialization
+            int entryCount = cacheProto.getEntriesCount();
+            walletEx.mapOutpointRoundsCache = new HashMap<>(entryCount * 4 / 3 + 1);
             for (Protos.OutpointRoundsEntry entryProto : cacheProto.getEntriesList()) {
                 Sha256Hash txHash = Sha256Hash.wrap(entryProto.getTransactionHash().toByteArray());
                 long outputIndex = entryProto.getOutputIndex();

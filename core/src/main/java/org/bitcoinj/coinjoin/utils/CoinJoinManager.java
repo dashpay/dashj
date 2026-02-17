@@ -71,6 +71,7 @@ import java.util.HashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -507,10 +508,14 @@ public class CoinJoinManager {
     public final PreMessageReceivedEventListener preMessageReceivedEventListener = (peer, m) -> {
         if (m instanceof CoinJoinQueue) {
             // Offload DSQueue message processing to thread pool to avoid blocking network I/O thread
-            messageProcessingExecutor.execute(() -> {
-                processMessage(peer, m);
-            });
-            // Return null as dsq meessages are only processed above
+            try {
+                messageProcessingExecutor.execute(() -> {
+                    processMessage(peer, m);
+                });
+            } catch (RejectedExecutionException e) {
+                // Executor was shutdown - ignore, we're shutting down
+            }
+            // Return null as dsq messages are only processed above
             return null;
         } else if (isCoinJoinMessage(m)) {
             // Process other CoinJoin messages synchronously

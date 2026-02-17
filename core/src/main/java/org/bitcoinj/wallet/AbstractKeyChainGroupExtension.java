@@ -544,4 +544,9 @@ abstract public class AbstractKeyChainGroupExtension implements KeyChainGroupExt
     public int getCombinedKeyLookaheadEpochs() {
         return hasKeyChains() ? getKeyChainGroup().getCombinedKeyLookaheadEpochs() : 0;
     }
+
+    @Override
+    public int getTotalIssuedKeys() {
+        return hasKeyChains() ? getKeyChainGroup().getTotalIssuedKeys() : 0;
+    }
 }
