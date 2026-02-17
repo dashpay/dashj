@@ -343,11 +343,11 @@ public class WalletEx extends Wallet {
     
     @VisibleForTesting
     public void markAsFullyMixed(TransactionOutPoint outPoint) {
-        lock.lock();
+        lock.writeLock().lock();
         try {
             mapOutpointRoundsCache.put(outPoint, 19);
         } finally {
-            lock.unlock();
+            lock.writeLock().unlock();
         }
     }
 
