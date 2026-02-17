@@ -56,6 +56,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -173,11 +174,11 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
         // Time protobuf building and optimized I/O
         long ioStartTime = System.nanoTime();
         Protos.CoinJoin coinJoinProto = builder.build();
-        
+
         // Use optimized buffer size based on actual serialized size
         int serializedSize = coinJoinProto.getSerializedSize();
         ByteArrayOutputStream output = new ByteArrayOutputStream(serializedSize);
-        
+
         // Use optimized CodedOutputStream buffer size - larger than default for better performance
         int bufferSize = Math.max(64 * 1024, serializedSize / 4); // At least 64KB or 25% of data size
         try {
@@ -221,7 +222,7 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
         }
         rounds = coinJoinProto.getRounds();
         CoinJoinClientOptions.setRounds(rounds);
-        
+
         // Deserialize outpoint rounds cache for WalletEx
         if (containingWallet instanceof WalletEx && coinJoinProto.hasOutpointRoundsCache()) {
             WalletEx walletEx = (WalletEx) containingWallet;
@@ -234,7 +235,7 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
                 walletEx.mapOutpointRoundsCache.put(outPoint, rounds);
             }
         }
-        
+
         // Deserialize coinJoinSalt
         if (coinJoinProto.hasCoinjoinSalt()) {
             coinJoinSalt = Sha256Hash.wrap(coinJoinProto.getCoinjoinSalt().toByteArray());
@@ -242,7 +243,7 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
             // if there is no coinJoinSalt, then add it.
             calculateCoinJoinSalt();
         }
-        
+
         loadedKeys = true;
     }
 
