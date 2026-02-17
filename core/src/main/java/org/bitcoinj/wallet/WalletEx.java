@@ -340,6 +340,17 @@ public class WalletEx extends Wallet {
         return false;
     }
 
+    
+    @VisibleForTesting
+    public void markAsFullyMixed(TransactionOutPoint outPoint) {
+        lock.lock();
+        try {
+            mapOutpointRoundsCache.put(outPoint, 19);
+        } finally {
+            lock.unlock();
+        }
+    }
+
     // only call from other getRealOutputCoinJoinRounds
     int getRealOutpointCoinJoinRounds(TransactionOutPoint outpoint, int rounds) {
         final int roundsMax = CoinJoinConstants.MAX_COINJOIN_ROUNDS + CoinJoinClientOptions.getRandomRounds();

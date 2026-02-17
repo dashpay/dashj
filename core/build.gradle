@@ -10,7 +10,7 @@ apply plugin: 'eclipse'
 apply plugin: 'jacoco'
 // apply plugin:  'com.github.spotbugs'
 
-version = '21.1.14'
+version = '21.2.0-SNAPSHOT'
 archivesBaseName = 'dashj-core'
 eclipse.project.name = 'dashj-core'
 
