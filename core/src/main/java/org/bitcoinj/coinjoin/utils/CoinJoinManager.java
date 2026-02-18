@@ -99,7 +99,7 @@ public class CoinJoinManager {
     private RequestKeyParameter requestKeyParameter;
     private RequestDecryptedKey requestDecryptedKey;
     private final ScheduledExecutorService scheduledExecutorService;
-    private ExecutorService messageProcessingExecutor = null;
+    private volatile ExecutorService messageProcessingExecutor = null;
     protected final ReentrantLock lock = Threading.lock("coinjoin-manager");
 
     private boolean finishCurrentSessions = false;
@@ -292,9 +292,18 @@ public class CoinJoinManager {
             masternodeGroup.removePreMessageReceivedEventListener(preMessageReceivedEventListener);
         }
         // Ensure executor is shut down
-        if (messageProcessingExecutor != null && !messageProcessingExecutor.isShutdown()) {
-            messageProcessingExecutor.shutdown();
-            messageProcessingExecutor = null;
+        ExecutorService execToStop = null;
+        lock.lock();
+        try {
+            if (messageProcessingExecutor != null && !messageProcessingExecutor.isShutdown()) {
+                execToStop = messageProcessingExecutor;
+                messageProcessingExecutor = null;
+            }
+        } finally {
+            lock.unlock();
+        }
+        if (execToStop != null) {
+            execToStop.shutdown();
         }
     }
 
@@ -519,11 +528,10 @@ public class CoinJoinManager {
     public final PreMessageReceivedEventListener preMessageReceivedEventListener = (peer, m) -> {
         if (m instanceof CoinJoinQueue) {
             // Offload DSQueue message processing to thread pool to avoid blocking network I/O thread
-            if (isMessageProcessorRunning()) {
+            ExecutorService exec = messageProcessingExecutor;
+            if (exec != null) {
                 try {
-                    messageProcessingExecutor.execute(() -> {
-                        processMessage(peer, m);
-                    });
+                    exec.execute(() -> processMessage(peer, m));
                 } catch (RejectedExecutionException e) {
                     // swallow because this is being stopped
                 }
