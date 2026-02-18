@@ -528,7 +528,7 @@ public class CoinJoinManager {
                     // swallow because this is being stopped
                 }
             }
-            // Return null as dsq meessages are only processed above
+            // Return null as dsq messages are only processed above
             return null;
         } else if (isCoinJoinMessage(m)) {
             // Process other CoinJoin messages synchronously

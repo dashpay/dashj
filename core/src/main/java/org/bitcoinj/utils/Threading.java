@@ -31,6 +31,7 @@ import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
 import java.util.concurrent.*;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * Various threading related utilities. Provides a wrapper around explicit lock creation that lets you control whether
@@ -190,6 +191,13 @@ public class Threading {
 
     public static CycleDetectingLockFactory.Policy getPolicy() {
         return policy;
+    }
+
+    public static ReentrantReadWriteLock readWriteLock(String name) {
+        if (Utils.isAndroidRuntime() && useDefaultAndroidPolicy)
+            return new ReentrantReadWriteLock(true);
+        else
+            return factory.newReentrantReadWriteLock(name, true);
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////

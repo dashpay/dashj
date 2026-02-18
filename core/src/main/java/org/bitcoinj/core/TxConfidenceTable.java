@@ -202,14 +202,19 @@ public class TxConfidenceTable {
     }
 
     public ArrayList<TransactionConfidence> get(StoredBlock block) {
-        ArrayList<TransactionConfidence> results = Lists.newArrayList();
-        for (Map.Entry<Sha256Hash, WeakConfidenceReference> entry: table.entrySet()) {
-            TransactionConfidence confidence = entry.getValue().get();
-            if (confidence != null && confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING &&
-                    confidence.getAppearedAtChainHeight() <= block.getHeight()) {
-                results.add(confidence);
+        lock.lock();
+        try {
+            ArrayList<TransactionConfidence> results = Lists.newArrayList();
+            for (Map.Entry<Sha256Hash, WeakConfidenceReference> entry: table.entrySet()) {
+                TransactionConfidence confidence = entry.getValue().get();
+                if (confidence != null && confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING &&
+                        confidence.getAppearedAtChainHeight() <= block.getHeight()) {
+                    results.add(confidence);
+                }
             }
+            return results;
+        } finally {
+            lock.unlock();
         }
-        return results;
     }
 }
