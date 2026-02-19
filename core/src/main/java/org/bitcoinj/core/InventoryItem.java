@@ -60,6 +60,7 @@ public class InventoryItem {
         ChainLockSignature,
         InstantSendLock,
         InstantSendDeterministicLock,
+        CoinJoinQueue, //dsq
         None,
     }
 

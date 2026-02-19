@@ -184,6 +184,9 @@ public abstract class ListMessage extends Message {
                 case 31:
                     type = InventoryItem.Type.InstantSendDeterministicLock;
                     break;
+                case 32:
+                    type = InventoryItem.Type.CoinJoinQueue;
+                    break;
                 default:
                     type = InventoryItem.Type.None;
                     break;

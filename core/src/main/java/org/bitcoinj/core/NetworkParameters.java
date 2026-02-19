@@ -689,8 +689,14 @@ public abstract class NetworkParameters {
         MNLISTDIFF_VERSION_ORDER(70229),
         MNLISTDIFF_CHAINLOCKS(70230),
         CORE_20_1(70231),
+        NO_LEGACY_ISLOCK_PROTO_VERSION(70231),
         CORE_21(70232),
-        CURRENT(70232); //testnet is still 70228
+        DSQ_INV_VERSION(70234),
+        INCREASE_MAX_HEADERS2_VERSION(70235),
+        // EFFICIENT_QRINFO_VERSION(70236),
+        // ISDLOCK_CYCLEHASH_UPDATE_VERSION(70237),
+        // PLATFORM_BAN_VERSION(70238),
+        CURRENT(70235); //testnet is still 70228
 
         private final int bitcoinProtocol;
 

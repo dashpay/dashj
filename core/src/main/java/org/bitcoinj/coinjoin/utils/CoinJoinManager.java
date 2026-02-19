@@ -39,6 +39,9 @@ import org.bitcoinj.core.AbstractBlockChain;
 import org.bitcoinj.core.BlockChain;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.ECKey;
+import org.bitcoinj.core.GetDataMessage;
+import org.bitcoinj.core.InventoryItem;
+import org.bitcoinj.core.InventoryMessage;
 import org.bitcoinj.core.MasternodeAddress;
 import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.core.Message;
@@ -53,10 +56,8 @@ import org.bitcoinj.core.listeners.PreMessageReceivedEventListener;
 import org.bitcoinj.core.listeners.TransactionReceivedInBlockListener;
 import org.bitcoinj.evolution.Masternode;
 import org.bitcoinj.evolution.MasternodeMetaDataManager;
-import org.bitcoinj.evolution.SimplifiedMasternodeListDiff;
 import org.bitcoinj.evolution.SimplifiedMasternodeListManager;
 import org.bitcoinj.quorums.ChainLocksHandler;
-import org.bitcoinj.quorums.QuorumRotationInfo;
 import org.bitcoinj.utils.ContextPropagatingThreadFactory;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Wallet;
@@ -68,6 +69,9 @@ import org.slf4j.LoggerFactory;
 import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -85,7 +89,7 @@ public class CoinJoinManager {
     private static final Logger log = LoggerFactory.getLogger(CoinJoinManager.class);
     public static final String MESSAGE_PROCESSOR = "CoinJoin-MessageProcessor";
     private final ArrayList<WalletEx> wallets = Lists.newArrayList();
-    private final Context context;
+    private Context context;
     public final HashMap<String, CoinJoinClientManager> coinJoinClientManagers;
     private final CoinJoinClientQueueManager coinJoinClientQueueManager;
 
@@ -526,7 +530,31 @@ public class CoinJoinManager {
     }
 
     public final PreMessageReceivedEventListener preMessageReceivedEventListener = (peer, m) -> {
-        if (m instanceof CoinJoinQueue) {
+        if (m instanceof InventoryMessage) {
+            InventoryMessage inv = (InventoryMessage) m;
+            List<InventoryItem> items = inv.getItems();
+            List<InventoryItem> dsqList = new LinkedList<>();
+            for (InventoryItem item : items) {
+                if (item.type == InventoryItem.Type.CoinJoinQueue) {
+                    dsqList.add(item);
+                }
+            }
+            Iterator<InventoryItem> it = dsqList.iterator();
+            GetDataMessage getdata = new GetDataMessage(context.getParams());
+            while (it.hasNext()) {
+                InventoryItem item = it.next();
+                if(!alreadyHave(item)) {
+                    getdata.addItem(item);
+                } else {
+                    log.info("coinjoin: DSQUEUE: already has {}", item.hash);
+                }
+            }
+            if (!getdata.getItems().isEmpty()) {
+                // This will cause us to receive a bunch of block or tx messages.
+                log.info("coinjoin: DSQUEUE: requesting {} dsq messages", getdata.getItems().size());
+                peer.sendMessage(getdata);
+            }
+        } else if (m instanceof CoinJoinQueue) {
             // Offload DSQueue message processing to thread pool to avoid blocking network I/O thread
             ExecutorService exec = messageProcessingExecutor;
             if (exec != null) {
@@ -555,5 +583,9 @@ public class CoinJoinManager {
 
     public void removeWallet(WalletEx wallet) {
         wallets.remove(wallet);
+    }
+
+    protected boolean alreadyHave(InventoryItem item) {
+        return coinJoinClientQueueManager.alreadyHave(item);
     }
 }
