@@ -121,8 +121,10 @@ public class FriendKeyChainTest {
     public void serializeTest() throws UnreadableWalletException {
         final NetworkParameters PARAMS = UnitTestParams.get();
 
-        Context.propagate(new Context(PARAMS, 100, Coin.ZERO, false));
-        Wallet wallet = new Wallet(PARAMS);
+        Context context = new Context(PARAMS, 100, Coin.ZERO, false);
+        Context.propagate(context);
+        Wallet wallet = Wallet.createDeterministic(context, Script.ScriptType.P2PKH);
+
 
         Sha256Hash userAhash = Sha256Hash.wrap("c27eb14f698b32e9bb306dba7bbbee831263dcf658abeebb39930460ead117e5");
         Sha256Hash userBhash = Sha256Hash.wrap("ee2052ff075c5ca3c16c3e20e9ac8223834475cc1324ab07889cb24ce6a62793");
