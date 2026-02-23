@@ -48,13 +48,13 @@ public class PrefixedChecksummedBytesTest {
     @Test
     public void stringification() {
         // Test a testnet address.
-        expect(params.getAddressHeader()).andReturn(111).andReturn(0);
+        expect(params.getAddressHeader()).andReturn(140).andReturn(76);
         replay(params);
 
-        PrefixedChecksummedBytes a = new PrefixedChecksummedBytesToTest(TESTNET, HEX.decode("fda79a24e50ff70ff42f7d89585da5bd19d9e5cc"));
+        PrefixedChecksummedBytes a = new PrefixedChecksummedBytesToTest(params, HEX.decode("fda79a24e50ff70ff42f7d89585da5bd19d9e5cc"));
         assertEquals("yjSeawEuRUJDpr9FMmGx1oFtPrEjQG3vkg", a.toString());
 
-        PrefixedChecksummedBytes b = new PrefixedChecksummedBytesToTest(MAINNET, HEX.decode("4a22c3c4cbb31e4d03b15550636762bda0baf85a"));
+        PrefixedChecksummedBytes b = new PrefixedChecksummedBytesToTest(params, HEX.decode("4a22c3c4cbb31e4d03b15550636762bda0baf85a"));
         assertEquals("XhSqUwiG6PGjRCXD5sksyvRNE1ZV8jkaVC", b.toString());
     }
 
