@@ -37,7 +37,7 @@ public class Base58EncodeCheckedTest {
     @Parameters
     public static Collection<Object[]> parameters() {
         return Arrays.asList(new Object[][]{
-                {111, new byte[LegacyAddress.LENGTH], "mfWxJ45yp2SFn7UciZyNpvDKrzbhyfKrY8"},
+                {111, new byte[Address.LENGTH], "mfWxJ45yp2SFn7UciZyNpvDKrzbhyfKrY8"},
                 {128, new byte[32], "5HpHagT65TZzG1PH3CSu63k8DbpvD8s5ip4nEB3kEsreAbuatmU"}
         });
     }
