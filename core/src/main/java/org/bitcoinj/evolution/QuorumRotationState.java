@@ -135,7 +135,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
     }
 
     void finishInitialization() {
-        lastRequest = new QuorumUpdateRequest<>(new GetQuorumRotationInfo(params, Lists.newArrayList(), Sha256Hash.ZERO_HASH, true));
+        lastRequest = new QuorumUpdateRequest<>(new GetQuorumRotationInfo(params, new ArrayList<>(), Sha256Hash.ZERO_HASH, true));
         llmqType = params.getLlmqDIP0024InstantSend();
         syncOptions = MasternodeListSyncOptions.SYNC_MINIMUM;
     }
@@ -389,7 +389,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
     }
 
     public GetQuorumRotationInfo getQuorumRotationInfoRequestFromGenesis(StoredBlock block) {
-        return new GetQuorumRotationInfo(params, Lists.newArrayList(), block.getHeader().getHash(), true);
+        return new GetQuorumRotationInfo(params, new ArrayList<>(), block.getHeader().getHash(), true);
     }
 
     @Override
@@ -571,7 +571,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
 
         ArrayList<ArrayList<Masternode>> quorumMembers = Lists.newArrayListWithCapacity(llmqParameters.getSigningActiveQuorumCount());
         for (int i = 0; i < llmqParameters.getSigningActiveQuorumCount(); ++i) {
-            quorumMembers.add(Lists.newArrayList());
+            quorumMembers.add(new ArrayList<>());
         }
 
         ArrayList<ArrayList<SimplifiedMasternodeListEntry>> newQuarterMembers = buildNewQuorumQuarterMembers(llmqParameters, quorumBaseBlock, previousQuarters);
@@ -669,7 +669,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
         int nQuorums = llmqParameters.getSigningActiveQuorumCount();
         ArrayList<ArrayList<SimplifiedMasternodeListEntry>> quarterQuorumMembers = new ArrayList<>(nQuorums);
         for (int i = 0; i < llmqParameters.getSigningActiveQuorumCount(); ++i) {
-            quarterQuorumMembers.add(Lists.newArrayList());
+            quarterQuorumMembers.add(new ArrayList<>());
         }
         return quarterQuorumMembers;
     }
@@ -749,7 +749,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             log.info("BuildNewQuorumQuarterMembers h[{}] {}\n", cycleQuorumBaseBlock.getHeight(), ss);
         }
 
-        ArrayList<Integer> skipList = Lists.newArrayList();
+        ArrayList<Integer> skipList = new ArrayList<>();
         int firstSkippedIndex = 0;
         int idx = 0;
         for (int i = 0; i < llmqParameters.getSigningActiveQuorumCount(); ++i) {
@@ -829,7 +829,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
 
         ArrayList<ArrayList<SimplifiedMasternodeListEntry>> quarterQuorumMembers = Lists.newArrayListWithCapacity(numQuorums);
         for (int i = 0; i < numQuorums; ++i) {
-            quarterQuorumMembers.add(Lists.newArrayList());
+            quarterQuorumMembers.add(new ArrayList<>());
         }
 
         Sha256Hash modifier = getHashModifier(llmqParameters, cycleQuorumBaseBlock);
@@ -867,7 +867,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
         //Mode 1: List holds entries to be skipped
         else if (snapshot.getSkipListMode() == SnapshotSkipMode.MODE_SKIPPING_ENTRIES.getValue()) {
             int firstEntryIndex = 0;
-            ArrayList<Integer> processedSkipList = Lists.newArrayList();
+            ArrayList<Integer> processedSkipList = new ArrayList<>();
             for (int s : snapshot.getSkipList()) {
                 if (firstEntryIndex == 0) {
                     firstEntryIndex = s;

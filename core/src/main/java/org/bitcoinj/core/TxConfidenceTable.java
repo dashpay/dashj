@@ -204,7 +204,7 @@ public class TxConfidenceTable {
     public ArrayList<TransactionConfidence> get(StoredBlock block) {
         lock.lock();
         try {
-            ArrayList<TransactionConfidence> results = Lists.newArrayList();
+            ArrayList<TransactionConfidence> results = new ArrayList<>();
             for (Map.Entry<Sha256Hash, WeakConfidenceReference> entry: table.entrySet()) {
                 TransactionConfidence confidence = entry.getValue().get();
                 if (confidence != null && confidence.getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING &&

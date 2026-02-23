@@ -275,7 +275,7 @@ public class WalletEx extends Wallet {
     }
 
     public boolean hasCollateralInputs(boolean onlyConfirmed) {
-        ArrayList<TransactionOutput> vCoins = Lists.newArrayList();
+        ArrayList<TransactionOutput> vCoins = new ArrayList<>();
         CoinControl coin_control = new CoinControl();
         coin_control.setCoinType(CoinType.ONLY_COINJOIN_COLLATERAL);
         availableCoins(vCoins, onlyConfirmed, coin_control);
@@ -586,7 +586,7 @@ public class WalletEx extends Wallet {
 
             // construct resulting vector
             // NOTE: vecTallyRet is "sorted" by txdest (i.e. address), just like mapTally
-            ArrayList<CompactTallyItem> vecTallyRet = Lists.newArrayList();
+            ArrayList<CompactTallyItem> vecTallyRet = new ArrayList<>();
             for (Map.Entry<TransactionDestination, CompactTallyItem> item : mapTally.entrySet()) {
                 //TODO: ignore this to get this dust back in
                 if (anonymizable && item.getValue().amount.isLessThan(smallestDenom))
@@ -963,7 +963,7 @@ public class WalletEx extends Wallet {
     }
 
     List<TransactionOutput> getDenominatedOutputs() {
-        ArrayList<TransactionOutput> result = Lists.newArrayList();
+        ArrayList<TransactionOutput> result = new ArrayList<>();
         List<TransactionOutput> candidates = calculateAllSpendCandidates(false, true);
         CoinSelection selection = DenominatedCoinSelector.get().select(MAX_MONEY, candidates);
         for (TransactionOutput out : selection.gathered) {
@@ -983,7 +983,7 @@ public class WalletEx extends Wallet {
     }
 
     List<TransactionOutput> getCoinJoinOutputs() {
-        ArrayList<TransactionOutput> result = Lists.newArrayList();
+        ArrayList<TransactionOutput> result = new ArrayList<>();
         List<TransactionOutput> candidates = calculateAllSpendCandidates(false, true);
         CoinSelection selection = DenominatedCoinSelector.get().select(MAX_MONEY, candidates);
         for (TransactionOutput out : selection.gathered) {
@@ -998,7 +998,7 @@ public class WalletEx extends Wallet {
         StringBuilder s = new StringBuilder("Transaction History Report");
         s.append("\n-----------------------------------------------\n");
 
-        ArrayList<Transaction> sortedTxes = Lists.newArrayList();
+        ArrayList<Transaction> sortedTxes = new ArrayList<>();
         getWalletTransactions().forEach(tx -> sortedTxes.add(tx.getTransaction()));
         sortedTxes.sort(Transaction.SORT_TX_BY_UPDATE_TIME);
 
@@ -1041,7 +1041,7 @@ public class WalletEx extends Wallet {
                 sendingToFriendsGroup.getFriendKeyChain(contact.getEvolutionUserId(), contact.getUserAccount(), contact.getFriendUserId(), contact.getFriendAccountReference(), FriendKeyChain.KeyChainType.SENDING_CHAIN) :
                 null;
 
-        ArrayList<Transaction> txs = Lists.newArrayList();
+        ArrayList<Transaction> txs = new ArrayList<>();
         if (fromChain == null && toChain == null) {
             return txs;
         }

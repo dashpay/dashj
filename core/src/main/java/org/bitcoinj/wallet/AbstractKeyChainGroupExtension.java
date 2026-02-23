@@ -31,6 +31,7 @@ import org.bitcoinj.wallet.listeners.KeyChainEventListener;
 import org.bouncycastle.crypto.params.KeyParameter;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.Executor;
@@ -477,7 +478,7 @@ abstract public class AbstractKeyChainGroupExtension implements KeyChainGroupExt
     public List<Protos.Key> serializeToProtobuf() {
         keyChainGroupLock.lock();
         try {
-            return isInitialized() ? getKeyChainGroup().serializeToProtobuf() : Lists.newArrayList();
+            return isInitialized() ? getKeyChainGroup().serializeToProtobuf() : new ArrayList<>();
         } finally {
             keyChainGroupLock.unlock();
         }

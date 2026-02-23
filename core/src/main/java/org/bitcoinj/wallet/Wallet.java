@@ -6316,7 +6316,7 @@ public class Wallet extends BaseTaggableObject
                     sendingToFriendsGroup.getFriendKeyChain(contact.getEvolutionUserId(), contact.getUserAccount(), contact.getFriendUserId(), contact.getFriendAccountReference(), FriendKeyChain.KeyChainType.SENDING_CHAIN) :
                     null;
 
-            ArrayList<Transaction> txs = Lists.newArrayList();
+            ArrayList<Transaction> txs = new ArrayList<>();
             if (fromChain == null && toChain == null) {
                 return txs;
             }
@@ -6507,7 +6507,7 @@ public class Wallet extends BaseTaggableObject
                 keys = receivingFromFriendsGroup.freshKeys(contact, type, numberOfKeys);
             else if(type == FriendKeyChain.KeyChainType.SENDING_CHAIN)
                 keys = sendingToFriendsGroup.freshKeys(contact, type, numberOfKeys);
-            else keys = Lists.newArrayList();
+            else keys = new ArrayList<>();
         } finally {
             keyChainGroupLock.unlock();
         }

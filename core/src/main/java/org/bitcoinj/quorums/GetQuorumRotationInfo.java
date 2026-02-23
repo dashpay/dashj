@@ -88,7 +88,7 @@ public class GetQuorumRotationInfo extends AbstractQuorumRequest {
 
     @Override
     public String toString(DualBlockChain blockChain) {
-        List<Integer> baseHeights = Lists.newArrayList();
+        List<Integer> baseHeights = new ArrayList<>();
         int blockHeight = -1;
         try {
             for (Sha256Hash baseBlockHash : baseBlockHashes) {

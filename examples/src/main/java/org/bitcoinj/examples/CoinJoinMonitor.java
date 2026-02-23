@@ -66,7 +66,7 @@ public class CoinJoinMonitor {
     static int txCount = 0;
     static int dsqCount = 0;
     private static final HashMap<Sha256Hash, CoinJoinBroadcastTx> mapDSTX = new HashMap<>();
-    private static final ArrayList<CoinJoinBroadcastTx> listDSTX = Lists.newArrayList();
+    private static final ArrayList<CoinJoinBroadcastTx> listDSTX = new ArrayList<>();
     private static final HashSet<CoinJoinQueue> queueSet = new HashSet<>();
     private static final HashMap<Sha256Hash, Block> mapBlocks = new HashMap<>();
     private static final long startTime = Utils.currentTimeSeconds();
@@ -93,7 +93,7 @@ public class CoinJoinMonitor {
     }
 
     private static final HashMap<Sha256Hash, SessionInfo> pendingSessions = new HashMap<>();
-    private static final ArrayList<SessionInfo> completedSessions = Lists.newArrayList();
+    private static final ArrayList<SessionInfo> completedSessions = new ArrayList<>();
 
     static class DenomInfo {
         int count = 0;

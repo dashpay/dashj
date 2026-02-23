@@ -793,7 +793,7 @@ public class LargeCoinJoinWalletTest {
 
     @Test
     public void selectionOverRangeTest() throws InsufficientMoneyException {
-        ArrayList<Transaction> list = Lists.newArrayList();
+        ArrayList<Transaction> list = new ArrayList<>();
         for (int i = 0; i < 100; i++) {
             for (int j = 0; j < 10; ++j) {
                 if (i == 0 && j == 0) j = 1;

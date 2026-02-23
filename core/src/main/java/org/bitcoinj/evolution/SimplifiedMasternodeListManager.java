@@ -87,7 +87,7 @@ public class SimplifiedMasternodeListManager extends MasternodeListManager {
     private ExecutorService threadPool = Executors.newFixedThreadPool(1, new ContextPropagatingThreadFactory("process-qrinfo"));
 
     public List<Quorum> getAllQuorums(LLMQParameters.LLMQType llmqType) {
-        ArrayList<Quorum> list = Lists.newArrayList();
+        ArrayList<Quorum> list = new ArrayList<>();
 
         for (Map.Entry<Sha256Hash, SimplifiedQuorumList> entry: getQuorumListCache(llmqType).entrySet()) {
             entry.getValue().forEachQuorum(true, new SimplifiedQuorumList.ForeachQuorumCallback() {

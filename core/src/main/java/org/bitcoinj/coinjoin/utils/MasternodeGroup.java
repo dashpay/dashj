@@ -352,7 +352,7 @@ public class MasternodeGroup extends PeerGroup implements NewBestBlockListener {
     @GuardedBy("lock")
     private void checkMasternodesWithoutSessions() {
         List<Peer> listMasternodes = getConnectedPeers();
-        ArrayList<Peer> masternodesToDrop = Lists.newArrayList();
+        ArrayList<Peer> masternodesToDrop = new ArrayList<>();
         pendingMasternodesLock.lock();
         try {
             for (Peer masternode : listMasternodes) {

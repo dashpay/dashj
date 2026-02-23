@@ -42,7 +42,7 @@ public class QuorumSnapshot extends Message {
         for (int i = 0; i < activeQuorumMembersCount; ++i) {
             activeQuorumMembers.add(false);
         }
-        skipList = Lists.newArrayList();
+        skipList = new ArrayList<>();
         skipListMode = SnapshotSkipMode.MODE_INVALID.getValue();
     }
 

@@ -185,7 +185,7 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
         LLMQParameters llmqParameters = params.getLlmqs().get(llmqType);
         checkNotNull(llmqParameters);
         if (llmqParameters.useRotation() || quorumBaseBlock.getHeight() % llmqParameters.getDkgInterval() != 0) {
-            return Lists.newArrayList();
+            return new ArrayList<>();
         }
 
         StoredBlock workBlock = params.isV20Active(quorumBaseBlock) ?

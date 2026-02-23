@@ -10,6 +10,7 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 
 import java.math.BigInteger;
+import java.util.ArrayList;
 
 public class DualBlockChainTest {
 
@@ -43,7 +44,7 @@ public class DualBlockChainTest {
                     1398712771,
                     0x1e0fffff,
                     31475,
-                    Lists.newArrayList()
+                    new ArrayList<>()
                 ),
                 BigInteger.ONE,
                 1

@@ -65,7 +65,7 @@ public class CoinJoinReport extends Report {
             this.mixThousandth = mixThousandth;
         }
     }
-    ArrayList<BlockStats> stats = Lists.newArrayList();
+    ArrayList<BlockStats> stats = new ArrayList<>();
 
     public CoinJoinReport(String dashClientPath, String confPath, NetworkParameters params) {
         super("coinjoin-report-", dashClientPath, confPath, params);
@@ -91,7 +91,7 @@ public class CoinJoinReport extends Report {
             FileWriter writer = new FileWriter(outputFile);
             writer.append("Block Id, Block Number, Block Time, 10, 1, 0.1, 0.01, 0.001, 15x0.01, 12x0.01+30x0.001\n");
 
-            stats = Lists.newArrayList();
+            stats = new ArrayList<>();
             for (BlockInfo blockInfo : blockList) {
                 Block block = blockInfo.storedBlock.getHeader();
 

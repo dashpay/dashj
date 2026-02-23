@@ -532,7 +532,7 @@ public class SimplifiedMasternodeList extends Message {
     }
 
     public Collection<SimplifiedMasternodeListEntry> getSortedList(Comparator<Masternode> comparator) {
-        ArrayList<SimplifiedMasternodeListEntry> list = Lists.newArrayList();
+        ArrayList<SimplifiedMasternodeListEntry> list = new ArrayList<>();
         forEachMN(true, list::add);
         list.sort(comparator);
         return list;

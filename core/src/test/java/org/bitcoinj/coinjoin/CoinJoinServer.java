@@ -103,7 +103,7 @@ public class CoinJoinServer extends CoinJoinBaseSession {
         proTxHash = Sha256Hash.ZERO_HASH;
     }
 
-    protected ArrayList<Transaction> sessionCollaterals = Lists.newArrayList();
+    protected ArrayList<Transaction> sessionCollaterals = new ArrayList<>();
 
     private RelayTransaction relayTransaction = null;
 
@@ -502,7 +502,7 @@ public class CoinJoinServer extends CoinJoinBaseSession {
             return CoinJoinResult.fail(ERR_MAXIMUM);
         }
 
-        ArrayList<TransactionInput> vin = Lists.newArrayList();
+        ArrayList<TransactionInput> vin = new ArrayList<>();
         for (TransactionInput txin : entry.getMixingInputs()) {
             log.info("coinjoin: txin={}",txin);
             lock.lock();

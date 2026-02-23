@@ -32,7 +32,7 @@ public class KeyHolderStorage {
     static final Logger log = LoggerFactory.getLogger(KeyHolderStorage.class);
     private final ReentrantLock lock = Threading.lock("storage");
     @GuardedBy("lock")
-    ArrayList<KeyHolder> storage = Lists.newArrayList();
+    ArrayList<KeyHolder> storage = new ArrayList<>();
 
     public Script addKey(WalletEx wallet) {
         KeyHolder keyHolder = new KeyHolder(wallet);
@@ -53,7 +53,7 @@ public class KeyHolderStorage {
         lock.lock();
         try {
             tmp = storage;
-            storage = Lists.newArrayList();
+            storage = new ArrayList<>();
         } finally {
             lock.unlock();
         }
@@ -71,7 +71,7 @@ public class KeyHolderStorage {
         lock.lock();
         try {
             tmp = storage;
-            storage = Lists.newArrayList();
+            storage = new ArrayList<>();
         } finally {
             lock.unlock();
         }

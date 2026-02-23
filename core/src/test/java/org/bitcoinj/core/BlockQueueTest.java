@@ -103,7 +103,7 @@ public class BlockQueueTest {
         // Actual creation may vary based on `StoredBlock` and `Block` instantiation in `DashJ`.
         // For this example, we're using a mock method to represent the creation.
         return new StoredBlock(
-                new Block(UnitTestParams.get(), 3, Sha256Hash.ZERO_HASH, Sha256Hash.twiceOf(new byte[0]), 0L, 1L, 2L, Lists.newArrayList()),
+                new Block(UnitTestParams.get(), 3, Sha256Hash.ZERO_HASH, Sha256Hash.twiceOf(new byte[0]), 0L, 1L, 2L, new ArrayList<>()),
                 BigInteger.TEN,
                 1
                 );

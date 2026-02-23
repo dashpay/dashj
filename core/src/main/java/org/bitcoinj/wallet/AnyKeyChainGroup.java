@@ -873,7 +873,7 @@ public class AnyKeyChainGroup implements IKeyBag {
         if (basic != null)
             result = basic.serializeToProtobuf();
         else
-            result = Lists.newArrayList();
+            result = new ArrayList<>();
         if (chains != null)
             for (AnyDeterministicKeyChain chain : chains)
                 result.addAll(chain.serializeToProtobuf());
@@ -1043,7 +1043,7 @@ public class AnyKeyChainGroup implements IKeyBag {
 
     private static void extractFollowingKeychains(List<AnyDeterministicKeyChain> chains) {
         // look for following key chains and map them to the watch keys of followed keychains
-        List<AnyDeterministicKeyChain> followingChains = Lists.newArrayList();
+        List<AnyDeterministicKeyChain> followingChains = new ArrayList<>();
         for (Iterator<AnyDeterministicKeyChain> it = chains.iterator(); it.hasNext(); ) {
             AnyDeterministicKeyChain chain = it.next();
             if (chain.isFollowing()) {
@@ -1053,7 +1053,7 @@ public class AnyKeyChainGroup implements IKeyBag {
                 //if (!(chain instanceof MarriedKeyChain))
                 //    throw new IllegalStateException();
                 //((MarriedKeyChain)chain).setFollowingKeyChains(followingChains);
-                followingChains = Lists.newArrayList();
+                followingChains = new ArrayList<>();
             }
         }
     }

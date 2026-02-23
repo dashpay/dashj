@@ -39,7 +39,7 @@ public class CoinJoinBaseManager {
     protected final ArrayList<CoinJoinQueue> coinJoinQueue;
 
     public CoinJoinBaseManager() {
-        coinJoinQueue = Lists.newArrayList();
+        coinJoinQueue = new ArrayList<>();
     }
 
     protected void setNull() {

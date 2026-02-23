@@ -76,14 +76,14 @@ public class CoinJoinWalletTest {
         wallet.initializeCoinJoin(0);
         wallet.coinjoin.getActiveKeyChain().getKeys(KeyChain.KeyPurpose.RECEIVE_FUNDS, 3000);
         wallet.addWalletTransaction(new WalletTransaction(WalletTransaction.Pool.SPENT, new Transaction(TESTNET, inputTx)));
-        ArrayList<Transaction> unspentTxList = Lists.newArrayList();
+        ArrayList<Transaction> unspentTxList = new ArrayList<>();
 
         for (byte[] unspentTxData : unspentTxs) {
             Transaction unspentTx = new Transaction(TESTNET, unspentTxData);
             unspentTxList.add(unspentTx);
         }
 
-        ArrayList<TransactionInput> currentInputs = Lists.newArrayList();
+        ArrayList<TransactionInput> currentInputs = new ArrayList<>();
 
         for (Transaction unspentTx : unspentTxList) {
             currentInputs.clear();

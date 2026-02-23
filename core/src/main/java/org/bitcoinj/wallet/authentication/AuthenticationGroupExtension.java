@@ -452,7 +452,7 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
         if (platformKey == null) {
             platformKey = platformNodeId != null ? findKeyFromPubKeyHash(Utils.reverseBytes(platformNodeId.getBytes()), Script.ScriptType.P2PKH) : null;
         }
-        List<AuthenticationKeyUsage> updates = Lists.newArrayList();
+        List<AuthenticationKeyUsage> updates = new ArrayList<>();
 
         // voting
         if (votingKey != null) {
@@ -513,7 +513,7 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
             if (address == null)
                 address = previousOperatorKeyUsage.getAddress();
         }
-        List<AuthenticationKeyUsage> updates = Lists.newArrayList();
+        List<AuthenticationKeyUsage> updates = new ArrayList<>();
 
         // voting
         if (votingKey != null) {

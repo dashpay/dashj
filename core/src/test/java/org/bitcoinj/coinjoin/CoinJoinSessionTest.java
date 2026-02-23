@@ -599,7 +599,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
         }
     }
 
-    private final ArrayList<Transaction> memPool = Lists.newArrayList();
+    private final ArrayList<Transaction> memPool = new ArrayList<>();
     RelayTransaction relayTransaction = memPool::add;
 
     // performs the function of a miner

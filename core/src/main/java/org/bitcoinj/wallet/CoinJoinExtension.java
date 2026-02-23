@@ -52,6 +52,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;
 import java.security.SecureRandom;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -135,7 +136,7 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
 
         // Time key chain serialization
         long keysStartTime = System.nanoTime();
-        List<Protos.Key> keys = coinJoinKeyChainGroup != null ? coinJoinKeyChainGroup.serializeToProtobuf() : Lists.newArrayList();
+        List<Protos.Key> keys = coinJoinKeyChainGroup != null ? coinJoinKeyChainGroup.serializeToProtobuf() : new ArrayList<>();
         builder.addAllKey(keys);
         builder.setRounds(rounds);
         long keysEndTime = System.nanoTime();
@@ -341,10 +342,10 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
             return outputs;
         }
         for (Coin amount : CoinJoin.getStandardDenominations()) {
-            outputs.put(CoinJoin.amountToDenomination(amount), Lists.newArrayList());
+            outputs.put(CoinJoin.amountToDenomination(amount), new ArrayList<>());
         }
-        outputs.put(-2, Lists.newArrayList());
-        outputs.put(0, Lists.newArrayList());
+        outputs.put(-2, new ArrayList<>());
+        outputs.put(0, new ArrayList<>());
         for (TransactionOutput output : wallet.getUnspents()) {
             byte [] pkh = ScriptPattern.extractHashFromP2PKH(output.getScriptPubKey());
             if (getKeyChainGroup().findKeyFromPubKeyHash(pkh, Script.ScriptType.P2PKH) != null) {

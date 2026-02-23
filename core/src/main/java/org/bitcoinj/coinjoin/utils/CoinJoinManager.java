@@ -88,7 +88,7 @@ public class CoinJoinManager {
 
     private static final Logger log = LoggerFactory.getLogger(CoinJoinManager.class);
     public static final String MESSAGE_PROCESSOR = "CoinJoin-MessageProcessor";
-    private final ArrayList<WalletEx> wallets = Lists.newArrayList();
+    private final ArrayList<WalletEx> wallets = new ArrayList<>();
     private Context context;
     public final HashMap<String, CoinJoinClientManager> coinJoinClientManagers;
     private final CoinJoinClientQueueManager coinJoinClientQueueManager;
@@ -158,7 +158,7 @@ public class CoinJoinManager {
             if (wallet.isTransactionRelevant(dstx.getTx())) {
                 log.info("dstx: {}", dstx.getTx());
                 // do we need dependencies?
-                wallet.receivePending(dstx.getTx(), Lists.newArrayList());
+                wallet.receivePending(dstx.getTx(), new ArrayList<>());
             }
         });
     }

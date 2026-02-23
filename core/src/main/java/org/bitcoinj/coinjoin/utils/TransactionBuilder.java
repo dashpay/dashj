@@ -284,7 +284,7 @@ public class TransactionBuilder implements AutoCloseable {
 
     static int calculateMaximumSignedTxSize(Transaction tx, Wallet wallet, CoinJoinManager coinJoinManager, boolean useMaxSig)
     {
-        ArrayList<TransactionOutput> txouts = Lists.newArrayList();
+        ArrayList<TransactionOutput> txouts = new ArrayList<>();
         for (TransactionInput input : tx.getInputs()) {
             Transaction mi = wallet.getTransaction(input.getOutpoint().getHash());
             // Can not estimate size without knowing the input details

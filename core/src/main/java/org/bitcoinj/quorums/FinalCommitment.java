@@ -298,7 +298,7 @@ public class FinalCommitment extends SpecialTxPayload {
         if (checkSigs) {
             Sha256Hash commitmentHash = LLMQUtils.buildCommitmentHash(llmqParameters.type, quorumHash, validMembers, quorumPublicKey.getPublicKey(), quorumVvecHash);
 
-            ArrayList<BLSPublicKey> memberPubKeys = Lists.newArrayList();
+            ArrayList<BLSPublicKey> memberPubKeys = new ArrayList<>();
             for (int i = 0; i < members.size(); i++) {
                 if (!signers.get(i)) {
                     continue;

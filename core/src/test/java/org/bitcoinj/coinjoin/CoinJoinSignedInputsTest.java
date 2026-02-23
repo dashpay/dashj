@@ -23,6 +23,7 @@ import org.bitcoinj.wallet.RedeemData;
 import org.junit.Test;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -148,7 +149,7 @@ public class CoinJoinSignedInputsTest {
             finalMutableTransaction.addOutput(output);
         }
 
-        List<TransactionInput> sigs = Lists.newArrayList();
+        List<TransactionInput> sigs = new ArrayList<>();
         CoinJoinTransactionSigner signer = new CoinJoinTransactionSigner(system.coinJoinManager, sigs, false); // anyoneCanPay = false
 
         TransactionSigner.ProposedTransaction proposedTransaction = new TransactionSigner.ProposedTransaction(finalMutableTransaction);

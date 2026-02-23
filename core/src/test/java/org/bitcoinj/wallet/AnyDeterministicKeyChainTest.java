@@ -57,6 +57,7 @@ import org.junit.Test;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
+import java.util.ArrayList;
 import java.util.List;
 
 import static com.google.common.base.Preconditions.checkNotNull;
@@ -191,7 +192,7 @@ public class AnyDeterministicKeyChainTest {
     @Test
     public void events() throws Exception {
         // Check that we get the right events at the right time.
-        final List<List<IKey>> listenerKeys = Lists.newArrayList();
+        final List<List<IKey>> listenerKeys = new ArrayList<>();
         long secs = 1389353062L;
         chain = AnyDeterministicKeyChain.builder().entropy(ENTROPY, secs).outputScriptType(Script.ScriptType.P2PKH)
                 .build();

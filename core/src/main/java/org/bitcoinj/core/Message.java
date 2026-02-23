@@ -393,7 +393,7 @@ public abstract class Message {
 
     public ArrayList<Boolean> readBooleanArrayList()
     {
-        ArrayList<Boolean> vec = Lists.newArrayList();
+        ArrayList<Boolean> vec = new ArrayList<>();
         int size = (int)readVarInt();
 
         byte[] vBytes = readBytes((int)((size + 7) / 8));

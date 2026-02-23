@@ -831,7 +831,7 @@ public class Utils {
 
     public static ArrayList<Boolean> booleanArrayList(int size, byte [] vBytes)
     {
-        ArrayList<Boolean> vec = Lists.newArrayList();
+        ArrayList<Boolean> vec = new ArrayList<>();
 
         for (int p = 0; p < size; p++)
             vec.add((vBytes[p / 8] & (1 << (p % 8))) != 0);

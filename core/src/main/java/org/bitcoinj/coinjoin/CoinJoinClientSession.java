@@ -104,7 +104,7 @@ import static org.bitcoinj.wallet.CoinType.ONLY_COINJOIN_COLLATERAL;
 public class CoinJoinClientSession extends CoinJoinBaseSession {
     private static final Logger log = LoggerFactory.getLogger(CoinJoinClientSession.class);
     private static final Random random = new Random();
-    private final ArrayList<TransactionOutPoint> outPointLocked = Lists.newArrayList();
+    private final ArrayList<TransactionOutPoint> outPointLocked = new ArrayList<>();
     private String strLastMessage;
     private String strAutoDenomResult;
     private Boolean lastCreateDenominatedResult = true;
@@ -901,8 +901,8 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         log.info("coinjoin: Added transaction to pool.");
 
         Transaction tx = new Transaction(context.getParams()); // for debug purposes only
-        ArrayList<CoinJoinTransactionInput> vecTxDSInTmp = Lists.newArrayList();
-        ArrayList<TransactionOutput> vecTxOutTmp = Lists.newArrayList();
+        ArrayList<CoinJoinTransactionInput> vecTxDSInTmp = new ArrayList<>();
+        ArrayList<TransactionOutput> vecTxOutTmp = new ArrayList<>();
 
         for (Pair<CoinJoinTransactionInput, TransactionOutput> pair : vecPSInOutPairs) {
             vecTxDSInTmp.add(pair.getFirst());
@@ -1090,7 +1090,7 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
 
             // STEP 2: make sure our own inputs/outputs are present, otherwise refuse to sign
 
-            ArrayList<TransactionInput> sigs = Lists.newArrayList();
+            ArrayList<TransactionInput> sigs = new ArrayList<>();
 
             for (CoinJoinEntry entry: entries){
                 // Check that the final transaction has all our outputs
@@ -1582,15 +1582,15 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
     /// As a client, submit part of a future mixing transaction to a Masternode to start the process
     public boolean submitDenominate() {
         StringBuilder strError = new StringBuilder();
-        ArrayList<CoinJoinTransactionInput> vecTxDSIn = Lists.newArrayList();
-        ArrayList<Pair<CoinJoinTransactionInput, TransactionOutput>> vecPSInOutPairsTmp = Lists.newArrayList();
+        ArrayList<CoinJoinTransactionInput> vecTxDSIn = new ArrayList<>();
+        ArrayList<Pair<CoinJoinTransactionInput, TransactionOutput>> vecPSInOutPairsTmp = new ArrayList<>();
 
         if (!selectDenominate(strError, vecTxDSIn)) {
            log.info("coinjoin:  SelectDenominate failed, error: {}", strError);
             return false;
         }
 
-        ArrayList<Pair<Integer, Integer>> vecInputsByRounds = Lists.newArrayList();
+        ArrayList<Pair<Integer, Integer>> vecInputsByRounds = new ArrayList<>();
 
         for (int i = 0; i < CoinJoinClientOptions.getRounds() + CoinJoinClientOptions.getRandomRounds(); ++i) {
             if (prepareDenominate(i, i, strError, vecTxDSIn, vecPSInOutPairsTmp, true)) {

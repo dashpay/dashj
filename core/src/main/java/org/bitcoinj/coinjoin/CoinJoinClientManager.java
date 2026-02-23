@@ -696,7 +696,7 @@ public class CoinJoinClientManager implements WalletCoinsReceivedEventListener {
     }
 
     public List<PoolStatus> getSessionsStatus() {
-        ArrayList<PoolStatus> sessionsStatus = Lists.newArrayList();
+        ArrayList<PoolStatus> sessionsStatus = new ArrayList<>();
         for (CoinJoinClientSession session : deqSessions) {
             sessionsStatus.add(session.getStatus());
         }

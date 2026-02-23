@@ -24,5 +24,5 @@ import java.util.ArrayList;
 public class CompactTallyItem {
     public TransactionDestination txDestination;
     public Coin amount = Coin.ZERO;
-    public final ArrayList<InputCoin> inputCoins = Lists.newArrayList();
+    public final ArrayList<InputCoin> inputCoins = new ArrayList<>();
 }

@@ -164,7 +164,7 @@ public class CoinJoinBaseSession {
 
     public CoinJoinBaseSession(Context context) {
         this.context = context;
-        entries = Lists.newArrayList();
+        entries = new ArrayList<>();
         finalMutableTransaction = new Transaction(context.getParams());
     }
 

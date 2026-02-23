@@ -85,7 +85,7 @@ public class AnyExternalKeyChain extends AnyDeterministicKeyChain {
         lock.lock();
         try {
             IDeterministicKey parent = getKeyByPath(getAccountPath());
-            List<IDeterministicKey> keys = Lists.newArrayList();
+            List<IDeterministicKey> keys = new ArrayList<>();
             if (!hardenedKeysOnly || parent.hasPrivKey()) {
                 keys = maybeLookAhead(getKeyByPath(getAccountPath()), issuedExternalKeys);
             }

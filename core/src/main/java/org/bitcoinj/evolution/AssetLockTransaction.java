@@ -72,14 +72,14 @@ public class AssetLockTransaction extends Transaction {
         setVersionAndType(SPECIAL_VERSION, Type.TRANSACTION_ASSET_LOCK);
         this.assetLockPublicKeys = Maps.newTreeMap();
         assetLockPublicKeys.put(0, assetLockPublicKey);
-        this.assetLockPublicKeyIds = Lists.newArrayList();
+        this.assetLockPublicKeyIds = new ArrayList<>();
         assetLockPublicKeyIds.add(KeyId.fromBytes(assetLockPublicKey.getPubKeyHash()));
-        this.identityIds = Lists.newArrayList();
+        this.identityIds = new ArrayList<>();
         identityIds.add(Sha256Hash.ZERO_HASH);
 
         TransactionOutput realOutput = new TransactionOutput(params, this, fundingAmount, Address.fromKey(params, assetLockPublicKey));
 
-        lockedOutpoints = Lists.newArrayList();
+        lockedOutpoints = new ArrayList<>();
         TransactionOutput assetLockOutput = new TransactionOutput(params, null, fundingAmount, ScriptBuilder.createAssetLockOutput().getProgram());
         assetLockPayload = new AssetLockPayload(params, Lists.newArrayList(realOutput));
         setExtraPayload(assetLockPayload);
@@ -118,10 +118,10 @@ public class AssetLockTransaction extends Transaction {
      */
     private void parseTransaction() {
         assetLockPayload = (AssetLockPayload) getExtraPayloadObject();
-        lockedOutpoints = Lists.newArrayList();
-        assetLockPublicKeyIds = Lists.newArrayList();
+        lockedOutpoints = new ArrayList<>();
+        assetLockPublicKeyIds = new ArrayList<>();
         assetLockPublicKeys = Maps.newTreeMap();
-        identityIds = Lists.newArrayList();
+        identityIds = new ArrayList<>();
         getLockedOutpoint();
         getAssetLockPublicKeyId();
         getIdentityId();
