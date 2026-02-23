@@ -96,6 +96,7 @@ public class KeyCrypterECDHTest {
         KeyCrypterECDH aliceKeyExchangeCrypter = new KeyCrypterECDH();
 
         KeyParameter aliceKeyParameter = aliceKeyExchangeCrypter.deriveKey(alicePrivateKey, bobKeyPair.getPubKey());
+        assertEquals(32, aliceKeyParameter.getKeyLength());
 
         assertEquals("fbd27dbb9e7f471bf3de3704a35e884e37d35c676dc2cc8c3cc574c3962376d2", Utils.HEX.encode(aliceKeyParameter.getKey()));
         EncryptedData encryptedAliceData = aliceKeyExchangeCrypter.encrypt(secret.getBytes(),
@@ -116,6 +117,7 @@ public class KeyCrypterECDHTest {
 
         KeyCrypterECDH bobKeyExchangeCrypter = new KeyCrypterECDH();
         KeyParameter bobKeyParameter = bobKeyExchangeCrypter.deriveKey(bobKeyPair.getPrivKeyBytes(), alicePublicKey);
+        assertEquals(32, bobKeyParameter.getKeyLength());
 
         EncryptedData encryptedData = new EncryptedData(Arrays.copyOfRange(encryptedSecret, 0, 16),
                 Arrays.copyOfRange(encryptedSecret, 16, encryptedSecret.length));
