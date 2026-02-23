@@ -39,6 +39,7 @@ import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.script.ScriptPattern;
 import org.bitcoinj.utils.ListenerRegistration;
 import org.bitcoinj.utils.Threading;
+import org.bitcoinj.wallet.listeners.CurrentKeyChangeEventListener;
 import org.bitcoinj.wallet.listeners.KeyChainEventListener;
 import org.bouncycastle.crypto.params.KeyParameter;
 import org.slf4j.Logger;
@@ -48,6 +49,7 @@ import javax.annotation.Nullable;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.EnumMap;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -206,6 +208,8 @@ public class AnyKeyChainGroup implements IKeyBag {
     private int lookaheadThreshold = -1;
     protected KeyFactory keyFactory;
 
+    private final CopyOnWriteArrayList<ListenerRegistration<CurrentKeyChangeEventListener>> currentKeyChangeListeners = new CopyOnWriteArrayList<>();
+
     /** Creates a keychain group with just a basic chain. No deterministic chains will be created automatically. */
     public static AnyKeyChainGroup createBasic(NetworkParameters params, KeyFactory keyFactory) {
         return new AnyKeyChainGroup(params, new AnyBasicKeyChain(keyFactory), null, -1, -1, null, null, keyFactory);
@@ -288,6 +292,7 @@ public class AnyKeyChainGroup implements IKeyBag {
         chains.add(chain);
         currentKeys.clear();
         currentAddresses.clear();
+        queueOnCurrentKeyChanged();
     }
 
     /**
@@ -585,6 +590,7 @@ public class AnyKeyChainGroup implements IKeyBag {
             if (entry.getValue() != null && entry.getValue().equals(address)) {
                 log.info("Marking P2SH address as used: {}", address);
                 currentAddresses.put(entry.getKey(), freshAddress(entry.getKey()));
+                queueOnCurrentKeyChanged();
                 return;
             }
         }
@@ -598,6 +604,7 @@ public class AnyKeyChainGroup implements IKeyBag {
             if (entry.getValue() != null && entry.getValue().equals(key)) {
                 log.info("Marking key as used: {}", key);
                 currentKeys.put(entry.getKey(), freshKey(entry.getKey()));
+                queueOnCurrentKeyChanged();
                 return;
             }
         }
@@ -827,6 +834,37 @@ public class AnyKeyChainGroup implements IKeyBag {
             for (AnyDeterministicKeyChain chain : chains)
                 chain.removeEventListener(listener);
         return basic.removeEventListener(listener);
+    }
+
+    /** Adds a listener for events that are run when a current key and/or address changes. */
+    public void addCurrentKeyChangeEventListener(CurrentKeyChangeEventListener listener) {
+        addCurrentKeyChangeEventListener(listener, Threading.USER_THREAD);
+    }
+
+    /**
+     * Adds a listener for events that are run when a current key and/or address changes, on the given
+     * executor.
+     */
+    public void addCurrentKeyChangeEventListener(CurrentKeyChangeEventListener listener, Executor executor) {
+        checkNotNull(listener);
+        currentKeyChangeListeners.add(new ListenerRegistration<>(listener, executor));
+    }
+
+    /** Removes a listener for events that are run when a current key and/or address changes. */
+    public boolean removeCurrentKeyChangeEventListener(CurrentKeyChangeEventListener listener) {
+        checkNotNull(listener);
+        return ListenerRegistration.removeFromList(listener, currentKeyChangeListeners);
+    }
+
+    protected void queueOnCurrentKeyChanged() {
+        for (final ListenerRegistration<CurrentKeyChangeEventListener> registration : currentKeyChangeListeners) {
+            registration.executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    registration.listener.onCurrentKeyChanged();
+                }
+            });
+        }
     }
 
     /** Returns a list of key protobufs obtained by merging the chains. */

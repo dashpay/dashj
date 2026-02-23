@@ -346,6 +346,7 @@ public class AuthenticationKeyChainGroup extends AnyKeyChainGroup {
             if (entry.getValue() != null && entry.getValue().equals(key)) {
                 log.info("Marking key as used: {}", key);
                 currentAuthenticationKeys.put(entry.getKey(), freshKey(entry.getKey()));
+                queueOnCurrentKeyChanged();
                 return;
             }
         }

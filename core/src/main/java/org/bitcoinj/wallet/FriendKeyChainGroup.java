@@ -363,6 +363,7 @@ public class FriendKeyChainGroup extends KeyChainGroup {
             if (entry.getValue() != null && entry.getValue().equals(key)) {
                 log.info("Marking key as used: {}", key);
                 currentContactKeys.put(entry.getKey(), freshKey(new EvolutionContact(entry.getKey(), getKeyChainType() == KeyChainType.RECEIVING_CHAIN), getKeyChainType()));
+                queueOnCurrentKeyChanged();
                 return;
             }
         }

@@ -831,7 +831,7 @@ public class KeyChainGroup implements KeyBag {
         return ListenerRegistration.removeFromList(listener, currentKeyChangeListeners);
     }
 
-    private void queueOnCurrentKeyChanged() {
+    protected void queueOnCurrentKeyChanged() {
         for (final ListenerRegistration<CurrentKeyChangeEventListener> registration : currentKeyChangeListeners) {
             registration.executor.execute(new Runnable() {
                 @Override
