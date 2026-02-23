@@ -21,6 +21,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.crypto.ChildNumber;
+import org.bitcoinj.crypto.HDPath;
 import org.bitcoinj.crypto.IDeterministicKey;
 import org.bitcoinj.crypto.IKey;
 import org.bitcoinj.crypto.HDUtils;
@@ -115,7 +116,7 @@ public class AuthenticationKeyChain extends AnyExternalKeyChain {
         protected DeterministicSeed seed;
         protected boolean isFollowing = false;
         protected IDeterministicKey spendingKey = null;
-        protected ImmutableList<ChildNumber> accountPath = null;
+        protected HDPath accountPath = null;
         protected KeyChainType type = null;
         protected boolean hardenedChildren = false;
         protected KeyFactory keyFactory = null;
@@ -181,8 +182,8 @@ public class AuthenticationKeyChain extends AnyExternalKeyChain {
         /**
          * Use an account path other than the default {@link DeterministicKeyChain#ACCOUNT_ZERO_PATH}.
          */
-        public T accountPath(ImmutableList<ChildNumber> accountPath) {
-            this.accountPath = checkNotNull(accountPath);
+        public T accountPath(List<ChildNumber> accountPath) {
+            this.accountPath = HDPath.of(checkNotNull(accountPath));
             return self();
         }
 
@@ -227,13 +228,13 @@ public class AuthenticationKeyChain extends AnyExternalKeyChain {
 
 
 
-    public AuthenticationKeyChain(DeterministicSeed seed, ImmutableList<ChildNumber> path, KeyFactory keyFactory, boolean hardenedKeysOnly) {
+    public AuthenticationKeyChain(DeterministicSeed seed, List<ChildNumber> path, KeyFactory keyFactory, boolean hardenedKeysOnly) {
         super(seed, null, path, keyFactory, hardenedKeysOnly);
         setLookaheadSize(hardenedKeysOnly ? 0 : 5);
         setLookaheadThreshold(hardenedKeysOnly ? 0 : lookaheadSize);
     }
 
-    public AuthenticationKeyChain(DeterministicSeed seed, KeyCrypter keyCrypter, ImmutableList<ChildNumber> path, KeyFactory factory, boolean hardenedKeysOnly) {
+    public AuthenticationKeyChain(DeterministicSeed seed, KeyCrypter keyCrypter, List<ChildNumber> path, KeyFactory factory, boolean hardenedKeysOnly) {
         super(seed, keyCrypter, path, factory, hardenedKeysOnly);
         setLookaheadSize(hardenedKeysOnly ? 0 : 5);
         setLookaheadThreshold(hardenedKeysOnly ? 0 : lookaheadSize);
@@ -245,14 +246,14 @@ public class AuthenticationKeyChain extends AnyExternalKeyChain {
         setLookaheadThreshold(hardenedKeysOnly ? 0 : lookaheadSize);
     }
 
-    public AuthenticationKeyChain(DeterministicSeed seed, ImmutableList<ChildNumber> path, KeyChainType type, boolean hardenedChildren) {
+    public AuthenticationKeyChain(DeterministicSeed seed, List<ChildNumber> path, KeyChainType type, boolean hardenedChildren) {
         this(seed, path, getKeyFactory(type), hardenedChildren);
         this.type = type;
         setLookaheadSize(hardenedKeysOnly ? 0 : 5);
         setLookaheadThreshold(hardenedKeysOnly ? 0 : lookaheadSize);
     }
 
-    public AuthenticationKeyChain(DeterministicSeed seed, KeyCrypter keyCrypter, ImmutableList<ChildNumber> path, KeyChainType type, boolean hardenedChildren) {
+    public AuthenticationKeyChain(DeterministicSeed seed, KeyCrypter keyCrypter, List<ChildNumber> path, KeyChainType type, boolean hardenedChildren) {
         this(seed, keyCrypter, path, getKeyFactory(type), hardenedChildren);
         this.type = type;
         setLookaheadSize(hardenedKeysOnly ? 0 : 5);
@@ -331,7 +332,7 @@ public class AuthenticationKeyChain extends AnyExternalKeyChain {
             basicKeyChain.importKeys(lookahead);
             List<IDeterministicKey> keys = new ArrayList<>(numberOfKeys);
             for (int i = 0; i < numberOfKeys; i++) {
-                ImmutableList<ChildNumber> path = HDUtils.append(parentKey.getPath(), new ChildNumber(index - numberOfKeys + i, hardenedKeysOnly));
+                HDPath path = HDUtils.append(parentKey.getPath(), new ChildNumber(index - numberOfKeys + i, hardenedKeysOnly));
                 IDeterministicKey k = hierarchy.get(path, false, false);
                 keys.add(k);
             }

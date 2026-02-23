@@ -21,6 +21,7 @@ import com.google.common.collect.ImmutableList;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.crypto.HDKeyDerivation;
+import org.bitcoinj.crypto.HDPath;
 import org.bitcoinj.crypto.KeyCrypter;
 import org.bitcoinj.script.Script;
 import org.bouncycastle.crypto.params.KeyParameter;
@@ -36,15 +37,15 @@ public class ExternalKeyChain extends DeterministicKeyChain {
 
     private static final Logger log = LoggerFactory.getLogger(ExternalKeyChain.class);
 
-    public ExternalKeyChain(DeterministicSeed seed, ImmutableList<ChildNumber> path) {
+    public ExternalKeyChain(DeterministicSeed seed, List<ChildNumber> path) {
         super(seed, null, Script.ScriptType.P2PKH, path);
     }
 
-    public ExternalKeyChain(DeterministicSeed seed, KeyCrypter keyCrypter, ImmutableList<ChildNumber> path) {
+    public ExternalKeyChain(DeterministicSeed seed, KeyCrypter keyCrypter, List<ChildNumber> path) {
         super(seed, keyCrypter, Script.ScriptType.P2PKH, path);
     }
 
-    public ExternalKeyChain(DeterministicKey key, ImmutableList<ChildNumber> accountPath) {
+    public ExternalKeyChain(DeterministicKey key, List<ChildNumber> accountPath) {
         super(key, false, true, Script.ScriptType.P2PKH, accountPath);
     }
 

@@ -16,12 +16,13 @@
 
 package org.bitcoinj.wallet;
 
-import com.google.common.collect.ImmutableList;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.IDeterministicKey;
 import org.bitcoinj.crypto.KeyCrypter;
 import org.bitcoinj.crypto.factory.KeyFactory;
 import org.bitcoinj.script.Script;
+
+import java.util.List;
 
 /**
  * Default factory for creating authentication keychains while de-serializing.
@@ -41,7 +42,7 @@ public class AuthenticationKeyChainFactory implements AnyKeyChainFactory {
 
     @Override
     public AnyDeterministicKeyChain makeKeyChain(DeterministicSeed seed,
-                                                 KeyCrypter crypter, boolean isMarried, Script.ScriptType outputScriptType, ImmutableList<ChildNumber> accountPath, KeyFactory keyFactory, boolean hardenedKeysOnly) {
+                                                 KeyCrypter crypter, boolean isMarried, Script.ScriptType outputScriptType, List<ChildNumber> accountPath, KeyFactory keyFactory, boolean hardenedKeysOnly) {
         AuthenticationKeyChain chain;
         if (isMarried) {
             throw new UnsupportedOperationException();
@@ -71,9 +72,7 @@ public class AuthenticationKeyChainFactory implements AnyKeyChainFactory {
      *
      * <p>isMarried and isFollowingKey must not be true at the same time.
      *
-     * @param key              the protobuf for the account key
-     * @param firstSubKey      the protobuf for the first child key (normally the parent of the external subchain)
-     * @param accountKey       the account extended public key
+    * @param accountKey       the account extended public key
      * @param isMarried        whether the keychain is leading in a marriage
      * @param outputScriptType type of addresses (aka output scripts) to generate for spending
      */
@@ -83,12 +82,12 @@ public class AuthenticationKeyChainFactory implements AnyKeyChainFactory {
     }
 
     @Override
-    public AnyDeterministicKeyChain makeSpendingFriendKeyChain(DeterministicSeed seed, KeyCrypter crypter, boolean isMarried, ImmutableList<ChildNumber> accountPath, KeyFactory keyFactory, boolean hardenedKeysOnly) throws UnreadableWalletException {
+    public AnyDeterministicKeyChain makeSpendingFriendKeyChain(DeterministicSeed seed, KeyCrypter crypter, boolean isMarried, List<ChildNumber> accountPath, KeyFactory keyFactory, boolean hardenedKeysOnly) throws UnreadableWalletException {
         throw new UnsupportedOperationException();
     }
 
     @Override
-    public AnyDeterministicKeyChain makeWatchingFriendKeyChain(IDeterministicKey accountKey, ImmutableList<ChildNumber> accountPath) throws UnreadableWalletException {
+    public AnyDeterministicKeyChain makeWatchingFriendKeyChain(IDeterministicKey accountKey, List<ChildNumber> accountPath) throws UnreadableWalletException {
         throw new UnsupportedOperationException();
     }
 }

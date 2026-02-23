@@ -18,7 +18,6 @@
 package org.bitcoinj.crypto;
 
 import org.bitcoinj.core.*;
-import org.bitcoinj.crypto.bls.BLSHDKeyDerivation;
 import org.bitcoinj.crypto.factory.ECKeyFactory;
 import org.bitcoinj.crypto.factory.KeyFactory;
 import org.bitcoinj.script.Script;
@@ -629,7 +628,7 @@ public class DeterministicKey extends ECKey implements IDeterministicKey {
      * Deserialize a base-58-encoded HD Key and associates it with a given path.
      *  @throws IllegalArgumentException if the base58 encoded key could not be parsed.
      */
-    public static DeterministicKey deserializeB58(String base58, ImmutableList<ChildNumber> path, NetworkParameters params) {
+    public static DeterministicKey deserializeB58(String base58, List<ChildNumber> path, NetworkParameters params) {
         return deserialize(params, Base58.decodeChecked(base58), null, path);
     }
 
@@ -688,7 +687,7 @@ public class DeterministicKey extends ECKey implements IDeterministicKey {
     /**
      * Deserialize an HD Key and associate it with a full path.
      */
-    public static DeterministicKey deserialize(NetworkParameters params, byte[] serializedKey, DeterministicKey parent, ImmutableList<ChildNumber> fullPath) {
+    public static DeterministicKey deserialize(NetworkParameters params, byte[] serializedKey, DeterministicKey parent, List<ChildNumber> fullPath) {
         ByteBuffer buffer = ByteBuffer.wrap(serializedKey);
         int header = buffer.getInt();
         if (header != params.getBip32HeaderP2PKHpriv() && header != params.getBip32HeaderP2PKHpub())
@@ -697,11 +696,11 @@ public class DeterministicKey extends ECKey implements IDeterministicKey {
         int depth = buffer.get() & 0xFF; // convert signed byte to positive int since depth cannot be negative
         final int parentFingerprint = buffer.getInt();
         final int i = buffer.getInt();
-        ImmutableList<ChildNumber> path;
+        List<ChildNumber> path;
 
         if (depth >= 1)
             path = fullPath;
-        else path = ImmutableList.of();
+        else path = HDPath.of();
 
         byte[] chainCode = new byte[32];
         buffer.get(chainCode);

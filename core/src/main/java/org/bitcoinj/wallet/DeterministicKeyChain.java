@@ -119,43 +119,43 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
     // m / 1'
     public static final HDPath ACCOUNT_ONE_PATH = HDPath.of(ChildNumber.ONE_HARDENED);
     // m / 44' / 0' / 0'
-    public static final HDPath BIP44_ACCOUNT_ZERO_PATH = ImmutableList.of(new ChildNumber(44, true),
-            ChildNumber.FIVE_HARDENED, ChildNumber.ZERO_HARDENED);
-    public static final HDPath BIP44_ACCOUNT_ZERO_PATH_TESTNET = ImmutableList.of(new ChildNumber(44, true),
-            ChildNumber.ONE_HARDENED, ChildNumber.ZERO_HARDENED);
+    public static final HDPath BIP44_ACCOUNT_ZERO_PATH = HDPath.of(new ChildNumber(44, true))
+                    .extend(ChildNumber.FIVE_HARDENED, ChildNumber.ZERO_HARDENED);
+    public static final HDPath BIP44_ACCOUNT_ZERO_PATH_TESTNET = HDPath.of(new ChildNumber(44, true))
+            .extend(ChildNumber.ONE_HARDENED, ChildNumber.ZERO_HARDENED);
 
     // m / 9' / 5' / 3' / 0' - 1000 DASH for masternode
-    public static final HDPath MASTERNODE_HOLDINGS_PATH = ImmutableList.of(new ChildNumber(9, true),
-            ChildNumber.FIVE_HARDENED, new ChildNumber(3, true), ChildNumber.ZERO_HARDENED);
-    public static final HDPath MASTERNODE_HOLDINGS_PATH_TESTNET = ImmutableList.of(new ChildNumber(9, true),
-            ChildNumber.ONE_HARDENED, new ChildNumber(3, true), ChildNumber.ZERO_HARDENED);
+    public static final HDPath MASTERNODE_HOLDINGS_PATH = HDPath.of(new ChildNumber(9, true))
+            .extend(ChildNumber.FIVE_HARDENED, new ChildNumber(3, true)).extend(ChildNumber.ZERO_HARDENED);
+    public static final HDPath MASTERNODE_HOLDINGS_PATH_TESTNET = HDPath.of(new ChildNumber(9, true))
+            .extend(ChildNumber.ONE_HARDENED, new ChildNumber(3, true)).extend(ChildNumber.ZERO_HARDENED);
 
     // m / 9' / 5' / 3' / 1' - Masternode Voting Path
-    public static final HDPath PROVIDER_VOTING_PATH = ImmutableList.of(new ChildNumber(9, true),
-            ChildNumber.FIVE_HARDENED, new ChildNumber(3, true), ChildNumber.ONE_HARDENED);
-    public static final HDPath PROVIDER_VOTING_PATH_TESTNET = ImmutableList.of(new ChildNumber(9, true),
-            ChildNumber.ONE_HARDENED, new ChildNumber(3, true), ChildNumber.ONE_HARDENED);
+    public static final HDPath PROVIDER_VOTING_PATH = HDPath.of(new ChildNumber(9, true))
+            .extend(ChildNumber.FIVE_HARDENED, new ChildNumber(3, true)).extend(ChildNumber.ONE_HARDENED);
+    public static final HDPath PROVIDER_VOTING_PATH_TESTNET = HDPath.of(new ChildNumber(9, true))
+            .extend(ChildNumber.ONE_HARDENED, new ChildNumber(3, true)).extend(ChildNumber.ONE_HARDENED);
 
     // m / 9' / 5' / 3' / 2' - Masternode Owner Path
-    public static final HDPath PROVIDER_OWNER_PATH = ImmutableList.of(new ChildNumber(9, true),
-            ChildNumber.FIVE_HARDENED, new ChildNumber(3, true), new ChildNumber(2, true));
-    public static final HDPath PROVIDER_OWNER_PATH_TESTNET = ImmutableList.of(new ChildNumber(9, true),
-            ChildNumber.ONE_HARDENED, new ChildNumber(3, true), new ChildNumber(2, true));
+    public static final HDPath PROVIDER_OWNER_PATH = HDPath.of(new ChildNumber(9, true))
+            .extend(ChildNumber.FIVE_HARDENED, new ChildNumber(3, true)).extend(new ChildNumber(2, true));
+    public static final HDPath PROVIDER_OWNER_PATH_TESTNET = HDPath.of(new ChildNumber(9, true))
+            .extend(ChildNumber.ONE_HARDENED, new ChildNumber(3, true)).extend(new ChildNumber(2, true));
 
     // m / 9' / 5' / 3' / 3' - Masternode Operator Path
-    public static final HDPath PROVIDER_OPERATOR_PATH = ImmutableList.of(new ChildNumber(9, true),
-            ChildNumber.FIVE_HARDENED, new ChildNumber(3, true), new ChildNumber(3, true));
-    public static final HDPath PROVIDER_OPERATOR_PATH_TESTNET = ImmutableList.of(new ChildNumber(9, true),
-            ChildNumber.ONE_HARDENED, new ChildNumber(3, true), new ChildNumber(3, true));
+    public static final HDPath PROVIDER_OPERATOR_PATH = HDPath.of(new ChildNumber(9, true))
+            .extend(ChildNumber.FIVE_HARDENED, new ChildNumber(3, true)).extend(new ChildNumber(3, true));
+    public static final HDPath PROVIDER_OPERATOR_PATH_TESTNET = HDPath.of(new ChildNumber(9, true))
+            .extend(ChildNumber.ONE_HARDENED, new ChildNumber(3, true)).extend(new ChildNumber(3, true));
 
     // m / 9' / 5' / 5' / 0' - Blockchain User Path
-    public static final HDPath BLOCKCHAIN_USER_PATH = ImmutableList.of(new ChildNumber(9, true),
-            ChildNumber.FIVE_HARDENED, new ChildNumber(5, true), new ChildNumber(0, true));
-    public static final HDPath BLOCKCHAIN_USER_PATH_TESTNET = ImmutableList.of(new ChildNumber(9, true),
-            ChildNumber.ONE_HARDENED, new ChildNumber(5, true), new ChildNumber(0, true));
+    public static final HDPath BLOCKCHAIN_USER_PATH = HDPath.of(new ChildNumber(9, true))
+            .extend(ChildNumber.FIVE_HARDENED, new ChildNumber(5, true)).extend(new ChildNumber(0, true));
+    public static final HDPath BLOCKCHAIN_USER_PATH_TESTNET = HDPath.of(new ChildNumber(9, true))
+            .extend(ChildNumber.ONE_HARDENED, new ChildNumber(5, true)).extend(new ChildNumber(0, true));
 
-    public static final HDPath EXTERNAL_SUBPATH = ImmutableList.of(ChildNumber.ZERO);
-    public static final HDPath INTERNAL_SUBPATH = ImmutableList.of(ChildNumber.ONE);
+    public static final HDPath EXTERNAL_SUBPATH = HDPath.of(ChildNumber.ZERO);
+    public static final HDPath INTERNAL_SUBPATH = HDPath.of(ChildNumber.ONE);
 
     // We try to ensure we have at least this many keys ready and waiting to be handed out via getKey().
     // See docs for getLookaheadSize() for more info on what this is for. The -1 value means it hasn't been calculated
@@ -381,7 +381,7 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
     }
 
     public DeterministicKeyChain(DeterministicKey key, boolean isFollowing, boolean isWatching,
-                                 Script.ScriptType outputScriptType, ImmutableList<ChildNumber> accountPath) {
+                                 Script.ScriptType outputScriptType, List<ChildNumber> accountPath) {
         if (isWatching)
             checkArgument(key.isPubKeyOnly(), "Private subtrees not currently supported for watching keys: if you got this key from DKC.getWatchingKey() then use .dropPrivate().dropParent() on it first.");
         else
@@ -393,7 +393,7 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
         this.rootKey = null;
         basicKeyChain.importKey(key);
         hierarchy = new DeterministicHierarchy(key);
-        this.accountPath = accountPath;
+        this.accountPath = HDPath.of(accountPath);
         this.outputScriptType = outputScriptType;
         initializeHierarchyUnencrypted(key);
         this.isFollowing = isFollowing;
@@ -847,11 +847,11 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
     }
 
     private void setPathOrExtendedPath(DeterministicKey key, Protos.DeterministicKey.Builder detKey) {
-        ImmutableList<ChildNumber> path = key.getPath();
+        HDPath path = key.getPath();
         setPathOrExtendedPath(path, detKey);
     }
 
-    private void setPathOrExtendedPath(ImmutableList<ChildNumber> path, Protos.DeterministicKey.Builder detKey) {
+    private void setPathOrExtendedPath(List<ChildNumber> path, Protos.DeterministicKey.Builder detKey) {
         if(!pathHasExtendedChildren(path)) {
             for (ChildNumber num : path)
                 detKey.addPath(num.i());
@@ -871,7 +871,7 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
         }
     }
 
-    private void setPathOrExtendedPath(ImmutableList<ChildNumber> path, Protos.Key.Builder detKey) {
+    private void setPathOrExtendedPath(List<ChildNumber> path, Protos.Key.Builder detKey) {
         if(!pathHasExtendedChildren(path)) {
             for (ChildNumber num : path)
                 detKey.addAccountPath(num.i());
@@ -895,7 +895,7 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
         return pathHasExtendedChildren(key.getPath());
     }
 
-    protected boolean pathHasExtendedChildren(ImmutableList<ChildNumber> path) {
+    protected boolean pathHasExtendedChildren(List<ChildNumber> path) {
         boolean hasExtendedChildren = false;
         for (ChildNumber num : path) {
             if (num instanceof ExtendedChildNumber) {

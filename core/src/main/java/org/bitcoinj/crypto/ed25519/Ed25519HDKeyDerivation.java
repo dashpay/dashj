@@ -23,6 +23,7 @@ import org.bitcoinj.core.Utils;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.ExtendedChildNumber;
 import org.bitcoinj.crypto.HDDerivationException;
+import org.bitcoinj.crypto.HDPath;
 import org.bitcoinj.crypto.HDUtils;
 import org.bitcoinj.crypto.LinuxSecureRandom;
 
@@ -87,20 +88,20 @@ public final class Ed25519HDKeyDerivation {
     public static Ed25519DeterministicKey createMasterPrivKeyFromBytes(byte[] privKeyBytes, byte[] chainCode)
             throws HDDerivationException {
         // childNumberPath is an empty list because we are creating the root key.
-        return createMasterPrivKeyFromBytes(privKeyBytes, chainCode, ImmutableList.<ChildNumber> of());
+        return createMasterPrivKeyFromBytes(privKeyBytes, chainCode, HDPath.of());
     }
 
     /**
      * @throws HDDerivationException if privKeyBytes is invalid (not between 0 and n inclusive).
      */
     public static Ed25519DeterministicKey createMasterPrivKeyFromBytes(byte[] privKeyBytes, byte[] chainCode,
-            ImmutableList<ChildNumber> childNumberPath) throws HDDerivationException {
+            HDPath childNumberPath) throws HDDerivationException {
         Ed25519PrivateKeyParameters priv = new Ed25519PrivateKeyParameters(privKeyBytes, 0);
         return new Ed25519DeterministicKey(childNumberPath, chainCode, priv, null);
     }
 
     public static Ed25519DeterministicKey createMasterPubKeyFromBytes(byte[] pubKeyBytes, byte[] chainCode) {
-        return new Ed25519DeterministicKey(ImmutableList.<ChildNumber>of(), chainCode, new Ed25519PublicKeyParameters(pubKeyBytes, 0), null, null);
+        return new Ed25519DeterministicKey(HDPath.of(), chainCode, new Ed25519PublicKeyParameters(pubKeyBytes, 0), null, null);
     }
 
     /**

@@ -35,6 +35,7 @@ import org.bitcoinj.core.VersionMessage;
 import org.bitcoinj.crypto.BLSPublicKey;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.DeterministicKey;
+import org.bitcoinj.crypto.HDPath;
 import org.bitcoinj.crypto.IDeterministicKey;
 import org.bitcoinj.crypto.IKey;
 import org.bitcoinj.crypto.KeyCrypter;
@@ -117,7 +118,7 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
         return keyChainGroup;
     }
 
-    public boolean hasKeyChain(ImmutableList<ChildNumber> path) {
+    public boolean hasKeyChain(List<ChildNumber> path) {
         if (keyChainGroup == null)
             return false;
         boolean hasPath = false;
@@ -139,7 +140,7 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
         return false;
     }
 
-    public void addKeyChain(DeterministicSeed seed, ImmutableList<ChildNumber> path, AuthenticationKeyChain.KeyChainType type) {
+    public void addKeyChain(DeterministicSeed seed, List<ChildNumber> path, AuthenticationKeyChain.KeyChainType type) {
         checkState(!seed.isEncrypted());
         if (!hasKeyChain(path)) {
             keyChainGroup.addAndActivateHDChain(AuthenticationKeyChain.authenticationBuilder()
@@ -159,7 +160,7 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
         }
     }
 
-    public void addEncryptedKeyChain(DeterministicSeed seed, ImmutableList<ChildNumber> path, @Nonnull KeyParameter keyParameter, AuthenticationKeyChain.KeyChainType type) {
+    public void addEncryptedKeyChain(DeterministicSeed seed, List<ChildNumber> path, @Nonnull KeyParameter keyParameter, AuthenticationKeyChain.KeyChainType type) {
         checkNotNull(keyParameter);
         checkState(seed.isEncrypted());
         if (!hasKeyChain(path)) {
@@ -625,7 +626,7 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
         }
     }
 
-    private static ImmutableList<ChildNumber> getDefaultPath(NetworkParameters params, AuthenticationKeyChain.KeyChainType keyChainType) {
+    private static HDPath getDefaultPath(NetworkParameters params, AuthenticationKeyChain.KeyChainType keyChainType) {
         DerivationPathFactory factory = DerivationPathFactory.get(params);
         switch (keyChainType) {
             case MASTERNODE_OWNER:

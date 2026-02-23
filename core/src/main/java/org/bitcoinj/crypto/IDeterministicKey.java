@@ -18,7 +18,6 @@
 
 package org.bitcoinj.crypto;
 
-import com.google.common.collect.ImmutableList;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.script.Script;
 import org.bouncycastle.crypto.params.KeyParameter;
@@ -50,7 +49,7 @@ public interface IDeterministicKey extends IKey {
      * A path can be written as 0/1/0 which means the first child of the root, the second child of that node, then
      * the first child of that node.
      */
-    ImmutableList<ChildNumber> getPath();
+    HDPath getPath();
     
     /**
      * Returns the path of this key as a human readable string starting with M to indicate the master key.

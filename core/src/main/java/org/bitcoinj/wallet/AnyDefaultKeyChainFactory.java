@@ -24,6 +24,8 @@ import org.bitcoinj.crypto.KeyCrypter;
 import org.bitcoinj.crypto.factory.KeyFactory;
 import org.bitcoinj.script.Script;
 
+import java.util.List;
+
 /**
  * Default factory for creating keychains while de-serializing.
  */
@@ -31,7 +33,7 @@ public class AnyDefaultKeyChainFactory implements AnyKeyChainFactory {
     @Override
     public AnyDeterministicKeyChain makeKeyChain(DeterministicSeed seed,
                                                  KeyCrypter crypter, boolean isMarried, Script.ScriptType outputScriptType,
-                                                 ImmutableList<ChildNumber> accountPath, KeyFactory keyFactory, boolean hardenedKeysOnly) {
+                                                 List<ChildNumber> accountPath, KeyFactory keyFactory, boolean hardenedKeysOnly) {
         AnyDeterministicKeyChain chain;
         if (isMarried)
             throw new UnsupportedOperationException("Married chains are not supported");
@@ -69,7 +71,7 @@ public class AnyDefaultKeyChainFactory implements AnyKeyChainFactory {
     @Override
     public AnyDeterministicKeyChain makeSpendingFriendKeyChain(DeterministicSeed seed,
                                                                KeyCrypter crypter, boolean isMarried,
-                                                               ImmutableList<ChildNumber> accountPath, KeyFactory keyFactory, boolean hardenedKeysOnly) throws UnreadableWalletException
+                                                               List<ChildNumber> accountPath, KeyFactory keyFactory, boolean hardenedKeysOnly) throws UnreadableWalletException
     {
         if (isMarried)
             throw new UnsupportedOperationException("Married Friend Keychains are not allowed");
@@ -80,7 +82,7 @@ public class AnyDefaultKeyChainFactory implements AnyKeyChainFactory {
     }
 
     @Override
-    public AnyDeterministicKeyChain makeWatchingFriendKeyChain(IDeterministicKey accountKey, ImmutableList<ChildNumber> accountPath)
+    public AnyDeterministicKeyChain makeWatchingFriendKeyChain(IDeterministicKey accountKey, List<ChildNumber> accountPath)
     {
         if(accountPath.get(0).equals(ChildNumber.NINE_HARDENED) && /* allow any coin type */
                 accountPath.get(2).equals(DerivationPathFactory.FEATURE_PURPOSE_DASHPAY)) {

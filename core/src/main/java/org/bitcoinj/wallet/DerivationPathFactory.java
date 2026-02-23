@@ -16,10 +16,11 @@
 
 package org.bitcoinj.wallet;
 
-import com.google.common.collect.ImmutableList;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.crypto.ChildNumber;
+import org.bitcoinj.crypto.HDPath;
 
+import java.util.Arrays;
 import java.util.HashMap;
 
 public class DerivationPathFactory {
@@ -39,197 +40,183 @@ public class DerivationPathFactory {
      * m/9'/5'/5'/1' (mainnet)
      * m/9'/1'/5'/1' (testnet, devnets)
      */
-    public ImmutableList<ChildNumber> blockchainIdentityRegistrationFundingDerivationPath() {
-        return ImmutableList.<ChildNumber>builder()
-                .add(FEATURE_PURPOSE)
-                .add(coinType)
-                .add(FEATURE_PURPOSE_IDENTITIES)
-                .add(ChildNumber.ONE_HARDENED)
-                .build();
+    public HDPath blockchainIdentityRegistrationFundingDerivationPath() {
+        return HDPath.of(Arrays.asList(
+                FEATURE_PURPOSE,
+                coinType,
+                FEATURE_PURPOSE_IDENTITIES,
+                ChildNumber.ONE_HARDENED));
     }
 
     /** blockchain identity topup funding derivation path
      * m/9'/5'/5'/2' (mainnet)
      * m/9'/1'/5'/2' (testnet, devnets)
      */
-    public ImmutableList<ChildNumber> blockchainIdentityTopupFundingDerivationPath() {
-        return ImmutableList.<ChildNumber>builder()
-                .add(FEATURE_PURPOSE)
-                .add(coinType)
-                .add(FEATURE_PURPOSE_IDENTITIES)
-                .add(new ChildNumber(2, true))
-                .build();
+    public HDPath blockchainIdentityTopupFundingDerivationPath() {
+        return HDPath.of(Arrays.asList(
+                FEATURE_PURPOSE,
+                coinType,
+                FEATURE_PURPOSE_IDENTITIES,
+                new ChildNumber(2, true)));
     }
 
     /** blockchain identity invitation funding derivation path
      * m/9'/5'/5'/3' (mainnet)
      * m/9'/1'/5'/3' (testnet, devnets)
      */
-    public ImmutableList<ChildNumber> identityInvitationFundingDerivationPath() {
-        return ImmutableList.<ChildNumber>builder()
-                .add(FEATURE_PURPOSE)
-                .add(coinType)
-                .add(FEATURE_PURPOSE_IDENTITIES)
-                .add(new ChildNumber(3, true))
-                .build();
+    public HDPath identityInvitationFundingDerivationPath() {
+        return HDPath.of(Arrays.asList(
+                FEATURE_PURPOSE,
+                coinType,
+                FEATURE_PURPOSE_IDENTITIES,
+                new ChildNumber(3, true)));
     }
 
     /** blockchain identity keys derivation root path (EC Keys)
      * m/9'/5'/5'/0'/0'/(blockchain identity index)' (mainnet)
      * m/9'/1'/5'/0'/0'/(blockchain identity index)' (testnet, devnets)
      */
-    public ImmutableList<ChildNumber> blockchainIdentityECDSADerivationPath() {
-        return ImmutableList.<ChildNumber>builder()
-                .add(FEATURE_PURPOSE)
-                .add(coinType)
-                .add(FEATURE_PURPOSE_IDENTITIES)
-                .add(ChildNumber.ZERO_HARDENED) //sub feature 0
-                .add(ChildNumber.ZERO_HARDENED) //key type (0 is EC key)
-                .add(ChildNumber.ZERO_HARDENED) //identity index (default to 0 for now)
-                .build();
+    public HDPath blockchainIdentityECDSADerivationPath() {
+        return HDPath.of(Arrays.asList(
+                FEATURE_PURPOSE,
+                coinType,
+                FEATURE_PURPOSE_IDENTITIES,
+                ChildNumber.ZERO_HARDENED, //sub feature 0
+                ChildNumber.ZERO_HARDENED, //key type (0 is EC key)
+                ChildNumber.ZERO_HARDENED)); //identity index (default to 0 for now)
     }
 
     /** blockchain identity keys derivation path (EC Keys)
      * m/9'/5'/5'/0'/0'/(blockchain identity index)'/(key index)' (mainnet)
      * m/9'/1'/5'/0'/0'/(blockchain identity index)'/(key index)' (testnet, devnets)
      */
-    public ImmutableList<ChildNumber> blockchainIdentityECDSADerivationPath(int index) {
-        return ImmutableList.<ChildNumber>builder()
-                .add(FEATURE_PURPOSE)
-                .add(coinType)
-                .add(FEATURE_PURPOSE_IDENTITIES)
-                .add(ChildNumber.ZERO_HARDENED) //sub feature 0
-                .add(ChildNumber.ZERO_HARDENED) //key type (0 is EC key)
-                .add(ChildNumber.ZERO_HARDENED) //identity index (default to 0 for now)
-                .add(new ChildNumber(index, true)) //key index (default to 0 for now)
-                .build();
+    public HDPath blockchainIdentityECDSADerivationPath(int index) {
+        return HDPath.of(Arrays.asList(
+                FEATURE_PURPOSE,
+                coinType,
+                FEATURE_PURPOSE_IDENTITIES,
+                ChildNumber.ZERO_HARDENED, //sub feature 0
+                ChildNumber.ZERO_HARDENED, //key type (0 is EC key)
+                ChildNumber.ZERO_HARDENED, //identity index (default to 0 for now)
+                new ChildNumber(index, true))); //key index (default to 0 for now)
     }
 
     /** blockchain identity keys derivation root path (BLS Keys)
      * m/9'/5'/5'/0'/1'/(blockchain identity index = 0) (mainnet)
      * m/9'/1'/5'/0'/1'/(blockchain identity index = 0) (testnet, devnets)
      */
-    public ImmutableList<ChildNumber> blockchainIdentityBLSDerivationPath() {
-        return ImmutableList.<ChildNumber>builder()
-                .add(FEATURE_PURPOSE)
-                .add(coinType)
-                .add(FEATURE_PURPOSE_IDENTITIES)
-                .add(ChildNumber.ZERO_HARDENED) //sub feature 0
-                .add(ChildNumber.ONE_HARDENED) //key type (1 is BLS key)
-                .add(ChildNumber.ZERO_HARDENED) // identity index (default to 0 for now)
-                .build();
+    public HDPath blockchainIdentityBLSDerivationPath() {
+        return HDPath.of(Arrays.asList(
+                FEATURE_PURPOSE,
+                coinType,
+                FEATURE_PURPOSE_IDENTITIES,
+                ChildNumber.ZERO_HARDENED, //sub feature 0
+                ChildNumber.ONE_HARDENED, //key type (1 is BLS key)
+                ChildNumber.ZERO_HARDENED)); // identity index (default to 0 for now)
     }
 
     /** blockchain identity keys derivation path (BLS Keys)
      * m/9'/5'/5'/0'/1'/(blockchain identity index)/(key index)' (mainnet)
      * m/9'/1'/5'/0'/1'/(blockchain identity index)/(key index)' (testnet, devnets)
      */
-    public ImmutableList<ChildNumber> blockchainIdentityBLSDerivationPath(int index) {
-        return ImmutableList.<ChildNumber>builder()
-                .add(FEATURE_PURPOSE)
-                .add(coinType)
-                .add(FEATURE_PURPOSE_IDENTITIES)
-                .add(ChildNumber.ZERO_HARDENED) //sub feature 0
-                .add(ChildNumber.ONE_HARDENED) //key type (1 is BLS key)
-                .add(ChildNumber.ZERO_HARDENED) // identity index (default to 0 for now)
-                .add(new ChildNumber(index, true)) //key index (default to 0 for now)
-                .build();
+    public HDPath blockchainIdentityBLSDerivationPath(int index) {
+        return HDPath.of(Arrays.asList(
+                FEATURE_PURPOSE,
+                coinType,
+                FEATURE_PURPOSE_IDENTITIES,
+                ChildNumber.ZERO_HARDENED, //sub feature 0
+                ChildNumber.ONE_HARDENED, //key type (1 is BLS key)
+                ChildNumber.ZERO_HARDENED, // identity index (default to 0 for now)
+                new ChildNumber(index, true))); //key index (default to 0 for now)
     }
 
-    public ImmutableList<ChildNumber> masternodeHoldingsDerivationPath() {
-        return ImmutableList.<ChildNumber>builder()
-                .add(FEATURE_PURPOSE)
-                .add(coinType)
-                .add(new ChildNumber(3, true))
-                .add(ChildNumber.ZERO_HARDENED)
-                .build();
+    public HDPath masternodeHoldingsDerivationPath() {
+        return HDPath.of(Arrays.asList(
+                FEATURE_PURPOSE,
+                coinType,
+                new ChildNumber(3, true),
+                ChildNumber.ZERO_HARDENED));
     }
 
     /** provider voting keys derivation path
      * m/9'/5'/3'/1' (mainnet)
      * m/9'/1'/3'/1' (testnet, devnets)
      */
-    public ImmutableList<ChildNumber> masternodeVotingDerivationPath() {
-        return ImmutableList.<ChildNumber>builder()
-                .add(FEATURE_PURPOSE)
-                .add(coinType)
-                .add(new ChildNumber(3, true))
-                .add(ChildNumber.ONE_HARDENED)
-                .build();
+    public HDPath masternodeVotingDerivationPath() {
+        return HDPath.of(Arrays.asList(
+                FEATURE_PURPOSE,
+                coinType,
+                new ChildNumber(3, true),
+                ChildNumber.ONE_HARDENED));
     }
 
     /** provider owner keys derivation path
      * m/9'/5'/3'/2' (mainnet)
      * m/9'/1'/3'/2' (testnet, devnets)
      */
-    public ImmutableList<ChildNumber> masternodeOwnerDerivationPath() {
-        return ImmutableList.<ChildNumber>builder()
-                .add(FEATURE_PURPOSE)
-                .add(coinType)
-                .add(new ChildNumber(3, true))
-                .add(new ChildNumber(2, true))
-                .build();
+    public HDPath masternodeOwnerDerivationPath() {
+        return HDPath.of(Arrays.asList(
+                FEATURE_PURPOSE,
+                coinType,
+                new ChildNumber(3, true),
+                new ChildNumber(2, true)));
     }
 
     /** provider operator keys derivation path
      * m/9'/5'/3'/3' (mainnet)
      * m/9'/1'/3'/3' (testnet, devnets)
      */
-    public ImmutableList<ChildNumber> masternodeOperatorDerivationPath() {
-        return ImmutableList.<ChildNumber>builder()
-                .add(FEATURE_PURPOSE)
-                .add(coinType)
-                .add(new ChildNumber(3, true))
-                .add(new ChildNumber(3, true))
-                .build();
+    public HDPath masternodeOperatorDerivationPath() {
+        return HDPath.of(Arrays.asList(
+                FEATURE_PURPOSE,
+                coinType,
+                new ChildNumber(3, true),
+                new ChildNumber(3, true)));
     }
 
     /** mixed coins derivation path
      * m/9'/5'/4'/account' (mainnet)
      * m/9'/1'/4'/account (testnet, devnets)
      */
-    public ImmutableList<ChildNumber> coinJoinDerivationPath(int account) {
-        return ImmutableList.<ChildNumber>builder()
-                .add(FEATURE_PURPOSE)
-                .add(coinType)
-                .add(new ChildNumber(4, true))
-                .add(new ChildNumber(account, true))
-                .build();
+    public HDPath coinJoinDerivationPath(int account) {
+        return HDPath.of(Arrays.asList(
+                FEATURE_PURPOSE,
+                coinType,
+                new ChildNumber(4, true),
+                new ChildNumber(account, true)));
     }
 
     /** provider platform keys derivation path
      * m/9'/5'/3'/4' (mainnet)
      * m/9'/1'/3'/4' (testnet, devnets)
      */
-    public ImmutableList<ChildNumber> masternodePlatformDerivationPath() {
-        return ImmutableList.<ChildNumber>builder()
-                .add(FEATURE_PURPOSE)
-                .add(coinType)
-                .add(new ChildNumber(3, true))
-                .add(new ChildNumber(4, true))
-                .build();
+    public HDPath masternodePlatformDerivationPath() {
+        return HDPath.of(Arrays.asList(
+                FEATURE_PURPOSE,
+                coinType,
+                new ChildNumber(3, true),
+                new ChildNumber(4, true)));
     }
 
     /** Default wallet derivation path
      * m/44'/5'/@account' (mainnet)
      * m/44'/1'/@account' (testnet, devnets)
      */
-    public ImmutableList<ChildNumber> bip44DerivationPath(int account) {
-        return ImmutableList.<ChildNumber>builder()
-                .add(new ChildNumber(44, true))
-                .add(coinType)
-                .add(new ChildNumber(account, true))
-                .build();
+    public HDPath bip44DerivationPath(int account) {
+        return HDPath.of(Arrays.asList(
+                new ChildNumber(44, true),
+                coinType,
+                new ChildNumber(account, true)));
     }
 
     /** Legacy wallet derivation path
      * m/@account' (mainnet, testnet, devnets)
      */
-    public ImmutableList<ChildNumber> bip32DerivationPath(int account) {
-        return ImmutableList.<ChildNumber>builder()
-                .add(new ChildNumber(account, true))
-                .build();
+    public HDPath bip32DerivationPath(int account) {
+        return HDPath.of(Arrays.asList(
+                new ChildNumber(account, true)));
     }
+
     // keep once instance per network
     private static final HashMap<String, DerivationPathFactory> instances = new HashMap<>();
 

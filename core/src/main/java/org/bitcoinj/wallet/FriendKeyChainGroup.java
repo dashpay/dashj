@@ -142,14 +142,14 @@ public class FriendKeyChainGroup extends KeyChainGroup {
 
 
 
-    HashMap<ImmutableList<ChildNumber>, DeterministicKey> currentContactKeys;
+    HashMap<HDPath, DeterministicKey> currentContactKeys;
 
     protected FriendKeyChainGroup(NetworkParameters params, @Nullable BasicKeyChain basicKeyChain, List<DeterministicKeyChain> chains,
                             int lookAheadSize, int lookAheadThreshold,
-                            @Nullable HashMap<ImmutableList<ChildNumber>, DeterministicKey> currentKeys, @Nullable KeyCrypter crypter) {
+                            @Nullable HashMap<HDPath, DeterministicKey> currentKeys, @Nullable KeyCrypter crypter) {
         super(params, basicKeyChain, chains, lookAheadSize, lookAheadThreshold,null, crypter);
         currentContactKeys = currentKeys != null ? currentKeys :
-                new HashMap<ImmutableList<ChildNumber>, DeterministicKey>();
+                new HashMap<HDPath, DeterministicKey>();
     }
 
     public FriendKeyChain getFriendKeyChain(Sha256Hash myBlockchainUserId, int account, Sha256Hash theirBlockchainUserId, int friendAccountReference, FriendKeyChain.KeyChainType type) {
@@ -169,7 +169,7 @@ public class FriendKeyChainGroup extends KeyChainGroup {
             accountReference = friendAccountReference;
         }
         for(DeterministicKeyChain chain : chains) {
-            ImmutableList<ChildNumber> accountPath = chain.getAccountPath();
+            HDPath accountPath = chain.getAccountPath();
             if(accountPath.get(PATH_INDEX_ACCOUNT).equals(new ChildNumber(accountReference, true)) &&
             accountPath.get(PATH_INDEX_TO_ID).equals(new ExtendedChildNumber(to)) &&
             accountPath.get(PATH_INDEX_FROM_ID).equals(new ExtendedChildNumber(from)))
@@ -206,7 +206,7 @@ public class FriendKeyChainGroup extends KeyChainGroup {
         for(DeterministicKeyChain chain : chains) {
             Preconditions.checkState(chain instanceof FriendKeyChain);
         }
-        HashMap<ImmutableList<ChildNumber>, DeterministicKey> currentKeys = null;
+        HashMap<HDPath, DeterministicKey> currentKeys = null;
 
         int lookaheadSize = -1, lookaheadThreshold = -1;
         if (!chains.isEmpty()) {
@@ -229,7 +229,7 @@ public class FriendKeyChainGroup extends KeyChainGroup {
         for(DeterministicKeyChain chain : chains) {
             Preconditions.checkState(chain instanceof FriendKeyChain);
         }
-        HashMap<ImmutableList<ChildNumber>, DeterministicKey> currentKeys = null;
+        HashMap<HDPath, DeterministicKey> currentKeys = null;
 
         int lookaheadSize = -1, lookaheadThreshold = -1;
         if (!chains.isEmpty()) {
@@ -258,7 +258,7 @@ public class FriendKeyChainGroup extends KeyChainGroup {
             throw new UnsupportedOperationException("Key is not suitable to receive coins for married keychains." +
                     " Use freshAddress to get P2SH address instead");
         }
-        ImmutableList<ChildNumber> accountPath = chain.getAccountPath();
+        HDPath accountPath = chain.getAccountPath();
         DeterministicKey current = currentContactKeys.get(accountPath);
         if (current == null) {
             current = freshKey(contact, type);
@@ -336,9 +336,9 @@ public class FriendKeyChainGroup extends KeyChainGroup {
         }
     }
 
-    protected static HashMap<ImmutableList<ChildNumber>, DeterministicKey> createCurrentContactKeysMap(List<DeterministicKeyChain> chains) {
+    protected static HashMap<HDPath, DeterministicKey> createCurrentContactKeysMap(List<DeterministicKeyChain> chains) {
 
-        HashMap<ImmutableList<ChildNumber>, DeterministicKey> currentKeys = new HashMap<ImmutableList<ChildNumber>, DeterministicKey>(chains.size());
+        HashMap<HDPath, DeterministicKey> currentKeys = new HashMap<HDPath, DeterministicKey>(chains.size());
 
         for(DeterministicKeyChain chain : chains) {
             FriendKeyChain contactChain = (FriendKeyChain)chain;
@@ -360,7 +360,7 @@ public class FriendKeyChainGroup extends KeyChainGroup {
     protected void maybeMarkCurrentKeyAsUsed(DeterministicKey key) {
         // It's OK for currentKeys to be empty here: it means we're a married wallet and the key may be a part of a
         // rotating chain.
-        for (Map.Entry<ImmutableList<ChildNumber>, DeterministicKey> entry : currentContactKeys.entrySet()) {
+        for (Map.Entry<HDPath, DeterministicKey> entry : currentContactKeys.entrySet()) {
             if (entry.getValue() != null && entry.getValue().equals(key)) {
                 log.info("Marking key as used: {}", key);
                 currentContactKeys.put(entry.getKey(), freshKey(new EvolutionContact(entry.getKey(), getKeyChainType() == KeyChainType.RECEIVING_CHAIN), getKeyChainType()));
@@ -377,7 +377,7 @@ public class FriendKeyChainGroup extends KeyChainGroup {
     public EvolutionContact getFriendFromPublicKeyHash(byte [] pubKeyHash) {
         ECKey key = findKeyFromPubKeyHash(pubKeyHash, Script.ScriptType.P2PKH);
         if (key instanceof DeterministicKey) {
-            ImmutableList<ChildNumber> path = ((DeterministicKey)key).getPath();
+            HDPath path = ((DeterministicKey)key).getPath();
             Sha256Hash from = Sha256Hash.wrap(((ExtendedChildNumber)path.get(PATH_INDEX_FROM_ID)).bi());
             Sha256Hash to = Sha256Hash.wrap(((ExtendedChildNumber)path.get(PATH_INDEX_TO_ID)).bi());
             return new EvolutionContact(from, to);

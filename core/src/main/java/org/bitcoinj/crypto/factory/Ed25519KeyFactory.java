@@ -17,6 +17,7 @@
 package org.bitcoinj.crypto.factory;
 
 import com.google.common.collect.ImmutableList;
+import org.bitcoinj.crypto.HDPath;
 import org.bitcoinj.crypto.ed25519.Ed25519DeterministicKey;
 import org.bitcoinj.crypto.ed25519.Ed25519HDKeyDerivation;
 import org.bitcoinj.crypto.ed25519.Ed25519Key;
@@ -31,6 +32,7 @@ import org.bouncycastle.crypto.params.Ed25519PrivateKeyParameters;
 import org.bouncycastle.crypto.params.Ed25519PublicKeyParameters;
 
 import java.math.BigInteger;
+import java.util.List;
 
 public class Ed25519KeyFactory implements KeyFactory {
 
@@ -70,7 +72,7 @@ public class Ed25519KeyFactory implements KeyFactory {
     }
 
     @Override
-    public IDeterministicKey fromExtended(ImmutableList<ChildNumber> immutablePath, byte[] chainCode, byte[] pubkey, byte[] priv, IDeterministicKey parent) {
+    public IDeterministicKey fromExtended(List<ChildNumber> immutablePath, byte[] chainCode, byte[] pubkey, byte[] priv, IDeterministicKey parent) {
         return new Ed25519DeterministicKey(immutablePath, chainCode,
                 new Ed25519PublicKeyParameters(pubkey, 1),
                 priv != null ? new Ed25519PrivateKeyParameters(priv, 0) : null,
@@ -78,7 +80,7 @@ public class Ed25519KeyFactory implements KeyFactory {
     }
 
     @Override
-    public IDeterministicKey fromExtendedEncrypted(ImmutableList<ChildNumber> immutablePath, byte[] chainCode, KeyCrypter keyCrypter, byte[] pubkey, EncryptedData data, IDeterministicKey parent) {
+    public IDeterministicKey fromExtendedEncrypted(List<ChildNumber> immutablePath, byte[] chainCode, KeyCrypter keyCrypter, byte[] pubkey, EncryptedData data, IDeterministicKey parent) {
         return new Ed25519DeterministicKey(immutablePath, chainCode, keyCrypter, new Ed25519PublicKeyParameters(pubkey, 1), data, (Ed25519DeterministicKey) parent);
     }
 
@@ -103,7 +105,7 @@ public class Ed25519KeyFactory implements KeyFactory {
     }
 
     @Override
-    public IDeterministicKey deserializeB58(String base58, ImmutableList<ChildNumber> path, NetworkParameters params) {
+    public IDeterministicKey deserializeB58(String base58, List<ChildNumber> path, NetworkParameters params) {
         return Ed25519DeterministicKey.deserializeB58(base58, path, params);
     }
 

@@ -34,6 +34,7 @@ import org.bitcoinj.crypto.DeterministicHierarchy;
 import org.bitcoinj.crypto.EncryptedData;
 import org.bitcoinj.crypto.ExtendedChildNumber;
 import org.bitcoinj.crypto.HDKeyDerivation;
+import org.bitcoinj.crypto.HDPath;
 import org.bitcoinj.crypto.HDUtils;
 import org.bitcoinj.crypto.IDeterministicKey;
 import org.bitcoinj.crypto.KeyCrypter;
@@ -48,6 +49,7 @@ import org.dashj.bls.ExtendedPublicKey;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -63,7 +65,7 @@ import static org.bitcoinj.core.Utils.HEX;
  */
 public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
     private final BLSDeterministicKey parent;
-    private final ImmutableList<ChildNumber> childNumberPath;
+    private final HDPath childNumberPath;
     private final int depth;
     private int parentFingerprint; // 0 if this key is root node of key hierarchy
 
@@ -73,7 +75,7 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
     /* package */ ExtendedPublicKey extendedPublicKey;
 
     /** Constructs a key from its components. This is not normally something you should use. */
-    public BLSDeterministicKey(ImmutableList<ChildNumber> childNumberPath,
+    public BLSDeterministicKey(List<ChildNumber> childNumberPath,
                                byte[] chainCode,
                                BLSPublicKey pub,
                                @Nullable BLSSecretKey priv,
@@ -85,7 +87,7 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
         } else {
             this.parent = null;
         }
-        this.childNumberPath = checkNotNull(childNumberPath);
+        this.childNumberPath = HDPath.of(checkNotNull(childNumberPath));
         this.chainCode = Arrays.copyOf(chainCode, chainCode.length);
         this.depth = parent == null ? 0 : parent.getDepth() + 1;
         this.parentFingerprint = (parent != null) ? parent.getFingerprint() : 0;
@@ -101,7 +103,7 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
         }
     }
 
-    public BLSDeterministicKey(ImmutableList<ChildNumber> childNumberPath,
+    public BLSDeterministicKey(List<ChildNumber> childNumberPath,
                                byte[] chainCode,
                                byte[] pub,
                                @Nullable byte[] priv,
@@ -111,14 +113,14 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
     }
 
     /** Constructs a key from its components. This is not normally something you should use. */
-    public BLSDeterministicKey(ImmutableList<ChildNumber> childNumberPath,
+    public BLSDeterministicKey(List<ChildNumber> childNumberPath,
                                byte[] chainCode,
                                byte[] priv,
                                @Nullable BLSDeterministicKey parent) {
         super(new BLSSecretKey(priv), new BLSSecretKey(priv, isLegacy).getPublicKey());
         checkArgument(chainCode.length == 32);
         this.parent = parent;
-        this.childNumberPath = checkNotNull(childNumberPath);
+        this.childNumberPath = HDPath.of(checkNotNull(childNumberPath));
         this.chainCode = Arrays.copyOf(chainCode, chainCode.length);
         this.depth = parent == null ? 0 : parent.depth + 1;
         this.parentFingerprint = (parent != null) ? parent.getFingerprint() : 0;
@@ -128,7 +130,7 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
     }
 
     /** Constructs a key from its components. This is not normally something you should use. */
-    public BLSDeterministicKey(ImmutableList<ChildNumber> childNumberPath,
+    public BLSDeterministicKey(List<ChildNumber> childNumberPath,
                                byte[] chainCode,
                                KeyCrypter crypter,
                                byte[] pub,
@@ -141,7 +143,7 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
     }
 
     /** Constructs a key from its components. This is not normally something you should use. */
-    public BLSDeterministicKey(ImmutableList<ChildNumber> childNumberPath,
+    public BLSDeterministicKey(List<ChildNumber> childNumberPath,
                                byte[] chainCode,
                                KeyCrypter crypter,
                                BLSPublicKey pub,
@@ -173,7 +175,7 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
      * information about its parent key.  Invoked when deserializing, but otherwise not something that
      * you normally should use.
      */
-    public BLSDeterministicKey(ImmutableList<ChildNumber> childNumberPath,
+    public BLSDeterministicKey(List<ChildNumber> childNumberPath,
                                byte[] chainCode,
                                byte[] publicKeyBytes,
                                @Nullable BLSDeterministicKey parent,
@@ -182,7 +184,7 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
         super(null, publicKeyBytes, parent != null ? parent.pub.isLegacy() : isLegacy);
         checkArgument(chainCode.length == 32);
         this.parent = parent;
-        this.childNumberPath = checkNotNull(childNumberPath);
+        this.childNumberPath = HDPath.of(checkNotNull(childNumberPath));
         this.chainCode = Arrays.copyOf(chainCode, chainCode.length);
         this.depth = depth;
         this.parentFingerprint = ascertainParentFingerprint(parent, parentFingerprint);
@@ -196,7 +198,7 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
      * information about its parent key.  Invoked when deserializing, but otherwise not something that
      * you normally should use.
      */
-    public BLSDeterministicKey(ImmutableList<ChildNumber> childNumberPath,
+    public BLSDeterministicKey(List<ChildNumber> childNumberPath,
                                byte[] chainCode,
                                BLSSecretKey priv,
                                @Nullable BLSDeterministicKey parent,
@@ -205,7 +207,7 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
         super(priv, priv.getPublicKey());
         checkArgument(chainCode.length == 32);
         this.parent = parent;
-        this.childNumberPath = checkNotNull(childNumberPath);
+        this.childNumberPath = HDPath.of(checkNotNull(childNumberPath));
         this.chainCode = Arrays.copyOf(chainCode, chainCode.length);
         this.depth = depth;
         this.parentFingerprint = ascertainParentFingerprint(parent, parentFingerprint);
@@ -246,7 +248,7 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
         priv = new BLSSecretKey(extendedPrivateKey.getPrivateKey(), isLegacy);
         pub = new BLSPublicKey(extendedPrivateKey.getPublicKey(), isLegacy);
         this.parent = null;
-        this.childNumberPath = ImmutableList.<ChildNumber>of();
+        this.childNumberPath = HDPath.of();
         this.chainCode = extendedPrivateKey.getChainCode().serialize();
         this.encryptedPrivateKey = null;
         this.depth = childNumberPath.size();
@@ -265,7 +267,7 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
         if (parent != null)
             this.childNumberPath = HDUtils.append(parent.getPath(), childNumber);
         else
-            this.childNumberPath = ImmutableList.of(childNumber);
+            this.childNumberPath = HDPath.of(childNumber);
 
         this.chainCode = extendedPrivateKey.getChainCode().serialize();
         this.encryptedPrivateKey = null;
@@ -285,7 +287,7 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
         if (parent != null)
             this.childNumberPath = HDUtils.append(parent.getPath(), childNumber);
         else
-            this.childNumberPath = ImmutableList.of(childNumber);
+            this.childNumberPath = HDPath.of(childNumber);
 
         this.chainCode = extendedPublicKey.getChainCode().serialize();
         this.encryptedPrivateKey = null;
@@ -298,7 +300,7 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
      * A path can be written as 0/1/0 which means the first child of the root, the second child of that node, then
      * the first child of that node.
      */
-    public ImmutableList<ChildNumber> getPath() {
+    public HDPath getPath() {
         return childNumberPath;
     }
 
@@ -558,7 +560,7 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
                 cursor.pub, parentalPrivateKeyBytes, cursor.parent);
         // Now we have to rederive the keys along the path back to ourselves. That path can be found by just truncating
         // our path with the length of the parents path.
-        ImmutableList<ChildNumber> path = childNumberPath.subList(cursor.getPath().size(), childNumberPath.size());
+        HDPath path = HDPath.of(childNumberPath.subList(cursor.getPath().size(), childNumberPath.size()));
         for (ChildNumber num : path) {
             downCursor = BLSHDKeyDerivation.deriveChildKey(downCursor, num);
         }
@@ -748,7 +750,7 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
      * Deserialize a base-58-encoded HD Key and associates it with a given path.
      *  @throws IllegalArgumentException if the base58 encoded key could not be parsed.
      */
-    public static BLSDeterministicKey deserializeB58(String base58, ImmutableList<ChildNumber> path, NetworkParameters params) {
+    public static BLSDeterministicKey deserializeB58(String base58, List<ChildNumber> path, NetworkParameters params) {
         return deserialize(params, Base58.decodeChecked(base58), null, path);
     }
 
@@ -774,7 +776,7 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
         final int parentFingerprint = buffer.getInt();
         final int i = buffer.getInt();
         final ChildNumber childNumber = new ChildNumber(i);
-        ImmutableList<ChildNumber> path;
+        HDPath path;
         if (parent != null) {
             if (parentFingerprint == 0)
                 throw new IllegalArgumentException("Parent was provided but this key doesn't have one");
@@ -789,8 +791,8 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
                 // This can happen when deserializing an account key for a watching wallet.  In this case, we assume that
                 // the client wants to conceal the key's position in the hierarchy.  The path is truncated at the
                 // parent's node.
-                path = ImmutableList.of(childNumber);
-            else path = ImmutableList.of();
+                path = HDPath.of(childNumber);
+            else path = HDPath.of();
         }
         byte[] chainCode = new byte[32];
         buffer.get(chainCode);
@@ -807,7 +809,7 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
     /**
      * Deserialize an HD Key and associate it with a full path.
      */
-    public static BLSDeterministicKey deserialize(NetworkParameters params, byte[] serializedKey, BLSDeterministicKey parent, ImmutableList<ChildNumber> fullPath) {
+    public static BLSDeterministicKey deserialize(NetworkParameters params, byte[] serializedKey, BLSDeterministicKey parent, List<ChildNumber> fullPath) {
         ByteBuffer buffer = ByteBuffer.wrap(serializedKey);
         int header = buffer.getInt();
         if (header != params.getBip32HeaderP2PKHpriv() && header != params.getBip32HeaderP2PKHpub())
@@ -816,11 +818,11 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
         int depth = buffer.get() & 0xFF; // convert signed byte to positive int since depth cannot be negative
         final int parentFingerprint = buffer.getInt();
         final int i = buffer.getInt();
-        ImmutableList<ChildNumber> path;
+        List<ChildNumber> path;
 
         if (depth >= 1)
             path = fullPath;
-        else path = ImmutableList.of();
+        else path = HDPath.of();
 
         byte[] chainCode = new byte[32];
         buffer.get(chainCode);

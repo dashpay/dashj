@@ -63,7 +63,7 @@ public class DefaultKeyChainFactory implements KeyChainFactory {
 
     @Override
     public DeterministicKeyChain makeSpendingFriendKeyChain(DeterministicSeed seed,
-                                                            KeyCrypter crypter, boolean isMarried, ImmutableList<ChildNumber> accountPath) throws UnreadableWalletException
+                                                            KeyCrypter crypter, boolean isMarried, List<ChildNumber> accountPath) throws UnreadableWalletException
     {
         DeterministicKeyChain chain;
         if (isMarried)
@@ -76,7 +76,7 @@ public class DefaultKeyChainFactory implements KeyChainFactory {
     }
 
     @Override
-    public DeterministicKeyChain makeWatchingFriendKeyChain(DeterministicKey accountKey, ImmutableList<ChildNumber> accountPath)
+    public DeterministicKeyChain makeWatchingFriendKeyChain(DeterministicKey accountKey, List<ChildNumber> accountPath)
     {
         DeterministicKeyChain chain;
         if(accountPath.get(0).equals(ChildNumber.NINE_HARDENED) && /* allow any coin type */

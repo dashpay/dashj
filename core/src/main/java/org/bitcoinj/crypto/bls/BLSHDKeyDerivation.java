@@ -21,9 +21,12 @@ import com.google.common.collect.ImmutableList;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.HDDerivationException;
+import org.bitcoinj.crypto.HDPath;
 import org.dashj.bls.ExtendedPrivateKey;
 import org.dashj.bls.ExtendedPublicKey;
 
+
+import java.util.List;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
@@ -61,19 +64,19 @@ public final class BLSHDKeyDerivation {
     public static BLSDeterministicKey createMasterPrivKeyFromBytes(byte[] privKeyBytes, byte[] chainCode)
             throws HDDerivationException {
         // childNumberPath is an empty list because we are creating the root key.
-        return createMasterPrivKeyFromBytes(privKeyBytes, chainCode, ImmutableList.<ChildNumber> of());
+        return createMasterPrivKeyFromBytes(privKeyBytes, chainCode, HDPath.of());
     }
 
     /**
      * @throws HDDerivationException if privKeyBytes is invalid (not between 0 and n inclusive).
      */
     public static BLSDeterministicKey createMasterPrivKeyFromBytes(byte[] privKeyBytes, byte[] chainCode,
-            ImmutableList<ChildNumber> childNumberPath) throws HDDerivationException {
+                                                                   List<ChildNumber> childNumberPath) throws HDDerivationException {
         return new BLSDeterministicKey(childNumberPath, chainCode, privKeyBytes, null);
     }
 
     public static BLSDeterministicKey createMasterPubKeyFromBytes(byte[] pubKeyBytes, byte[] chainCode) {
-        return new BLSDeterministicKey(ImmutableList.of(), chainCode, pubKeyBytes, null, false, null);
+        return new BLSDeterministicKey(HDPath.of(), chainCode, pubKeyBytes, null, false, null);
     }
 
     public static BLSDeterministicKey createMasterPubKeyFromBytes(byte[] seed) {

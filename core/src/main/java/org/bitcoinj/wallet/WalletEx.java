@@ -28,6 +28,7 @@ import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.DeterministicHierarchy;
 import org.bitcoinj.crypto.DeterministicKey;
+import org.bitcoinj.crypto.HDPath;
 import org.bitcoinj.evolution.EvolutionContact;
 import org.bitcoinj.script.Script;
 import org.bitcoinj.script.ScriptPattern;
@@ -974,7 +975,7 @@ public class WalletEx extends Wallet {
     }
 
     public void initializeCoinJoin(@Nullable KeyParameter keyParameter, int account) {
-        ImmutableList<ChildNumber> path = DerivationPathFactory.get(getParams()).coinJoinDerivationPath(account);
+        HDPath path = DerivationPathFactory.get(getParams()).coinJoinDerivationPath(account);
         if (keyParameter != null) {
             getCoinJoin().addEncryptedKeyChain(getKeyChainSeed(), path, keyParameter);
         } else {

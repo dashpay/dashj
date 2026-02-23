@@ -23,6 +23,7 @@ import org.bitcoinj.crypto.BLSPublicKey;
 import org.bitcoinj.crypto.BLSSecretKey;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.EncryptedData;
+import org.bitcoinj.crypto.HDPath;
 import org.bitcoinj.crypto.IDeterministicKey;
 import org.bitcoinj.crypto.IKey;
 import org.bitcoinj.crypto.KeyCrypter;
@@ -32,6 +33,7 @@ import org.bitcoinj.crypto.bls.BLSHDKeyDerivation;
 import org.bitcoinj.crypto.bls.BLSKey;
 
 import java.math.BigInteger;
+import java.util.List;
 
 public class BLSKeyFactory implements KeyFactory {
 
@@ -71,12 +73,12 @@ public class BLSKeyFactory implements KeyFactory {
     }
 
     @Override
-    public IDeterministicKey fromExtended(ImmutableList<ChildNumber> immutablePath, byte[] chainCode, byte[] pubkey, byte[] priv, IDeterministicKey parent) {
+    public IDeterministicKey fromExtended(List<ChildNumber> immutablePath, byte[] chainCode, byte[] pubkey, byte[] priv, IDeterministicKey parent) {
         return new BLSDeterministicKey(immutablePath, chainCode, BLSPublicKey.fromSerializedBytes(pubkey), priv != null ? new BLSSecretKey(priv) : null, parent);
     }
 
     @Override
-    public IDeterministicKey fromExtendedEncrypted(ImmutableList<ChildNumber> immutablePath, byte[] chainCode, KeyCrypter keyCrypter, byte[] pubkey, EncryptedData data, IDeterministicKey parent) {
+    public IDeterministicKey fromExtendedEncrypted(List<ChildNumber> immutablePath, byte[] chainCode, KeyCrypter keyCrypter, byte[] pubkey, EncryptedData data, IDeterministicKey parent) {
         return new BLSDeterministicKey(immutablePath, chainCode, keyCrypter, BLSPublicKey.fromSerializedBytes(pubkey), data, (BLSDeterministicKey) parent);
     }
 
@@ -100,7 +102,7 @@ public class BLSKeyFactory implements KeyFactory {
         return BLSDeterministicKey.deserializeB58((BLSDeterministicKey) parent, pub58, params);
     }
     @Override
-    public IDeterministicKey deserializeB58(String base58, ImmutableList<ChildNumber> path, NetworkParameters params) {
+    public IDeterministicKey deserializeB58(String base58, List<ChildNumber> path, NetworkParameters params) {
         return BLSDeterministicKey.deserializeB58(base58, path, params);
     }
 

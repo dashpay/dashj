@@ -31,6 +31,7 @@ import org.bitcoinj.core.Utils;
 import org.bitcoinj.crypto.BLSScheme;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.DeterministicKey;
+import org.bitcoinj.crypto.HDPath;
 import org.bitcoinj.crypto.IDeterministicKey;
 import org.bitcoinj.crypto.IKey;
 import org.bitcoinj.crypto.bls.BLSDeterministicKey;
@@ -715,7 +716,7 @@ public class AnyDeterministicKeyChainTest {
     public void blsCheckPathDerivationTest() {
         // TODO: should this be legacy or basic?
         BLSScheme.setLegacyDefault(true);
-        ImmutableList<ChildNumber> operatorPath = DerivationPathFactory.get(UNITTEST).masternodeOperatorDerivationPath();
+        HDPath operatorPath = DerivationPathFactory.get(UNITTEST).masternodeOperatorDerivationPath();
 
         AnyDeterministicKeyChain blsChain = AuthenticationKeyChain.builder()
                 .seed(chain.getSeed())

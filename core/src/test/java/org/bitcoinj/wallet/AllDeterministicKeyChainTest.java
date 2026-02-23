@@ -74,7 +74,7 @@ public class AllDeterministicKeyChainTest {
         BLSJniLibrary.init();
     }
     private KeyType keyType;
-    private ImmutableList<ChildNumber> accountPath;
+    private List<ChildNumber> accountPath;
     private KeyFactory keyFactory;
     private boolean hardenedOnly;
     private String derivedAddressOne;
@@ -91,7 +91,7 @@ public class AllDeterministicKeyChainTest {
     private static final NetworkParameters UNITTEST = UnitTestParams.get();
     private static final NetworkParameters MAINNET = MainNetParams.get();
 
-    public AllDeterministicKeyChainTest(KeyType keyType, ImmutableList<ChildNumber> accountPath, KeyFactory keyFactory,
+    public AllDeterministicKeyChainTest(KeyType keyType, List<ChildNumber> accountPath, KeyFactory keyFactory,
                                         boolean hardenedOnly,
                                         String derivedAddressOne, String derivedAddressTwo, String derivedAddressThree,
                                         String watchingXpub, String spendingXprv) {

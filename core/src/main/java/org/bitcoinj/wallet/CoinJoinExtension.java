@@ -38,6 +38,7 @@ import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.DeterministicKey;
+import org.bitcoinj.crypto.HDPath;
 import org.bitcoinj.crypto.IDeterministicKey;
 import org.bitcoinj.crypto.IKey;
 import org.bitcoinj.crypto.factory.ECKeyFactory;
@@ -256,7 +257,7 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
         coinJoinKeyChainGroup.getActiveKeyChain().setLookaheadThreshold(COINJOIN_LOOKADHEAD_THRESHOLD);
     }
 
-    public boolean hasKeyChain(ImmutableList<ChildNumber> path) {
+    public boolean hasKeyChain(List<ChildNumber> path) {
         if (coinJoinKeyChainGroup == null)
             return false;
         boolean hasPath = false;
@@ -269,7 +270,7 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
         return hasPath;
     }
 
-    public void addKeyChain(DeterministicSeed seed, ImmutableList<ChildNumber> path) {
+    public void addKeyChain(DeterministicSeed seed, List<ChildNumber> path) {
         checkState(!seed.isEncrypted());
         if (!hasKeyChain(path)) {
             if (coinJoinKeyChainGroup == null) {
@@ -280,7 +281,7 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
         }
     }
 
-    public void addEncryptedKeyChain(DeterministicSeed seed, ImmutableList<ChildNumber> path, @Nonnull KeyParameter keyParameter) {
+    public void addEncryptedKeyChain(DeterministicSeed seed, List<ChildNumber> path, @Nonnull KeyParameter keyParameter) {
         checkNotNull(keyParameter);
         checkState(seed.isEncrypted());
         if (!hasKeyChain(path)) {
@@ -596,7 +597,7 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
 
     public String getUnusedKeyReport() {
         List<IDeterministicKey> issuedKeys;
-        HashMap<ImmutableList<ChildNumber>, IDeterministicKey> unusedKeyMap = Maps.newHashMap();
+        HashMap<HDPath, IDeterministicKey> unusedKeyMap = Maps.newHashMap();
         Set<Transaction> txes = wallet.getTransactions(true);
         
         unusedKeysLock.lock();
@@ -626,7 +627,7 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
             usedKeys.forEach(key -> unusedKeyMap.remove(key.getPath()));
 
             StringBuilder builder = new StringBuilder();
-            Stream<ImmutableList<ChildNumber>> sortedPaths = unusedKeyMap.keySet().stream().sorted((a, b) -> {
+            Stream<HDPath> sortedPaths = unusedKeyMap.keySet().stream().sorted((a, b) -> {
                 int size1 = a.size();
                 int size2 =  b.size();
                 for (int i = 0; i < Math.min(size1, size2); i++) {

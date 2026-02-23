@@ -19,6 +19,7 @@ package org.bitcoinj.wallet;
 
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.DeterministicKey;
+import org.bitcoinj.crypto.HDPath;
 import org.bitcoinj.crypto.KeyCrypter;
 import org.bitcoinj.script.Script;
 
@@ -66,8 +67,8 @@ public interface KeyChainFactory {
             Script.ScriptType outputScriptType) throws UnreadableWalletException;
 
     DeterministicKeyChain makeSpendingFriendKeyChain(DeterministicSeed seed, KeyCrypter crypter, boolean isMarried,
-                                                     ImmutableList<ChildNumber> accountPath) throws UnreadableWalletException;
+                                                     List<ChildNumber> accountPath) throws UnreadableWalletException;
 
-    DeterministicKeyChain makeWatchingFriendKeyChain(DeterministicKey accountKey, ImmutableList<ChildNumber> accountPath) throws UnreadableWalletException;
+    DeterministicKeyChain makeWatchingFriendKeyChain(DeterministicKey accountKey, List<ChildNumber> accountPath) throws UnreadableWalletException;
 
 }

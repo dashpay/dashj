@@ -45,21 +45,21 @@ public class FriendKeyChain extends ExternalKeyChain {
 
 
     // m / 9' / 5' / 15' - Friend Key Chain root path
-    public static final ImmutableList<ChildNumber> FRIEND_ROOT_PATH = ImmutableList.of(ChildNumber.NINE_HARDENED,
-            ChildNumber.FIVE_HARDENED, DerivationPathFactory.FEATURE_PURPOSE_DASHPAY);
+    public static final HDPath FRIEND_ROOT_PATH = HDPath.of(ChildNumber.NINE_HARDENED)
+            .extend(ChildNumber.FIVE_HARDENED, DerivationPathFactory.FEATURE_PURPOSE_DASHPAY);
     // m / 9' / 1' / 15' - Friend Key Chain root path (testnet)
-    public static final ImmutableList<ChildNumber> FRIEND_ROOT_PATH_TESTNET = ImmutableList.of(ChildNumber.NINE_HARDENED,
-            ChildNumber.ONE_HARDENED, DerivationPathFactory.FEATURE_PURPOSE_DASHPAY);
+    public static final HDPath FRIEND_ROOT_PATH_TESTNET = HDPath.of(ChildNumber.NINE_HARDENED)
+            .extend(ChildNumber.ONE_HARDENED, DerivationPathFactory.FEATURE_PURPOSE_DASHPAY);
 
-    public static ImmutableList<ChildNumber> getRootPath(NetworkParameters params) {
+    public static HDPath getRootPath(NetworkParameters params) {
         return params.getId().equals(NetworkParameters.ID_MAINNET) ? FRIEND_ROOT_PATH : FRIEND_ROOT_PATH_TESTNET;
     }
 
-    public static ImmutableList<ChildNumber> getContactPath(NetworkParameters params, EvolutionContact contact, KeyChainType type) {
+    public static HDPath getContactPath(NetworkParameters params, EvolutionContact contact, KeyChainType type) {
         Sha256Hash userA = type == KeyChainType.RECEIVING_CHAIN ? contact.getEvolutionUserId() : contact.getFriendUserId();
         Sha256Hash userB = type == KeyChainType.RECEIVING_CHAIN ? contact.getFriendUserId() : contact.getEvolutionUserId();
         int account = type == KeyChainType.RECEIVING_CHAIN ? contact.getUserAccount() : contact.getFriendAccountReference();
-        return new ImmutableList.Builder().addAll(getRootPath(params)).add(new ChildNumber(account, true)).add(new ExtendedChildNumber(userA)).add(new ExtendedChildNumber(userB)).build();
+        return getRootPath(params).extend(new ChildNumber(account, true)).extend(new ExtendedChildNumber(userA)).extend(new ExtendedChildNumber(userB));
     }
 
     public static final int PATH_INDEX_ACCOUNT = 3;
@@ -67,22 +67,22 @@ public class FriendKeyChain extends ExternalKeyChain {
     public static final int PATH_INDEX_FROM_ID = 5;
 
 
-    public FriendKeyChain(DeterministicSeed seed, ImmutableList<ChildNumber> rootPath, int account, Sha256Hash myBlockchainUserId, Sha256Hash theirBlockchainUserId) {
-        super(seed, ImmutableList.<ChildNumber>builder().addAll(rootPath).add(new ChildNumber(account, true)).add(new ExtendedChildNumber(myBlockchainUserId)).add(new ExtendedChildNumber(theirBlockchainUserId)).build());
+    public FriendKeyChain(DeterministicSeed seed, List<ChildNumber> rootPath, int account, Sha256Hash myBlockchainUserId, Sha256Hash theirBlockchainUserId) {
+        super(seed, HDPath.of(rootPath).extend(new ChildNumber(account, true)).extend(new ExtendedChildNumber(myBlockchainUserId)).extend(new ExtendedChildNumber(theirBlockchainUserId)));
         type = KeyChainType.RECEIVING_CHAIN;
     }
 
-    public FriendKeyChain(DeterministicSeed seed, KeyCrypter keyCrypter, ImmutableList<ChildNumber> rootPath,  int account, Sha256Hash myBlockchainUserId, Sha256Hash theirBlockchainUserId) {
-        super(seed, keyCrypter, ImmutableList.<ChildNumber>builder().addAll(rootPath).add(new ChildNumber(account, true)).add(new ExtendedChildNumber(myBlockchainUserId)).add(new ExtendedChildNumber(theirBlockchainUserId)).build());
+    public FriendKeyChain(DeterministicSeed seed, KeyCrypter keyCrypter, List<ChildNumber> rootPath,  int account, Sha256Hash myBlockchainUserId, Sha256Hash theirBlockchainUserId) {
+        super(seed, keyCrypter, HDPath.of(rootPath).extend(new ChildNumber(account, true)).extend(new ExtendedChildNumber(myBlockchainUserId)).extend(new ExtendedChildNumber(theirBlockchainUserId)));
         type = KeyChainType.RECEIVING_CHAIN;
     }
 
-    public FriendKeyChain(DeterministicSeed seed, ImmutableList<ChildNumber> path) {
+    public FriendKeyChain(DeterministicSeed seed, List<ChildNumber> path) {
         super(seed, path);
         type = KeyChainType.RECEIVING_CHAIN;
     }
 
-    public FriendKeyChain(DeterministicSeed seed, KeyCrypter keyCrypter, ImmutableList<ChildNumber> path) {
+    public FriendKeyChain(DeterministicSeed seed, KeyCrypter keyCrypter, List<ChildNumber> path) {
         super(seed, keyCrypter, path);
         type = KeyChainType.RECEIVING_CHAIN;
     }
@@ -108,7 +108,7 @@ public class FriendKeyChain extends ExternalKeyChain {
      * For use in encryption when {@link #toEncrypted(KeyCrypter, KeyParameter)} is called, so that
      * subclasses can override that method and create an instance of the right class.
      *
-     * See also {@link #makeKeyChainFromSeed(DeterministicSeed, ImmutableList, Script.ScriptType)}
+     * See also {@link #makeKeyChainFromSeed(DeterministicSeed, List, Script.ScriptType)}
      */
     protected FriendKeyChain(KeyCrypter crypter, KeyParameter aesKey, FriendKeyChain chain) {
         super(crypter, aesKey, chain);
@@ -144,7 +144,7 @@ public class FriendKeyChain extends ExternalKeyChain {
             basicKeyChain.importKeys(lookahead);
             List<DeterministicKey> keys = new ArrayList<DeterministicKey>(numberOfKeys);
             for (int i = 0; i < numberOfKeys; i++) {
-                ImmutableList<ChildNumber> path = HDUtils.append(parentKey.getPath(), new ChildNumber(index - numberOfKeys + i, false));
+                HDPath path = HDUtils.append(parentKey.getPath(), new ChildNumber(index - numberOfKeys + i, false));
                 DeterministicKey k = hierarchy.get(path, false, false);
                 checkForBitFlip(k);
                 keys.add(k);
@@ -156,7 +156,7 @@ public class FriendKeyChain extends ExternalKeyChain {
     }
 
     public DeterministicKey getKey(int index) {
-        return getKeyByPath(new ImmutableList.Builder().addAll(getAccountPath()).addAll(ImmutableList.of(new ChildNumber(index, false))).build(), true);
+        return getKeyByPath(getAccountPath().extend(new ChildNumber(index, false)), true);
     }
 
     public KeyChainType getType() {

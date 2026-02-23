@@ -31,6 +31,7 @@ import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.DeterministicHierarchy;
 import org.bitcoinj.crypto.EncryptedData;
 import org.bitcoinj.crypto.ExtendedChildNumber;
+import org.bitcoinj.crypto.HDPath;
 import org.bitcoinj.crypto.HDUtils;
 import org.bitcoinj.crypto.IDeterministicKey;
 import org.bitcoinj.crypto.KeyCrypter;
@@ -43,6 +44,7 @@ import org.bouncycastle.crypto.params.KeyParameter;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 
 import static com.google.common.base.Preconditions.checkArgument;
@@ -61,7 +63,7 @@ public class Ed25519DeterministicKey extends Ed25519Key implements IDeterministi
     /** Sorts deterministic keys in the order of their child number. That's <i>usually</i> the order used to derive them. */
 
     private final Ed25519DeterministicKey parent;
-    private final ImmutableList<ChildNumber> childNumberPath;
+    private final HDPath childNumberPath;
     private final int depth;
     private int parentFingerprint; // 0 if this key is root node of key hierarchy
 
@@ -69,7 +71,7 @@ public class Ed25519DeterministicKey extends Ed25519Key implements IDeterministi
     private final byte[] chainCode;
 
     /** Constructs a key from its components. This is not normally something you should use. */
-    public Ed25519DeterministicKey(ImmutableList<ChildNumber> childNumberPath,
+    public Ed25519DeterministicKey(List<ChildNumber> childNumberPath,
                                    byte[] chainCode,
                                    Ed25519PublicKeyParameters pub,
                                    @Nullable Ed25519PrivateKeyParameters priv,
@@ -77,13 +79,13 @@ public class Ed25519DeterministicKey extends Ed25519Key implements IDeterministi
         super(priv, pub);
         checkArgument(chainCode.length == 32);
         this.parent = parent;
-        this.childNumberPath = checkNotNull(childNumberPath);
+        this.childNumberPath = HDPath.of(checkNotNull(childNumberPath));
         this.chainCode = Arrays.copyOf(chainCode, chainCode.length);
         this.depth = parent == null ? 0 : parent.depth + 1;
         this.parentFingerprint = (parent != null) ? parent.getFingerprint() : 0;
     }
 
-    public Ed25519DeterministicKey(ImmutableList<ChildNumber> childNumberPath,
+    public Ed25519DeterministicKey(List<ChildNumber> childNumberPath,
                                    byte[] chainCode,
                                    Ed25519PublicKeyParameters pub,
                                    boolean compressed,
@@ -93,21 +95,21 @@ public class Ed25519DeterministicKey extends Ed25519Key implements IDeterministi
     }
 
     /** Constructs a key from its components. This is not normally something you should use. */
-    public Ed25519DeterministicKey(ImmutableList<ChildNumber> childNumberPath,
+    public Ed25519DeterministicKey(List<ChildNumber> childNumberPath,
                                    byte[] chainCode,
                                    Ed25519PrivateKeyParameters priv,
                                    @Nullable Ed25519DeterministicKey parent) {
         super(priv, priv.generatePublicKey(), true);
         checkArgument(chainCode.length == 32);
         this.parent = parent;
-        this.childNumberPath = checkNotNull(childNumberPath);
+        this.childNumberPath = HDPath.of(checkNotNull(childNumberPath));
         this.chainCode = Arrays.copyOf(chainCode, chainCode.length);
         this.depth = parent == null ? 0 : parent.depth + 1;
         this.parentFingerprint = (parent != null) ? parent.getFingerprint() : 0;
     }
 
     /** Constructs a key from its components. This is not normally something you should use. */
-    public Ed25519DeterministicKey(ImmutableList<ChildNumber> childNumberPath,
+    public Ed25519DeterministicKey(List<ChildNumber> childNumberPath,
                                    byte[] chainCode,
                                    KeyCrypter crypter,
                                    Ed25519PublicKeyParameters pub,
@@ -139,7 +141,7 @@ public class Ed25519DeterministicKey extends Ed25519Key implements IDeterministi
      * information about its parent key.  Invoked when deserializing, but otherwise not something that
      * you normally should use.
      */
-    public Ed25519DeterministicKey(ImmutableList<ChildNumber> childNumberPath,
+    public Ed25519DeterministicKey(List<ChildNumber> childNumberPath,
                                    byte[] chainCode,
                                    Ed25519PublicKeyParameters pub,
                                    @Nullable Ed25519DeterministicKey parent,
@@ -148,7 +150,7 @@ public class Ed25519DeterministicKey extends Ed25519Key implements IDeterministi
         super(null, pub);
         checkArgument(chainCode.length == 32);
         this.parent = parent;
-        this.childNumberPath = checkNotNull(childNumberPath);
+        this.childNumberPath = HDPath.of(checkNotNull(childNumberPath));
         this.chainCode = Arrays.copyOf(chainCode, chainCode.length);
         this.depth = depth;
         this.parentFingerprint = ascertainParentFingerprint(parent, parentFingerprint);
@@ -159,7 +161,7 @@ public class Ed25519DeterministicKey extends Ed25519Key implements IDeterministi
      * information about its parent key.  Invoked when deserializing, but otherwise not something that
      * you normally should use.
      */
-    public Ed25519DeterministicKey(ImmutableList<ChildNumber> childNumberPath,
+    public Ed25519DeterministicKey(List<ChildNumber> childNumberPath,
                                    byte[] chainCode,
                                    Ed25519PrivateKeyParameters priv,
                                    @Nullable Ed25519DeterministicKey parent,
@@ -168,7 +170,7 @@ public class Ed25519DeterministicKey extends Ed25519Key implements IDeterministi
         super(priv, priv.generatePublicKey(), true);
         checkArgument(chainCode.length == 32);
         this.parent = parent;
-        this.childNumberPath = checkNotNull(childNumberPath);
+        this.childNumberPath = HDPath.of(checkNotNull(childNumberPath));
         this.chainCode = Arrays.copyOf(chainCode, chainCode.length);
         this.depth = depth;
         this.parentFingerprint = ascertainParentFingerprint(parent, parentFingerprint);
@@ -191,7 +193,7 @@ public class Ed25519DeterministicKey extends Ed25519Key implements IDeterministi
      * A path can be written as 0/1/0 which means the first child of the root, the second child of that node, then
      * the first child of that node.
      */
-    public ImmutableList<ChildNumber> getPath() {
+    public HDPath getPath() {
         return childNumberPath;
     }
 
@@ -454,7 +456,7 @@ public class Ed25519DeterministicKey extends Ed25519Key implements IDeterministi
                 cursor.pub, parentalPrivateKey, cursor.parent);
         // Now we have to rederive the keys along the path back to ourselves. That path can be found by just truncating
         // our path with the length of the parents path.
-        ImmutableList<ChildNumber> path = childNumberPath.subList(cursor.getPath().size(), childNumberPath.size());
+        HDPath path = HDPath.of(childNumberPath.subList(cursor.getPath().size(), childNumberPath.size()));
         for (ChildNumber num : path) {
             downCursor = downCursor.deriveChildKey(num);
         }
@@ -623,7 +625,7 @@ public class Ed25519DeterministicKey extends Ed25519Key implements IDeterministi
      * Deserialize a base-58-encoded HD Key and associates it with a given path.
      *  @throws IllegalArgumentException if the base58 encoded key could not be parsed.
      */
-    public static Ed25519DeterministicKey deserializeB58(String base58, ImmutableList<ChildNumber> path, NetworkParameters params) {
+    public static Ed25519DeterministicKey deserializeB58(String base58, List<ChildNumber> path, NetworkParameters params) {
         return deserialize(params, Base58.decodeChecked(base58), null, path);
     }
 
@@ -649,7 +651,7 @@ public class Ed25519DeterministicKey extends Ed25519Key implements IDeterministi
         final int parentFingerprint = buffer.getInt();
         final int i = buffer.getInt();
         final ChildNumber childNumber = new ChildNumber(i);
-        ImmutableList<ChildNumber> path;
+        HDPath path;
         if (parent != null) {
             if (parentFingerprint == 0)
                 throw new IllegalArgumentException("Parent was provided but this key doesn't have one");
@@ -664,8 +666,8 @@ public class Ed25519DeterministicKey extends Ed25519Key implements IDeterministi
                 // This can happen when deserializing an account key for a watching wallet.  In this case, we assume that
                 // the client wants to conceal the key's position in the hierarchy.  The path is truncated at the
                 // parent's node.
-                path = ImmutableList.of(childNumber);
-            else path = ImmutableList.of();
+                path = HDPath.of(childNumber);
+            else path = HDPath.of();
         }
         byte[] chainCode = new byte[32];
         buffer.get(chainCode);
@@ -682,7 +684,7 @@ public class Ed25519DeterministicKey extends Ed25519Key implements IDeterministi
     /**
      * Deserialize an HD Key and associate it with a full path.
      */
-    public static Ed25519DeterministicKey deserialize(NetworkParameters params, byte[] serializedKey, Ed25519DeterministicKey parent, ImmutableList<ChildNumber> fullPath) {
+    public static Ed25519DeterministicKey deserialize(NetworkParameters params, byte[] serializedKey, Ed25519DeterministicKey parent, List<ChildNumber> fullPath) {
         ByteBuffer buffer = ByteBuffer.wrap(serializedKey);
         int header = buffer.getInt();
         if (header != params.getBip32HeaderP2PKHpriv() && header != params.getBip32HeaderP2PKHpub())
@@ -691,11 +693,11 @@ public class Ed25519DeterministicKey extends Ed25519Key implements IDeterministi
         int depth = buffer.get() & 0xFF; // convert signed byte to positive int since depth cannot be negative
         final int parentFingerprint = buffer.getInt();
         final int i = buffer.getInt();
-        ImmutableList<ChildNumber> path;
+        List<ChildNumber> path;
 
         if (depth >= 1)
             path = fullPath;
-        else path = ImmutableList.of();
+        else path = HDPath.of();
 
         byte[] chainCode = new byte[32];
         buffer.get(chainCode);

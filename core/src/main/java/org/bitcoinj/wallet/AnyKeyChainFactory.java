@@ -24,6 +24,9 @@ import org.bitcoinj.crypto.IDeterministicKey;
 import org.bitcoinj.crypto.KeyCrypter;
 import org.bitcoinj.crypto.factory.KeyFactory;
 import org.bitcoinj.script.Script;
+
+import java.util.List;
+
 /**
  * Factory interface for creation keychains while de-serializing a wallet.
  */
@@ -39,7 +42,7 @@ public interface AnyKeyChainFactory {
      */
     AnyDeterministicKeyChain makeKeyChain(DeterministicSeed seed,
                                           KeyCrypter crypter, boolean isMarried, Script.ScriptType outputScriptType,
-                                          ImmutableList<ChildNumber> accountPath, KeyFactory keyFactory, boolean hardenedKeysOnly);
+                                          List<ChildNumber> accountPath, KeyFactory keyFactory, boolean hardenedKeysOnly);
 
     /**
      * Make a watching keychain.
@@ -68,9 +71,9 @@ public interface AnyKeyChainFactory {
                                                   boolean isMarried, Script.ScriptType outputScriptType, boolean hardenedKeysOnly) throws UnreadableWalletException;
 
     AnyDeterministicKeyChain makeSpendingFriendKeyChain(DeterministicSeed seed,
-                                                        KeyCrypter crypter, boolean isMarried, ImmutableList<ChildNumber> accountPath,
+                                                        KeyCrypter crypter, boolean isMarried, List<ChildNumber> accountPath,
                                                         KeyFactory keyFactory, boolean hardenedKeysOnly) throws UnreadableWalletException;
 
-    AnyDeterministicKeyChain makeWatchingFriendKeyChain(IDeterministicKey accountKey, ImmutableList<ChildNumber> accountPath) throws UnreadableWalletException;
+    AnyDeterministicKeyChain makeWatchingFriendKeyChain(IDeterministicKey accountKey, List<ChildNumber> accountPath) throws UnreadableWalletException;
 
 }

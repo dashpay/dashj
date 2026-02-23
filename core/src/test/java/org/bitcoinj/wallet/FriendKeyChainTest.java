@@ -22,6 +22,7 @@ import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.DeterministicKey;
 import org.bitcoinj.crypto.ExtendedChildNumber;
 import org.bitcoinj.crypto.HDKeyDerivation;
+import org.bitcoinj.crypto.HDPath;
 import org.bitcoinj.evolution.EvolutionContact;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.UnitTestParams;
@@ -64,7 +65,7 @@ public class FriendKeyChainTest {
     public void deriveMasterKey() throws Exception {
 
         FriendKeyChain friend = new FriendKeyChain(new DeterministicSeed(ENTROPY, "", secs),
-                ImmutableList.of(new ChildNumber(44, true), new ChildNumber(1, true), ChildNumber.ZERO_HARDENED));
+                HDPath.of(new ChildNumber(44, true)).extend(new ChildNumber(1, true), ChildNumber.ZERO_HARDENED));
 
         ECKey bip44chainMasterKey = bip44chain.getWatchingKey();
         ECKey friendMasterKey = friend.getWatchingKey();

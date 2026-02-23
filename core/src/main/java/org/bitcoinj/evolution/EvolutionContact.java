@@ -5,7 +5,10 @@ import org.bitcoinj.core.Base58;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.crypto.ChildNumber;
 import org.bitcoinj.crypto.ExtendedChildNumber;
+import org.bitcoinj.crypto.HDPath;
 import org.bitcoinj.wallet.FriendKeyChain;
+
+import java.util.List;
 
 public class EvolutionContact {
     Sha256Hash evolutionUserId;
@@ -32,7 +35,7 @@ public class EvolutionContact {
         this.friendAccountReference = friendAccountReference;
     }
 
-    public EvolutionContact(ImmutableList<ChildNumber> accountPath, boolean owner) {
+    public EvolutionContact(List<ChildNumber> accountPath, boolean owner) {
         this.evolutionUserId = Sha256Hash.wrap(((ExtendedChildNumber)accountPath.get(owner ?
                 FriendKeyChain.PATH_INDEX_TO_ID : FriendKeyChain.PATH_INDEX_FROM_ID)).bi());
         this.friendUserId = Sha256Hash.wrap(((ExtendedChildNumber)accountPath.get(!owner ?

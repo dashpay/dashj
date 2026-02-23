@@ -20,6 +20,7 @@ import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import org.bitcoinj.crypto.ChildNumber;
+import org.bitcoinj.crypto.HDPath;
 import org.bitcoinj.crypto.IDeterministicKey;
 import org.bitcoinj.crypto.KeyCrypter;
 import org.bitcoinj.crypto.factory.KeyFactory;
@@ -37,15 +38,15 @@ public class AnyExternalKeyChain extends AnyDeterministicKeyChain {
 
     private static final Logger log = LoggerFactory.getLogger(AnyExternalKeyChain.class);
 
-    public AnyExternalKeyChain(DeterministicSeed seed, ImmutableList<ChildNumber> path, KeyFactory keyFactory, boolean hardenedKeysOnly) {
+    public AnyExternalKeyChain(DeterministicSeed seed, List<ChildNumber> path, KeyFactory keyFactory, boolean hardenedKeysOnly) {
         super(seed, null, Script.ScriptType.P2PKH, path, keyFactory, hardenedKeysOnly, true);
     }
 
-    public AnyExternalKeyChain(DeterministicSeed seed, KeyCrypter keyCrypter, ImmutableList<ChildNumber> path, KeyFactory keyFactory, boolean hardenedKeysOnly) {
+    public AnyExternalKeyChain(DeterministicSeed seed, KeyCrypter keyCrypter, List<ChildNumber> path, KeyFactory keyFactory, boolean hardenedKeysOnly) {
         super(seed, keyCrypter, Script.ScriptType.P2PKH, path, keyFactory, hardenedKeysOnly, true);
     }
 
-    public AnyExternalKeyChain(IDeterministicKey key, ImmutableList<ChildNumber> accountPath, boolean hardenedKeysOnly) {
+    public AnyExternalKeyChain(IDeterministicKey key, List<ChildNumber> accountPath, boolean hardenedKeysOnly) {
         super(key, false, true, Script.ScriptType.P2PKH, accountPath, hardenedKeysOnly, true);
     }
 
