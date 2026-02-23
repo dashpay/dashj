@@ -116,12 +116,27 @@ public final class BLSHDKeyDerivation {
      * if the resulting derived key is invalid (eg. private key == 0).
      */
     public static BLSDeterministicKey deriveChildKey(BLSDeterministicKey parent, ChildNumber childNumber) throws HDDerivationException {
-        if (!parent.hasPrivKey()) {
-            ExtendedPublicKey extendedPublicKey = parent.extendedPublicKey.publicChild(childNumber.getI(), parent.pub.isLegacy());
-            return new BLSDeterministicKey(extendedPublicKey, parent);
-        } else {
-            ExtendedPrivateKey extendedPrivateKey = parent.extendedPrivateKey.privateChild(childNumber.getI(), parent.pub.isLegacy());
-            return new BLSDeterministicKey(extendedPrivateKey, parent);
-        }
+        if (!parent.hasPrivKey())
+            return deriveChildKeyFromPublic(parent, childNumber, PublicDeriveMode.NORMAL);
+        else
+            return deriveChildKeyFromPrivate(parent, childNumber);
+    }
+
+    public static BLSDeterministicKey deriveChildKeyFromPrivate(BLSDeterministicKey parent, ChildNumber childNumber)
+            throws HDDerivationException {
+        checkArgument(parent.hasPrivKey(), "Parent key must have private key bytes for this method.");
+        ExtendedPrivateKey extendedPrivateKey = parent.extendedPrivateKey.privateChild(childNumber.getI(), parent.pub.isLegacy());
+        return new BLSDeterministicKey(extendedPrivateKey, parent);
+    }
+
+    public static BLSDeterministicKey deriveChildKeyFromPublic(BLSDeterministicKey parent, ChildNumber childNumber,
+            PublicDeriveMode mode) throws HDDerivationException {
+        ExtendedPublicKey extendedPublicKey = parent.extendedPublicKey.publicChild(childNumber.getI(), parent.pub.isLegacy());
+        return new BLSDeterministicKey(extendedPublicKey, parent);
+    }
+
+    public enum PublicDeriveMode {
+        NORMAL,
+        WITH_INVERSION
     }
 }
