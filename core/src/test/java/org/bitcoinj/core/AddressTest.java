@@ -44,7 +44,7 @@ public class AddressTest {
 
     @Test
     public void equalsContract() {
-        EqualsVerifier.forClass(LegacyAddress.class)
+        EqualsVerifier.forClass(Address.class)
                 .withPrefabValues(NetworkParameters.class, MAINNET, TESTNET)
                 .suppress(Warning.NULL_FIELDS)
                 .suppress(Warning.TRANSIENT_FIELDS)
