@@ -216,7 +216,7 @@ public class TransactionOutput extends ChildMessage {
 
     /**
      * Returns the minimum value for this output to be considered "not dust", i.e. the transaction will be relayable
-     * and mined by default miners. For normal pay to address outputs, this is 2730 satoshis, the same as
+     * and mined by default miners. For normal pay to address outputs, this is 546 satoshis, the same as
      * {@link Transaction#MIN_NONDUST_OUTPUT}.
      */
     public Coin getMinNonDustValue() {
