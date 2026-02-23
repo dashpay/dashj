@@ -25,6 +25,7 @@ import org.bitcoinj.crypto.IDeterministicKey;
 import org.bitcoinj.crypto.KeyCrypter;
 import org.bitcoinj.crypto.factory.KeyFactory;
 import org.bitcoinj.script.Script;
+import org.bitcoinj.script.ScriptPattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -308,8 +309,8 @@ public class AuthenticationKeyChainGroup extends AnyKeyChainGroup {
         AnyDeterministicKeyChain chain = getKeyChain(type);
         if (chain.isMarried()) {
             Script outputScript = chain.freshOutputScript(KeyChain.KeyPurpose.AUTHENTICATION);
-            checkState(outputScript.isPayToScriptHash()); // Only handle P2SH for now
-            Address freshAddress = Address.fromP2SHScript(params, outputScript);
+            checkState(ScriptPattern.isP2SH(outputScript)); // Only handle P2SH for now
+            Address freshAddress = Address.fromScriptHash(params, ScriptPattern.extractHashFromP2SH(outputScript));
             maybeLookaheadScripts();
             currentAddresses.put(KeyChain.KeyPurpose.AUTHENTICATION, freshAddress);
             return freshAddress;

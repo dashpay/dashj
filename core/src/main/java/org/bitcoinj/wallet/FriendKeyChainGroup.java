@@ -25,6 +25,7 @@ import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.crypto.*;
 import org.bitcoinj.evolution.EvolutionContact;
 import org.bitcoinj.script.Script;
+import org.bitcoinj.script.ScriptPattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -325,8 +326,8 @@ public class FriendKeyChainGroup extends KeyChainGroup {
         DeterministicKeyChain chain = getFriendKeyChain(contact, type);
         if (chain.isMarried()) {
             Script outputScript = chain.freshOutputScript(KeyPurpose.RECEIVE_FUNDS);
-            checkState(outputScript.isPayToScriptHash()); // Only handle P2SH for now
-            Address freshAddress = Address.fromP2SHScript(params, outputScript);
+            checkState(ScriptPattern.isP2SH(outputScript)); // Only handle P2SH for now
+            Address freshAddress = Address.fromScriptHash(params, ScriptPattern.extractHashFromP2SH(outputScript));
             maybeLookaheadScripts();
             currentAddresses.put(KeyPurpose.RECEIVE_FUNDS, freshAddress);
             return freshAddress;

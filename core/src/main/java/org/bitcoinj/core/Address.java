@@ -55,7 +55,7 @@ public class Address extends AbstractAddress {
     /**
      * Private constructor. Use {@link #fromBase58(NetworkParameters, String)},
      * {@link #fromPubKeyHash(NetworkParameters, byte[])}, {@link #fromScriptHash(NetworkParameters, byte[])} or
-     * {@link #fromKey(NetworkParameters, ECKey)}.
+     * {@link #fromKey(NetworkParameters, IKey)}.
      * 
      * @param params
      *            network this address is valid for
@@ -155,23 +155,6 @@ public class Address extends AbstractAddress {
         return new Address(params, true, hash160);
     }
 
-    /** @deprecated use {@link #fromScriptHash(NetworkParameters, byte[])} */
-    @Deprecated
-    public static Address fromP2SHHash(NetworkParameters params, byte[] hash160) {
-        return fromScriptHash(params, hash160);
-    }
-
-
-    /**
-     * @deprecated use {@link #fromScriptHash(NetworkParameters, byte[])} in combination with
-     *             {@link ScriptPattern#extractHashFromP2SH(Script)}
-     */
-    @Deprecated
-    public static Address fromP2SHScript(NetworkParameters params, Script scriptPubKey) {
-        checkArgument(ScriptPattern.isP2SH(scriptPubKey), "Not a P2SH script");
-        return fromP2SHHash(params, ScriptPattern.extractHashFromP2SH(scriptPubKey));
-    }
-
     /**
      * Construct a {@link Address} from its base58 form.
      * 
@@ -207,12 +190,6 @@ public class Address extends AbstractAddress {
         }
     }
 
-    /** @deprecated use {@link #fromPubKeyHash(NetworkParameters, byte[])} */
-    @Deprecated
-    public Address(NetworkParameters params, byte[] hash160) throws AddressFormatException {
-        this(params, false, hash160);
-    }
-
     /**
      * Get the version header of an address. This is the first byte of a base58 encoded address.
      * 
@@ -231,12 +208,6 @@ public class Address extends AbstractAddress {
         return Base58.encodeChecked(getVersion(), bytes);
     }
 
-    /** @deprecated Use {@link #getHash()}. */
-    @Deprecated
-    public byte[] getHash160() {
-        return getHash();
-    }
-
     /** The (big endian) 20 byte hash that is the core of a Dash address. */
     @Override
     public byte[] getHash() {
@@ -252,12 +223,6 @@ public class Address extends AbstractAddress {
     @Override
     public ScriptType getOutputScriptType() {
         return p2sh ? ScriptType.P2SH : ScriptType.P2PKH;
-    }
-
-    /** @deprecated Use {@link #getOutputScriptType()} */
-    @Deprecated
-    public boolean isP2SHAddress() {
-        return p2sh;
     }
 
     /**
