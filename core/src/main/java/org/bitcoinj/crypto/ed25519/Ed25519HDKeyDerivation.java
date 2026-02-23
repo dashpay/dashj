@@ -139,22 +139,24 @@ public final class Ed25519HDKeyDerivation {
      * if the resulting derived key is invalid (eg. private key == 0).
      */
     public static Ed25519DeterministicKey deriveChildKey(Ed25519DeterministicKey parent, ChildNumber childNumber) throws HDDerivationException {
-        if (!parent.hasPrivKey()) {
-            RawKeyBytes rawKey = deriveChildKeyBytesFromPublic(parent, childNumber, PublicDeriveMode.NORMAL);
-            return new Ed25519DeterministicKey(
-                    HDUtils.append(parent.getPath(), childNumber),
-                    rawKey.chainCode,
-                    new Ed25519PublicKeyParameters(rawKey.keyBytes, 0),
-                    null,
-                    parent);
-        } else {
-            RawKeyBytes rawKey = deriveChildKeyBytesFromPrivate(parent, childNumber);
-            return new Ed25519DeterministicKey(
-                    HDUtils.append(parent.getPath(), childNumber),
-                    rawKey.chainCode,
-                    new Ed25519PrivateKeyParameters(rawKey.keyBytes, 0),
-                    parent);
-        }
+        if (!parent.hasPrivKey())
+            return deriveChildKeyFromPublic(parent, childNumber, PublicDeriveMode.NORMAL);
+        else
+            return deriveChildKeyFromPrivate(parent, childNumber);
+    }
+
+    public static Ed25519DeterministicKey deriveChildKeyFromPrivate(Ed25519DeterministicKey parent, ChildNumber childNumber)
+            throws HDDerivationException {
+        RawKeyBytes rawKey = deriveChildKeyBytesFromPrivate(parent, childNumber);
+        return new Ed25519DeterministicKey(HDUtils.append(parent.getPath(), childNumber), rawKey.chainCode,
+                new Ed25519PrivateKeyParameters(rawKey.keyBytes, 0), parent);
+    }
+
+    public static Ed25519DeterministicKey deriveChildKeyFromPublic(Ed25519DeterministicKey parent, ChildNumber childNumber,
+            PublicDeriveMode mode) throws HDDerivationException {
+        RawKeyBytes rawKey = deriveChildKeyBytesFromPublic(parent, childNumber, PublicDeriveMode.NORMAL);
+        return new Ed25519DeterministicKey(HDUtils.append(parent.getPath(), childNumber), rawKey.chainCode,
+                new Ed25519PublicKeyParameters(rawKey.keyBytes, 0), null, parent);
     }
 
     public static RawKeyBytes deriveChildKeyBytesFromPrivate(Ed25519DeterministicKey parent,
