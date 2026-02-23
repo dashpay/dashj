@@ -23,6 +23,7 @@ import org.bitcoinj.wallet.Protos.Wallet.EncryptionType;
 import org.bouncycastle.crypto.params.ECPrivateKeyParameters;
 import org.bouncycastle.crypto.params.ECPublicKeyParameters;
 import org.bouncycastle.crypto.params.KeyParameter;
+import org.bouncycastle.util.BigIntegers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -78,7 +79,8 @@ public class KeyCrypterECDH extends KeyCrypterAESCBC {
 
             Secp256k1ECDHAgreement agreement = new Secp256k1ECDHAgreement();
             agreement.init(prvkey);
-            byte[] password = agreement.calculateAgreement(pubKey).toByteArray();
+            BigInteger sharedSecret = agreement.calculateAgreement(pubKey);
+            byte[] password = BigIntegers.asUnsignedByteArray(32, sharedSecret);
             watch.stop();
 
             log.info("Deriving key took {} for a ECDH Key Exchange", watch);
