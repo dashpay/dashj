@@ -15,7 +15,6 @@
  */
 package org.bitcoinj.evolution;
 
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.bitcoinj.core.*;
 import org.bitcoinj.crypto.DeterministicKey;
@@ -27,6 +26,7 @@ import org.bitcoinj.script.ScriptPattern;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.TreeMap;
 
 import static com.google.common.base.Preconditions.checkState;
@@ -81,7 +81,7 @@ public class AssetLockTransaction extends Transaction {
 
         lockedOutpoints = new ArrayList<>();
         TransactionOutput assetLockOutput = new TransactionOutput(params, null, fundingAmount, ScriptBuilder.createAssetLockOutput().getProgram());
-        assetLockPayload = new AssetLockPayload(params, Lists.newArrayList(realOutput));
+        assetLockPayload = new AssetLockPayload(params, new ArrayList<>(Collections.singletonList(realOutput)));
         setExtraPayload(assetLockPayload);
         addOutput(assetLockOutput);
     }

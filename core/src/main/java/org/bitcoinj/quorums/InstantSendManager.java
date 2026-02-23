@@ -530,7 +530,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
             // verified by CSigningManager in parallel
             final int maxCount = 32;
             // The keys of the removed values are temporaily stored here to avoid invalidating an iterator
-            ArrayList<Sha256Hash> removed = Lists.newArrayListWithExpectedSize(maxCount);
+            ArrayList<Sha256Hash> removed = new ArrayList<>(maxCount);
 
             for (Map.Entry<Sha256Hash, Pair<Long, InstantSendLock>> entry : pendingInstantSendLocks.entrySet()) {
                 Sha256Hash islockHash = entry.getKey();

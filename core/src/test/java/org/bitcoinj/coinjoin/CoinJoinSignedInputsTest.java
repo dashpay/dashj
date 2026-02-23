@@ -82,7 +82,7 @@ public class CoinJoinSignedInputsTest {
             mixingWallet.put(tx.getTxId(), tx);
         }
 
-        List<String> keyList = Lists.newArrayList(
+        List<String> keyList = Arrays.asList(
                 "107da4635cb63a387ec4c17258d600c8813599b7ec72893d5bab0bf3aa514788",
                 "325c50fff4c6cb307ec5eda1310e2766d632091d984ff19ad3848e1e65db742a",
                 "b1ae60833f531c642dbda4d509462e6f5dde064d217c88547ceef18360b8bb54",

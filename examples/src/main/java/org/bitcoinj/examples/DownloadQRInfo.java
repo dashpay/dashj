@@ -44,6 +44,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Collections;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
@@ -103,7 +104,7 @@ public class DownloadQRInfo {
         });
         Peer peer = peerGroup.getDownloadPeer();
 
-        peer.sendMessage(new GetQuorumRotationInfo(params, Lists.newArrayList(params.getGenesisBlock().getHash()),
+        peer.sendMessage(new GetQuorumRotationInfo(params, Collections.singletonList(params.getGenesisBlock().getHash()),
                 Sha256Hash.wrap(blockHash), false)
         );
 

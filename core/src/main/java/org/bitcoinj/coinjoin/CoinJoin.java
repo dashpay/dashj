@@ -16,7 +16,7 @@
 
 package org.bitcoinj.coinjoin;
 
-import com.google.common.collect.Lists;
+import java.util.Arrays;
 import org.bitcoinj.core.Block;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.NetworkParameters;
@@ -42,7 +42,7 @@ public class CoinJoin {
     // this list of standard denominations cannot be modified by DashJ and must remain the same as
     // CoinJoin::vecStandardDenominations in coinjoin.cpp
     private static final List<Coin> standardDenominations = Collections.unmodifiableList(
-            Lists.newArrayList(
+            Arrays.asList(
                 Coin.COIN.multiply(10).add(Coin.valueOf(10000)),
                 Coin.COIN.add(Coin.valueOf(1000)),
                 Coin.COIN.div(10).add(Coin.valueOf(100)),

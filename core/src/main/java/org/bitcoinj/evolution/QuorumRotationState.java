@@ -425,7 +425,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
         if (mnListAtHMinus4C != null) {
             set.add(mnListAtHMinus4C.getBlockHash());
         }
-        ArrayList<Sha256Hash> baseBlockHashes = Lists.newArrayList(set);
+        ArrayList<Sha256Hash> baseBlockHashes = new ArrayList<>(set);
 
         return new GetQuorumRotationInfo(context.getParams(), baseBlockHashes, requestBlock.getHeader().getHash(), true);
     }
@@ -1052,11 +1052,11 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
 
         // obtain the most recent DIP24 quorum hash lists - top 2
         final int[] mostRecentListHeight = {-1};
-        List<Integer> heightList = Lists.newArrayList(activeQuorumLists.keySet().toArray(new Integer [0]));
+        List<Integer> heightList = Arrays.asList(activeQuorumLists.keySet().toArray(new Integer [0]));
         Collections.sort(heightList);
         int highestIndex = heightList.size() - 1;
         int nextHighestIndex = highestIndex - 1;
-        ArrayList<SimplifiedQuorumList> listsToSave = Lists.newArrayListWithExpectedSize(2);
+        ArrayList<SimplifiedQuorumList> listsToSave = new ArrayList<>(2);
         if (highestIndex >= 0) {
             listsToSave.add(activeQuorumLists.get(heightList.get(highestIndex)));
         }

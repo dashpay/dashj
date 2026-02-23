@@ -47,9 +47,9 @@ public class QuorumSnapshot extends Message {
     }
 
     public QuorumSnapshot(List<Boolean> activeQuorumMembers, int skipListMode, List<Integer> skipList) {
-        this.activeQuorumMembers = Lists.newArrayList(activeQuorumMembers);
+        this.activeQuorumMembers = new ArrayList<>(activeQuorumMembers);
         this.skipListMode = skipListMode;
-        this.skipList = Lists.newArrayList(skipList);
+        this.skipList = new ArrayList<>(skipList);
     }
 
     @Override

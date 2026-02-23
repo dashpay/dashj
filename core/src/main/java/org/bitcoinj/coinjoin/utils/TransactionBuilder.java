@@ -162,7 +162,7 @@ public class TransactionBuilder implements AutoCloseable {
 
         lock.lock();
         try {
-            vecSend = Lists.newArrayListWithExpectedSize(vecOutputs.size());
+            vecSend = new ArrayList<>(vecOutputs.size());
             for (TransactionBuilderOutput out : vecOutputs) {
                 // make sure the output is not invalid
                 if(ScriptPattern.isP2PKH(out.getScript()) && Arrays.equals(ScriptPattern.extractHashFromP2PKH(out.getScript()), new byte[20])) {

@@ -75,7 +75,7 @@ public class CoinJoinReport extends Report {
         BlockInfo blockInfo = new BlockInfo(storedBlock);
         blockList.add(blockInfo);
         blockMap.put(storedBlock.getHeader().getHash(), blockInfo);
-        blockTxMap.put(storedBlock.getHeader().getHash(), Lists.newArrayList(listDSTX));
+        blockTxMap.put(storedBlock.getHeader().getHash(), new ArrayList<>(listDSTX));
     }
 
     public void setChainLock(StoredBlock storedBlock) {

@@ -14,6 +14,7 @@ import org.bitcoinj.params.UnitTestParams;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.List;
 
 import static org.easymock.EasyMock.createMock;
@@ -52,14 +53,14 @@ public class CoinJoinEntryTest {
     @Before
     public void setUp() {
         // Initialize parameters
-        mixingInputs = Lists.newArrayList(
+        mixingInputs = Arrays.asList(
                 new CoinJoinTransactionInput(new TransactionInput(params, null, new byte[0], new TransactionOutPoint(params, 1L, Sha256Hash.wrap("9d70c0a4566f438091a0659b726551c1faaa477155d90d8b6858c264f7117ba5"))), null, 0),
                 new CoinJoinTransactionInput(new TransactionInput(params, null, new byte[0], new TransactionOutPoint(params, 0L, Sha256Hash.wrap("5a23dd70dbf8f595ac55710c708e514c613595aae958c1b9bad02dbac1d7b16e"))), null, 0),
                 new CoinJoinTransactionInput(new TransactionInput(params, null, new byte[0], new TransactionOutPoint(params, 0L, Sha256Hash.wrap("8087b393549d86c330abc3f1cf9e07375d39ce91f23c081270d7a1f18ff82621"))), null, 0),
                 new CoinJoinTransactionInput(new TransactionInput(params, null, new byte[0], new TransactionOutPoint(params, 2L, Sha256Hash.wrap("ab4dae4aa27dad995ed3372918a7a9247b13149bf1b126194d93b322e1fb92c6"))), null, 0),
                 new CoinJoinTransactionInput(new TransactionInput(params, null, new byte[0], new TransactionOutPoint(params, 0L, Sha256Hash.wrap("c471ff68382b91ba49546d7147f851a1b724c2a23c03db2dad457c3c3a9765ac"))), null, 0)
         );
-        mixingOutputs = Lists.newArrayList(
+        mixingOutputs = Arrays.asList(
                 new TransactionOutput(params, null, Denomination.THOUSANDTH.value, Address.fromBase58(params, "ycRPFRGZSuFE9NufKvJRHVRWgU7HjZHe4E")),
                 new TransactionOutput(params, null, Denomination.THOUSANDTH.value, Address.fromBase58(params, "yXQTFMZR93symkQQP6sBdoNWfuTBXC8LRW")),
                 new TransactionOutput(params, null, Denomination.THOUSANDTH.value, Address.fromBase58(params, "yLsPyeigcsyiuTZtXtARc3FjQhiG7jsgXg")),

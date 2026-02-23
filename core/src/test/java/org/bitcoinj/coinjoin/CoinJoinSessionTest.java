@@ -297,7 +297,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
                     TransactionInput input = new TransactionInput(UNITTEST, null, new byte[]{}, outPoint);
                     finalTx.addInput(input);
                 }*/
-                assertTrue(coinJoinServer.validateFinalTransaction(Lists.newArrayList(entry), finalTx));
+                assertTrue(coinJoinServer.validateFinalTransaction(Collections.singletonList(entry), finalTx));
                 ValidInOuts validState = coinJoinServer.isValidInOuts(finalTx.getInputs(), finalTx.getOutputs());
                 assertTrue(validState.messageId.name(), validState.result);
                 CoinJoinFinalTransaction finalTxMessage = new CoinJoinFinalTransaction(m.getParams(), SESSION_ID, finalTx);
@@ -481,7 +481,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
         CoinJoinFinalTransaction dsf = (CoinJoinFinalTransaction) finalTxMessage;
         Transaction finalTx = dsf.getTransaction();
         assertEquals(sessionId, dsf.getMsgSessionID());
-        assertTrue(coinJoinServer.validateFinalTransaction(Lists.newArrayList(entry), finalTx));
+        assertTrue(coinJoinServer.validateFinalTransaction(Collections.singletonList(entry), finalTx));
         ValidInOuts validState = coinJoinServer.isValidInOuts(finalTx.getInputs(), finalTx.getOutputs());
         assertTrue(validState.messageId.name(), validState.result);
         coinJoinManager.processMessage(lastMasternode.peer, finalTxMessage);

@@ -66,7 +66,7 @@ public class CoinJoinClientOptionsTest {
         CoinJoinClientOptions.setAmount(DEFAULT_COINJOIN_AMOUNT.add(Coin.FIFTY_COINS));
         assertEquals(CoinJoinClientOptions.getAmount(), DEFAULT_COINJOIN_AMOUNT.add(Coin.FIFTY_COINS));
 
-        ArrayList<Coin> denomsWithoutThousandths = Lists.newArrayList(CoinJoin.getStandardDenominations());
+        ArrayList<Coin> denomsWithoutThousandths = new ArrayList<>(CoinJoin.getStandardDenominations());
         denomsWithoutThousandths.remove(CoinJoin.getSmallestDenomination());
         CoinJoinClientOptions.removeDenomination(CoinJoin.getSmallestDenomination());
         assertEquals(denomsWithoutThousandths, CoinJoinClientOptions.getDenominations());

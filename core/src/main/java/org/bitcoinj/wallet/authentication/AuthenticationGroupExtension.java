@@ -75,6 +75,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -394,7 +395,7 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
         if (operatorKeyUsage != null) {
             log.info("protx revoke: operator key {}", operatorKeyUsage.getKey());
             operatorKeyUsage.setStatus(AuthenticationKeyStatus.REVOKED);
-            queueOnUsageEvent(Lists.newArrayList(operatorKeyUsage));
+            queueOnUsageEvent(Collections.singletonList(operatorKeyUsage));
         }
     }
 
@@ -894,7 +895,7 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
         if (wallet != null) {
             keyUsage.clear();
             Set<Transaction> transactionSet = wallet.getTransactions(false);
-            List<Transaction> transactionList = Lists.newArrayList(transactionSet);
+            List<Transaction> transactionList = new ArrayList<>(transactionSet);
             transactionList.sort(Comparator.comparingLong(transaction -> transaction.getUpdateTime().getTime()));
 
             for (Transaction tx : transactionList) {

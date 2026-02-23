@@ -28,6 +28,7 @@ import org.bitcoinj.core.Utils;
 import org.bitcoinj.params.UnitTestParams;
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
@@ -77,7 +78,7 @@ public class CoinJoinTest {
             assertEquals(value, CoinJoin.denominationToAmount(CoinJoin.amountToDenomination(value)));
         }
 
-        List<Denomination> denominationList = Lists.newArrayList(Denomination.values());
+        List<Denomination> denominationList = Arrays.asList(Denomination.values());
         denominationList.forEach(denomination -> {
             assertNotEquals(-1, CoinJoin.getStandardDenominations().indexOf(denomination.value));
         });

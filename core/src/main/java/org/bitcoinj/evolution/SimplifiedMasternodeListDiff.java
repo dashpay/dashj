@@ -53,9 +53,9 @@ public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
         this.cbTxMerkleTree = cbTxMerkleTree;
         this.coinBaseTx = coinBaseTx;
         this.deletedMNs = Sets.newHashSet();
-        this.mnList = Lists.newArrayList(mnList);
+        this.mnList = new ArrayList<>(mnList);
         this.deletedQuorums = new ArrayList<>();
-        this.newQuorums = Lists.newArrayList(quorumList);
+        this.newQuorums = new ArrayList<>(quorumList);
         this.version = version;
         this.quorumsCLSigs = Maps.newHashMap();
     }
