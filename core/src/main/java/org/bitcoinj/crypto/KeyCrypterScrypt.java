@@ -157,7 +157,7 @@ public class KeyCrypterScrypt implements KeyCrypter {
             }
 
             final Stopwatch watch = Stopwatch.createStarted();
-            byte[] keyBytes = SCrypt.scrypt(passwordBytes, salt, (int) scryptParameters.getN(), scryptParameters.getR(), scryptParameters.getP(), KEY_LENGTH);
+            byte[] keyBytes = SCryptWrapper.scrypt(passwordBytes, salt, (int) scryptParameters.getN(), scryptParameters.getR(), scryptParameters.getP(), KEY_LENGTH);
             watch.stop();
             log.info("Deriving key took {} for {}.", watch, scryptParametersString());
             return new KeyParameter(keyBytes);
