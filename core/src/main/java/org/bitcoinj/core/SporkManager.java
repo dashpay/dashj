@@ -325,35 +325,7 @@ public class SporkManager {
     };
 
     public final PreMessageReceivedEventListener preMessageReceivedEventListener = (peer, m) -> {
-        if (m instanceof InventoryMessage) {
-            if (masternodeSync != null && masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_SPORKS)) {
-                InventoryMessage inv = (InventoryMessage) m;
-                List<InventoryItem> items = inv.getItems();
-                List<InventoryItem> instantSendLocks = new LinkedList<>();
-                for (InventoryItem item : items) {
-                    switch (item.type) {
-                        case InstantSendLock:
-                        case InstantSendDeterministicLock:
-                            instantSendLocks.add(item);
-                            break;
-                        default:
-                            break;
-                    }
-                }
-                Iterator<InventoryItem> it = instantSendLocks.iterator();
-                GetDataMessage getdata = new GetDataMessage(SporkManager.this.context.getParams());
-                while (it.hasNext()) {
-                    InventoryItem item = it.next();
-                    if(!alreadyHave(item)) {
-                        getdata.addItem(item);
-                    }
-                }
-                if (!getdata.getItems().isEmpty()) {
-                    // This will cause us to receive a bunch of block or tx messages.
-                    peer.sendMessage(getdata);
-                }
-            }
-        } else if (m instanceof SporkMessage) {
+        if (m instanceof SporkMessage && masternodeSync != null && masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_SPORKS)) {
             processSpork(peer, (SporkMessage) m);
             return null;
         }
