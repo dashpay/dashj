@@ -1094,13 +1094,13 @@ public class AnyDeterministicKeyChain implements IEncryptableKeyChain {
                     if (seed == null && key.hasSecretBytes()) {
                         IDeterministicKey accountKey = keyFactory.fromExtended(immutablePath, chainCode, pubkey, key.getSecretBytes().toByteArray(), null);
                         accountKey.setCreationTimeSeconds(key.getCreationTimestamp() / 1000);
-                        chain = factory.makeSpendingKeyChain(key, iter.peek(), accountKey, isMarried, outputScriptType, hardenedKeysOnly);
+                        chain = factory.makeSpendingKeyChain(accountKey, isMarried, outputScriptType, hardenedKeysOnly);
                         isSpendingKey = true;
                     } else if (seed == null) {
                         IDeterministicKey accountKey = keyFactory.fromExtended(immutablePath, chainCode, pubkey, null, null);
                         accountKey.setCreationTimeSeconds(key.getCreationTimestamp() / 1000);
                         if (simple) {
-                            chain = factory.makeWatchingKeyChain(key, iter.peek(), accountKey, isFollowingKey, isMarried,
+                            chain = factory.makeWatchingKeyChain(accountKey, isFollowingKey, isMarried,
                                     outputScriptType);
                         } else {
                             chain = factory.makeWatchingFriendKeyChain(accountKey, immutablePath);
@@ -1108,10 +1108,10 @@ public class AnyDeterministicKeyChain implements IEncryptableKeyChain {
                         isWatchingAccountKey = true;
                     } else {
                         if (simple)
-                            chain = factory.makeKeyChain(key, iter.peek(), seed, crypter, isMarried,
+                            chain = factory.makeKeyChain(seed, crypter, isMarried,
                                     outputScriptType, ImmutableList.<ChildNumber> builder().addAll(accountPath).build(), keyFactory, hardenedKeysOnly);
                         else
-                            chain = factory.makeSpendingFriendKeyChain(key, iter.peek(), seed, crypter, isMarried,
+                            chain = factory.makeSpendingFriendKeyChain(seed, crypter, isMarried,
                                     ImmutableList.<ChildNumber> builder().addAll(accountPath).build(), keyFactory, hardenedKeysOnly);
                         chain.lookaheadSize = LAZY_CALCULATE_LOOKAHEAD;
                         // If the seed is encrypted, then the chain is incomplete at this point. However, we will load

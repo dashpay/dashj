@@ -29,7 +29,7 @@ import org.bitcoinj.script.Script;
  */
 public class AnyDefaultKeyChainFactory implements AnyKeyChainFactory {
     @Override
-    public AnyDeterministicKeyChain makeKeyChain(Protos.Key key, Protos.Key firstSubKey, DeterministicSeed seed,
+    public AnyDeterministicKeyChain makeKeyChain(DeterministicSeed seed,
                                                  KeyCrypter crypter, boolean isMarried, Script.ScriptType outputScriptType,
                                                  ImmutableList<ChildNumber> accountPath, KeyFactory keyFactory, boolean hardenedKeysOnly) {
         AnyDeterministicKeyChain chain;
@@ -41,8 +41,7 @@ public class AnyDefaultKeyChainFactory implements AnyKeyChainFactory {
     }
 
     @Override
-    public AnyDeterministicKeyChain makeWatchingKeyChain(Protos.Key key, Protos.Key firstSubKey,
-                                                         IDeterministicKey accountKey, boolean isFollowingKey,
+    public AnyDeterministicKeyChain makeWatchingKeyChain(IDeterministicKey accountKey, boolean isFollowingKey,
                                                          boolean isMarried, Script.ScriptType outputScriptType)
             throws UnreadableWalletException {
         AnyDeterministicKeyChain chain;
@@ -56,8 +55,7 @@ public class AnyDefaultKeyChainFactory implements AnyKeyChainFactory {
     }
 
     @Override
-    public AnyDeterministicKeyChain makeSpendingKeyChain(Protos.Key key, Protos.Key firstSubKey,
-                                                         IDeterministicKey accountKey, boolean isMarried,
+    public AnyDeterministicKeyChain makeSpendingKeyChain(IDeterministicKey accountKey, boolean isMarried,
                                                          Script.ScriptType outputScriptType, boolean hardenedKeysOnly)
             throws UnreadableWalletException {
         AnyDeterministicKeyChain chain;
@@ -69,7 +67,7 @@ public class AnyDefaultKeyChainFactory implements AnyKeyChainFactory {
     }
 
     @Override
-    public AnyDeterministicKeyChain makeSpendingFriendKeyChain(Protos.Key key, Protos.Key firstSubKey, DeterministicSeed seed,
+    public AnyDeterministicKeyChain makeSpendingFriendKeyChain(DeterministicSeed seed,
                                                                KeyCrypter crypter, boolean isMarried,
                                                                ImmutableList<ChildNumber> accountPath, KeyFactory keyFactory, boolean hardenedKeysOnly) throws UnreadableWalletException
     {

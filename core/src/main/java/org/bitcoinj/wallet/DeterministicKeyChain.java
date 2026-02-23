@@ -1044,7 +1044,7 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
                             chain = factory.makeKeyChain(seed, crypter, isMarried,
                                     outputScriptType, ImmutableList.<ChildNumber> builder().addAll(accountPath).build());
                         else
-                            chain = factory.makeSpendingFriendKeyChain(key, iter.peek(), seed, crypter, isMarried,
+                            chain = factory.makeSpendingFriendKeyChain(seed, crypter, isMarried,
                                     ImmutableList.<ChildNumber> builder().addAll(accountPath).build());
                         chain.lookaheadSize = LAZY_CALCULATE_LOOKAHEAD;
                         // If the seed is encrypted, then the chain is incomplete at this point. However, we will load
