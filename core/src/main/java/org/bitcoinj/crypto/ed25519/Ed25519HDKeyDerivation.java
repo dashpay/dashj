@@ -149,14 +149,14 @@ public final class Ed25519HDKeyDerivation {
     public static Ed25519DeterministicKey deriveChildKeyFromPrivate(Ed25519DeterministicKey parent, ChildNumber childNumber)
             throws HDDerivationException {
         RawKeyBytes rawKey = deriveChildKeyBytesFromPrivate(parent, childNumber);
-        return new Ed25519DeterministicKey(HDUtils.append(parent.getPath(), childNumber), rawKey.chainCode,
+        return new Ed25519DeterministicKey(parent.getPath().extend(childNumber), rawKey.chainCode,
                 new Ed25519PrivateKeyParameters(rawKey.keyBytes, 0), parent);
     }
 
     public static Ed25519DeterministicKey deriveChildKeyFromPublic(Ed25519DeterministicKey parent, ChildNumber childNumber,
             PublicDeriveMode mode) throws HDDerivationException {
         RawKeyBytes rawKey = deriveChildKeyBytesFromPublic(parent, childNumber, PublicDeriveMode.NORMAL);
-        return new Ed25519DeterministicKey(HDUtils.append(parent.getPath(), childNumber), rawKey.chainCode,
+        return new Ed25519DeterministicKey(parent.getPath().extend(childNumber), rawKey.chainCode,
                 new Ed25519PublicKeyParameters(rawKey.keyBytes, 0), null, parent);
     }
 

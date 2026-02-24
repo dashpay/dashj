@@ -332,7 +332,7 @@ public class AuthenticationKeyChain extends AnyExternalKeyChain {
             basicKeyChain.importKeys(lookahead);
             List<IDeterministicKey> keys = new ArrayList<>(numberOfKeys);
             for (int i = 0; i < numberOfKeys; i++) {
-                HDPath path = HDUtils.append(parentKey.getPath(), new ChildNumber(index - numberOfKeys + i, hardenedKeysOnly));
+                HDPath path = parentKey.getPath().extend(new ChildNumber(index - numberOfKeys + i, hardenedKeysOnly));
                 IDeterministicKey k = hierarchy.get(path, false, false);
                 keys.add(k);
             }

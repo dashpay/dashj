@@ -1025,17 +1025,17 @@ public class AnyKeyChainGroup implements IKeyBag {
         // kinds of KeyPurpose are introduced.
         if (activeChain.getIssuedExternalKeys() > 0) {
             IDeterministicKey currentExternalKey = activeChain.getKeyByPath(
-                    HDUtils.append(
-                            HDUtils.concat(activeChain.getAccountPath(), activeChain.hardenedKeysOnly ? AnyDeterministicKeyChain.EXTERNAL_SUBPATH_HARDENED : AnyDeterministicKeyChain.EXTERNAL_SUBPATH),
-                            new ChildNumber(activeChain.getIssuedExternalKeys() - 1)));
+                    activeChain.getAccountPath()
+                            .extend(activeChain.hardenedKeysOnly ? AnyDeterministicKeyChain.EXTERNAL_SUBPATH_HARDENED : AnyDeterministicKeyChain.EXTERNAL_SUBPATH)
+                            .extend(new ChildNumber(activeChain.getIssuedExternalKeys() - 1)));
             currentKeys.put(KeyChain.KeyPurpose.RECEIVE_FUNDS, currentExternalKey);
         }
 
         if (activeChain.getIssuedInternalKeys() > 0) {
             IDeterministicKey currentInternalKey = activeChain.getKeyByPath(
-                    HDUtils.append(
-                            HDUtils.concat(activeChain.getAccountPath(), activeChain.hardenedKeysOnly ? AnyDeterministicKeyChain.INTERNAL_SUBPATH_HARDENED : AnyDeterministicKeyChain.INTERNAL_SUBPATH),
-                            new ChildNumber(activeChain.getIssuedInternalKeys() - 1)));
+                    activeChain.getAccountPath()
+                            .extend(activeChain.hardenedKeysOnly ? AnyDeterministicKeyChain.INTERNAL_SUBPATH_HARDENED : AnyDeterministicKeyChain.INTERNAL_SUBPATH)
+                            .extend(new ChildNumber(activeChain.getIssuedInternalKeys() - 1)));
             currentKeys.put(KeyChain.KeyPurpose.CHANGE, currentInternalKey);
         }
         return currentKeys;

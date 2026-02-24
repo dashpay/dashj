@@ -330,9 +330,8 @@ public class AuthenticationKeyChainGroup extends AnyKeyChainGroup {
             // kinds of KeyPurpose are introduced.
             if (contactChain.getIssuedExternalKeys() > 0) {
                 IDeterministicKey currentExternalKey = contactChain.getKeyByPath(
-                        HDUtils.append(
-                                contactChain.getAccountPath(),
-                                new ChildNumber(contactChain.getIssuedExternalKeys() - 1)));
+                        contactChain.getAccountPath()
+                                .extend(new ChildNumber(contactChain.getIssuedExternalKeys() - 1)));
                 currentKeys.put(((AuthenticationKeyChain)chain).getType(), currentExternalKey);
             }
         }

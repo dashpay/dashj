@@ -347,9 +347,8 @@ public class FriendKeyChainGroup extends KeyChainGroup {
             // kinds of KeyPurpose are introduced.
             if (contactChain.getIssuedExternalKeys() > 0) {
                 DeterministicKey currentExternalKey = contactChain.getKeyByPath(
-                        HDUtils.append(
-                                contactChain.getAccountPath(),
-                                new ChildNumber(contactChain.getIssuedExternalKeys() - 1)));
+                        contactChain.getAccountPath()
+                                .extend(new ChildNumber(contactChain.getIssuedExternalKeys() - 1)));
                 currentKeys.put(chain.getAccountPath(), currentExternalKey);
             }
         }

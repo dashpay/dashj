@@ -525,8 +525,8 @@ public class AnyDeterministicKeyChain implements IEncryptableKeyChain {
         IDeterministicKey accountParent = hierarchy.get(getAccountPath().subList(0, getAccountPath().size() - 1), false, false);
 
         IDeterministicKey account = encryptNonLeaf(aesKey, chain, accountParent, getAccountPath());
-        externalParentKey = encryptNonLeaf(aesKey, chain, account, HDUtils.concat(getAccountPath(), getExternalPath()));
-        internalParentKey = encryptNonLeaf(aesKey, chain, account, HDUtils.concat(getAccountPath(), getInternalPath()));
+        externalParentKey = encryptNonLeaf(aesKey, chain, account, getAccountPath().extend(getExternalPath()));
+        internalParentKey = encryptNonLeaf(aesKey, chain, account, getAccountPath().extend(getInternalPath()));
 
         // Now copy the (pubkey only) leaf keys across to avoid rederiving them. The private key bytes are missing
         // anyway so there's nothing to encrypt.
@@ -627,7 +627,7 @@ public class AnyDeterministicKeyChain implements IEncryptableKeyChain {
             basicKeyChain.importKeys(lookahead);
             List<IDeterministicKey> keys = new ArrayList<>(numberOfKeys);
             for (int i = 0; i < numberOfKeys; i++) {
-                HDPath path = HDUtils.append(parentKey.getPath(), new ChildNumber(index - numberOfKeys + i, hardenedKeysOnly));
+                HDPath path = parentKey.getPath().extend(new ChildNumber(index - numberOfKeys + i, hardenedKeysOnly));
                 IDeterministicKey k = hierarchy.get(path, false, false);
                 if (k.getKeyFactory().getKeyType() == KeyType.ECDSA && !hardenedKeysOnly) {
                     // Just a last minute sanity check before we hand the key out to the app for usage. This isn't inspired

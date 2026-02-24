@@ -144,7 +144,7 @@ public class FriendKeyChain extends ExternalKeyChain {
             basicKeyChain.importKeys(lookahead);
             List<DeterministicKey> keys = new ArrayList<DeterministicKey>(numberOfKeys);
             for (int i = 0; i < numberOfKeys; i++) {
-                HDPath path = HDUtils.append(parentKey.getPath(), new ChildNumber(index - numberOfKeys + i, false));
+                HDPath path = parentKey.getPath().extend(new ChildNumber(index - numberOfKeys + i, false));
                 DeterministicKey k = hierarchy.get(path, false, false);
                 checkForBitFlip(k);
                 keys.add(k);

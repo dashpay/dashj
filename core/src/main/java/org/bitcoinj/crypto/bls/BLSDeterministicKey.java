@@ -265,7 +265,7 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
         long childNumberLong = extendedPrivateKey.getChildNumber();
         ChildNumber childNumber = new ChildNumber((int)childNumberLong);
         if (parent != null)
-            this.childNumberPath = HDUtils.append(parent.getPath(), childNumber);
+            this.childNumberPath = parent.getPath().extend(childNumber);
         else
             this.childNumberPath = HDPath.of(childNumber);
 
@@ -285,7 +285,7 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
         long childNumberLong = extendedPublicKey.getChildNumber();
         ChildNumber childNumber = new ChildNumber((int)childNumberLong);
         if (parent != null)
-            this.childNumberPath = HDUtils.append(parent.getPath(), childNumber);
+            this.childNumberPath = parent.getPath().extend(childNumber);
         else
             this.childNumberPath = HDPath.of(childNumber);
 
@@ -782,7 +782,7 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
                 throw new IllegalArgumentException("Parent was provided but this key doesn't have one");
             if (parent.getFingerprint() != parentFingerprint)
                 throw new IllegalArgumentException("Parent fingerprints don't match");
-            path = HDUtils.append(parent.getPath(), childNumber);
+            path = parent.getPath().extend(childNumber);
             if (path.size() != depth)
                 throw new IllegalArgumentException("Depth does not match");
         } else {
