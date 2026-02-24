@@ -45,10 +45,10 @@ public class FriendKeyChain extends ExternalKeyChain {
 
 
     // m / 9' / 5' / 15' - Friend Key Chain root path
-    public static final HDPath FRIEND_ROOT_PATH = HDPath.of(ChildNumber.NINE_HARDENED)
+    public static final HDPath FRIEND_ROOT_PATH = HDPath.M(ChildNumber.NINE_HARDENED)
             .extend(ChildNumber.FIVE_HARDENED, DerivationPathFactory.FEATURE_PURPOSE_DASHPAY);
     // m / 9' / 1' / 15' - Friend Key Chain root path (testnet)
-    public static final HDPath FRIEND_ROOT_PATH_TESTNET = HDPath.of(ChildNumber.NINE_HARDENED)
+    public static final HDPath FRIEND_ROOT_PATH_TESTNET = HDPath.M(ChildNumber.NINE_HARDENED)
             .extend(ChildNumber.ONE_HARDENED, DerivationPathFactory.FEATURE_PURPOSE_DASHPAY);
 
     public static HDPath getRootPath(NetworkParameters params) {
@@ -68,12 +68,12 @@ public class FriendKeyChain extends ExternalKeyChain {
 
 
     public FriendKeyChain(DeterministicSeed seed, List<ChildNumber> rootPath, int account, Sha256Hash myBlockchainUserId, Sha256Hash theirBlockchainUserId) {
-        super(seed, HDPath.of(rootPath).extend(new ChildNumber(account, true)).extend(new ExtendedChildNumber(myBlockchainUserId)).extend(new ExtendedChildNumber(theirBlockchainUserId)));
+        super(seed, HDPath.M(rootPath).extend(new ChildNumber(account, true)).extend(new ExtendedChildNumber(myBlockchainUserId)).extend(new ExtendedChildNumber(theirBlockchainUserId)));
         type = KeyChainType.RECEIVING_CHAIN;
     }
 
     public FriendKeyChain(DeterministicSeed seed, KeyCrypter keyCrypter, List<ChildNumber> rootPath,  int account, Sha256Hash myBlockchainUserId, Sha256Hash theirBlockchainUserId) {
-        super(seed, keyCrypter, HDPath.of(rootPath).extend(new ChildNumber(account, true)).extend(new ExtendedChildNumber(myBlockchainUserId)).extend(new ExtendedChildNumber(theirBlockchainUserId)));
+        super(seed, keyCrypter, HDPath.M(rootPath).extend(new ChildNumber(account, true)).extend(new ExtendedChildNumber(myBlockchainUserId)).extend(new ExtendedChildNumber(theirBlockchainUserId)));
         type = KeyChainType.RECEIVING_CHAIN;
     }
 

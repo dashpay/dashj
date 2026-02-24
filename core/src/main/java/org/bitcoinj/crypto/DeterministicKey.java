@@ -700,7 +700,7 @@ public class DeterministicKey extends ECKey implements IDeterministicKey {
 
         if (depth >= 1)
             path = fullPath;
-        else path = HDPath.of();
+        else path = HDPath.M();
 
         byte[] chainCode = new byte[32];
         buffer.get(chainCode);

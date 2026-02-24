@@ -87,7 +87,7 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
         } else {
             this.parent = null;
         }
-        this.childNumberPath = HDPath.of(checkNotNull(childNumberPath));
+        this.childNumberPath = HDPath.M(checkNotNull(childNumberPath));
         this.chainCode = Arrays.copyOf(chainCode, chainCode.length);
         this.depth = parent == null ? 0 : parent.getDepth() + 1;
         this.parentFingerprint = (parent != null) ? parent.getFingerprint() : 0;
@@ -120,7 +120,7 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
         super(new BLSSecretKey(priv), new BLSSecretKey(priv, isLegacy).getPublicKey());
         checkArgument(chainCode.length == 32);
         this.parent = parent;
-        this.childNumberPath = HDPath.of(checkNotNull(childNumberPath));
+        this.childNumberPath = HDPath.M(checkNotNull(childNumberPath));
         this.chainCode = Arrays.copyOf(chainCode, chainCode.length);
         this.depth = parent == null ? 0 : parent.depth + 1;
         this.parentFingerprint = (parent != null) ? parent.getFingerprint() : 0;
@@ -184,7 +184,7 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
         super(null, publicKeyBytes, parent != null ? parent.pub.isLegacy() : isLegacy);
         checkArgument(chainCode.length == 32);
         this.parent = parent;
-        this.childNumberPath = HDPath.of(checkNotNull(childNumberPath));
+        this.childNumberPath = HDPath.M(checkNotNull(childNumberPath));
         this.chainCode = Arrays.copyOf(chainCode, chainCode.length);
         this.depth = depth;
         this.parentFingerprint = ascertainParentFingerprint(parent, parentFingerprint);
@@ -207,7 +207,7 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
         super(priv, priv.getPublicKey());
         checkArgument(chainCode.length == 32);
         this.parent = parent;
-        this.childNumberPath = HDPath.of(checkNotNull(childNumberPath));
+        this.childNumberPath = HDPath.M(checkNotNull(childNumberPath));
         this.chainCode = Arrays.copyOf(chainCode, chainCode.length);
         this.depth = depth;
         this.parentFingerprint = ascertainParentFingerprint(parent, parentFingerprint);
@@ -248,7 +248,7 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
         priv = new BLSSecretKey(extendedPrivateKey.getPrivateKey(), isLegacy);
         pub = new BLSPublicKey(extendedPrivateKey.getPublicKey(), isLegacy);
         this.parent = null;
-        this.childNumberPath = HDPath.of();
+        this.childNumberPath = HDPath.M();
         this.chainCode = extendedPrivateKey.getChainCode().serialize();
         this.encryptedPrivateKey = null;
         this.depth = childNumberPath.size();
@@ -267,7 +267,7 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
         if (parent != null)
             this.childNumberPath = parent.getPath().extend(childNumber);
         else
-            this.childNumberPath = HDPath.of(childNumber);
+            this.childNumberPath = HDPath.M(childNumber);
 
         this.chainCode = extendedPrivateKey.getChainCode().serialize();
         this.encryptedPrivateKey = null;
@@ -287,7 +287,7 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
         if (parent != null)
             this.childNumberPath = parent.getPath().extend(childNumber);
         else
-            this.childNumberPath = HDPath.of(childNumber);
+            this.childNumberPath = HDPath.M(childNumber);
 
         this.chainCode = extendedPublicKey.getChainCode().serialize();
         this.encryptedPrivateKey = null;
@@ -560,7 +560,7 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
                 cursor.pub, parentalPrivateKeyBytes, cursor.parent);
         // Now we have to rederive the keys along the path back to ourselves. That path can be found by just truncating
         // our path with the length of the parents path.
-        HDPath path = HDPath.of(childNumberPath.subList(cursor.getPath().size(), childNumberPath.size()));
+        HDPath path = HDPath.M(childNumberPath.subList(cursor.getPath().size(), childNumberPath.size()));
         for (ChildNumber num : path) {
             downCursor = BLSHDKeyDerivation.deriveChildKey(downCursor, num);
         }
@@ -791,8 +791,8 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
                 // This can happen when deserializing an account key for a watching wallet.  In this case, we assume that
                 // the client wants to conceal the key's position in the hierarchy.  The path is truncated at the
                 // parent's node.
-                path = HDPath.of(childNumber);
-            else path = HDPath.of();
+                path = HDPath.M(childNumber);
+            else path = HDPath.M();
         }
         byte[] chainCode = new byte[32];
         buffer.get(chainCode);
@@ -822,7 +822,7 @@ public class BLSDeterministicKey extends BLSKey implements IDeterministicKey {
 
         if (depth >= 1)
             path = fullPath;
-        else path = HDPath.of();
+        else path = HDPath.M();
 
         byte[] chainCode = new byte[32];
         buffer.get(chainCode);

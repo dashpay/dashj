@@ -121,41 +121,39 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
     // m / 44' / 0' / 0'
     public static final HDPath BIP44_ACCOUNT_ZERO_PATH = HDPath.M(new ChildNumber(44, true))
             .extend(ChildNumber.FIVE_HARDENED, ChildNumber.ZERO_HARDENED);
-    public static final HDPath BIP44_ACCOUNT_ZERO_PATH_TESTNET = HDPath.of(new ChildNumber(44, true))
+    public static final HDPath BIP44_ACCOUNT_ZERO_PATH_TESTNET = HDPath.M(new ChildNumber(44, true))
             .extend(ChildNumber.ONE_HARDENED, ChildNumber.ZERO_HARDENED);
 
     // m / 9' / 5' / 3' / 0' - 1000 DASH for masternode
-    public static final HDPath MASTERNODE_HOLDINGS_PATH = HDPath.of(new ChildNumber(9, true))
+    public static final HDPath MASTERNODE_HOLDINGS_PATH = HDPath.M(new ChildNumber(9, true))
             .extend(ChildNumber.FIVE_HARDENED, new ChildNumber(3, true)).extend(ChildNumber.ZERO_HARDENED);
-    public static final HDPath MASTERNODE_HOLDINGS_PATH_TESTNET = HDPath.of(new ChildNumber(9, true))
+    public static final HDPath MASTERNODE_HOLDINGS_PATH_TESTNET = HDPath.M(new ChildNumber(9, true))
             .extend(ChildNumber.ONE_HARDENED, new ChildNumber(3, true)).extend(ChildNumber.ZERO_HARDENED);
 
     // m / 9' / 5' / 3' / 1' - Masternode Voting Path
-    public static final HDPath PROVIDER_VOTING_PATH = HDPath.of(new ChildNumber(9, true))
+    public static final HDPath PROVIDER_VOTING_PATH = HDPath.M(new ChildNumber(9, true))
             .extend(ChildNumber.FIVE_HARDENED, new ChildNumber(3, true)).extend(ChildNumber.ONE_HARDENED);
-    public static final HDPath PROVIDER_VOTING_PATH_TESTNET = HDPath.of(new ChildNumber(9, true))
+    public static final HDPath PROVIDER_VOTING_PATH_TESTNET = HDPath.M(new ChildNumber(9, true))
             .extend(ChildNumber.ONE_HARDENED, new ChildNumber(3, true)).extend(ChildNumber.ONE_HARDENED);
 
     // m / 9' / 5' / 3' / 2' - Masternode Owner Path
-    public static final HDPath PROVIDER_OWNER_PATH = HDPath.of(new ChildNumber(9, true))
+    public static final HDPath PROVIDER_OWNER_PATH = HDPath.M(new ChildNumber(9, true))
             .extend(ChildNumber.FIVE_HARDENED, new ChildNumber(3, true)).extend(new ChildNumber(2, true));
-    public static final HDPath PROVIDER_OWNER_PATH_TESTNET = HDPath.of(new ChildNumber(9, true))
+    public static final HDPath PROVIDER_OWNER_PATH_TESTNET = HDPath.M(new ChildNumber(9, true))
             .extend(ChildNumber.ONE_HARDENED, new ChildNumber(3, true)).extend(new ChildNumber(2, true));
 
     // m / 9' / 5' / 3' / 3' - Masternode Operator Path
-    public static final HDPath PROVIDER_OPERATOR_PATH = HDPath.of(new ChildNumber(9, true))
+    public static final HDPath PROVIDER_OPERATOR_PATH = HDPath.M(new ChildNumber(9, true))
             .extend(ChildNumber.FIVE_HARDENED, new ChildNumber(3, true)).extend(new ChildNumber(3, true));
-    public static final HDPath PROVIDER_OPERATOR_PATH_TESTNET = HDPath.of(new ChildNumber(9, true))
+    public static final HDPath PROVIDER_OPERATOR_PATH_TESTNET = HDPath.M(new ChildNumber(9, true))
             .extend(ChildNumber.ONE_HARDENED, new ChildNumber(3, true)).extend(new ChildNumber(3, true));
 
     // m / 9' / 5' / 5' / 0' - Blockchain User Path
-    public static final HDPath BLOCKCHAIN_USER_PATH = HDPath.of(new ChildNumber(9, true))
+    public static final HDPath BLOCKCHAIN_USER_PATH = HDPath.M(new ChildNumber(9, true))
             .extend(ChildNumber.FIVE_HARDENED, new ChildNumber(5, true)).extend(new ChildNumber(0, true));
-    public static final HDPath BLOCKCHAIN_USER_PATH_TESTNET = HDPath.of(new ChildNumber(9, true))
+    public static final HDPath BLOCKCHAIN_USER_PATH_TESTNET = HDPath.M(new ChildNumber(9, true))
             .extend(ChildNumber.ONE_HARDENED, new ChildNumber(5, true)).extend(new ChildNumber(0, true));
 
-    public static final HDPath EXTERNAL_SUBPATH = HDPath.of(ChildNumber.ZERO);
-    public static final HDPath INTERNAL_SUBPATH = HDPath.of(ChildNumber.ONE);
     public static final HDPath EXTERNAL_SUBPATH = HDPath.M(ChildNumber.ZERO);
     public static final HDPath INTERNAL_SUBPATH = HDPath.M(ChildNumber.ONE);
 
@@ -395,7 +393,7 @@ public class DeterministicKeyChain implements EncryptableKeyChain {
         this.rootKey = null;
         basicKeyChain.importKey(key);
         hierarchy = new DeterministicHierarchy(key);
-        this.accountPath = HDPath.of(accountPath);
+        this.accountPath = HDPath.M(accountPath);
         this.outputScriptType = outputScriptType;
         initializeHierarchyUnencrypted(key);
         this.isFollowing = isFollowing;

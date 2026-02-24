@@ -41,7 +41,7 @@ public class DerivationPathFactory {
      * m/9'/1'/5'/1' (testnet, devnets)
      */
     public HDPath blockchainIdentityRegistrationFundingDerivationPath() {
-        return HDPath.of(Arrays.asList(
+        return HDPath.M(Arrays.asList(
                 FEATURE_PURPOSE,
                 coinType,
                 FEATURE_PURPOSE_IDENTITIES,
@@ -53,7 +53,7 @@ public class DerivationPathFactory {
      * m/9'/1'/5'/2' (testnet, devnets)
      */
     public HDPath blockchainIdentityTopupFundingDerivationPath() {
-        return HDPath.of(Arrays.asList(
+        return HDPath.M(Arrays.asList(
                 FEATURE_PURPOSE,
                 coinType,
                 FEATURE_PURPOSE_IDENTITIES,
@@ -65,7 +65,7 @@ public class DerivationPathFactory {
      * m/9'/1'/5'/3' (testnet, devnets)
      */
     public HDPath identityInvitationFundingDerivationPath() {
-        return HDPath.of(Arrays.asList(
+        return HDPath.M(Arrays.asList(
                 FEATURE_PURPOSE,
                 coinType,
                 FEATURE_PURPOSE_IDENTITIES,
@@ -77,7 +77,7 @@ public class DerivationPathFactory {
      * m/9'/1'/5'/0'/0'/(blockchain identity index)' (testnet, devnets)
      */
     public HDPath blockchainIdentityECDSADerivationPath() {
-        return HDPath.of(Arrays.asList(
+        return HDPath.M(Arrays.asList(
                 FEATURE_PURPOSE,
                 coinType,
                 FEATURE_PURPOSE_IDENTITIES,
@@ -91,7 +91,7 @@ public class DerivationPathFactory {
      * m/9'/1'/5'/0'/0'/(blockchain identity index)'/(key index)' (testnet, devnets)
      */
     public HDPath blockchainIdentityECDSADerivationPath(int index) {
-        return HDPath.of(Arrays.asList(
+        return HDPath.M(Arrays.asList(
                 FEATURE_PURPOSE,
                 coinType,
                 FEATURE_PURPOSE_IDENTITIES,
@@ -106,7 +106,7 @@ public class DerivationPathFactory {
      * m/9'/1'/5'/0'/1'/(blockchain identity index = 0) (testnet, devnets)
      */
     public HDPath blockchainIdentityBLSDerivationPath() {
-        return HDPath.of(Arrays.asList(
+        return HDPath.M(Arrays.asList(
                 FEATURE_PURPOSE,
                 coinType,
                 FEATURE_PURPOSE_IDENTITIES,
@@ -120,7 +120,7 @@ public class DerivationPathFactory {
      * m/9'/1'/5'/0'/1'/(blockchain identity index)/(key index)' (testnet, devnets)
      */
     public HDPath blockchainIdentityBLSDerivationPath(int index) {
-        return HDPath.of(Arrays.asList(
+        return HDPath.M(Arrays.asList(
                 FEATURE_PURPOSE,
                 coinType,
                 FEATURE_PURPOSE_IDENTITIES,
@@ -131,7 +131,7 @@ public class DerivationPathFactory {
     }
 
     public HDPath masternodeHoldingsDerivationPath() {
-        return HDPath.of(Arrays.asList(
+        return HDPath.M(Arrays.asList(
                 FEATURE_PURPOSE,
                 coinType,
                 new ChildNumber(3, true),
@@ -143,7 +143,7 @@ public class DerivationPathFactory {
      * m/9'/1'/3'/1' (testnet, devnets)
      */
     public HDPath masternodeVotingDerivationPath() {
-        return HDPath.of(Arrays.asList(
+        return HDPath.M(Arrays.asList(
                 FEATURE_PURPOSE,
                 coinType,
                 new ChildNumber(3, true),
@@ -155,7 +155,7 @@ public class DerivationPathFactory {
      * m/9'/1'/3'/2' (testnet, devnets)
      */
     public HDPath masternodeOwnerDerivationPath() {
-        return HDPath.of(Arrays.asList(
+        return HDPath.M(Arrays.asList(
                 FEATURE_PURPOSE,
                 coinType,
                 new ChildNumber(3, true),
@@ -167,7 +167,7 @@ public class DerivationPathFactory {
      * m/9'/1'/3'/3' (testnet, devnets)
      */
     public HDPath masternodeOperatorDerivationPath() {
-        return HDPath.of(Arrays.asList(
+        return HDPath.M(Arrays.asList(
                 FEATURE_PURPOSE,
                 coinType,
                 new ChildNumber(3, true),
@@ -179,7 +179,7 @@ public class DerivationPathFactory {
      * m/9'/1'/4'/account (testnet, devnets)
      */
     public HDPath coinJoinDerivationPath(int account) {
-        return HDPath.of(Arrays.asList(
+        return HDPath.M(Arrays.asList(
                 FEATURE_PURPOSE,
                 coinType,
                 new ChildNumber(4, true),
@@ -191,7 +191,7 @@ public class DerivationPathFactory {
      * m/9'/1'/3'/4' (testnet, devnets)
      */
     public HDPath masternodePlatformDerivationPath() {
-        return HDPath.of(Arrays.asList(
+        return HDPath.M(Arrays.asList(
                 FEATURE_PURPOSE,
                 coinType,
                 new ChildNumber(3, true),
@@ -203,7 +203,7 @@ public class DerivationPathFactory {
      * m/44'/1'/@account' (testnet, devnets)
      */
     public HDPath bip44DerivationPath(int account) {
-        return HDPath.of(Arrays.asList(
+        return HDPath.M(Arrays.asList(
                 new ChildNumber(44, true),
                 coinType,
                 new ChildNumber(account, true)));
@@ -213,7 +213,7 @@ public class DerivationPathFactory {
      * m/@account' (mainnet, testnet, devnets)
      */
     public HDPath bip32DerivationPath(int account) {
-        return HDPath.of(Arrays.asList(
+        return HDPath.M(Arrays.asList(
                 new ChildNumber(account, true)));
     }
 

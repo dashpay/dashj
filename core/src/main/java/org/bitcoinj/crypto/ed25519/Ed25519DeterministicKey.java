@@ -79,7 +79,7 @@ public class Ed25519DeterministicKey extends Ed25519Key implements IDeterministi
         super(priv, pub);
         checkArgument(chainCode.length == 32);
         this.parent = parent;
-        this.childNumberPath = HDPath.of(checkNotNull(childNumberPath));
+        this.childNumberPath = HDPath.M(checkNotNull(childNumberPath));
         this.chainCode = Arrays.copyOf(chainCode, chainCode.length);
         this.depth = parent == null ? 0 : parent.depth + 1;
         this.parentFingerprint = (parent != null) ? parent.getFingerprint() : 0;
@@ -102,7 +102,7 @@ public class Ed25519DeterministicKey extends Ed25519Key implements IDeterministi
         super(priv, priv.generatePublicKey(), true);
         checkArgument(chainCode.length == 32);
         this.parent = parent;
-        this.childNumberPath = HDPath.of(checkNotNull(childNumberPath));
+        this.childNumberPath = HDPath.M(checkNotNull(childNumberPath));
         this.chainCode = Arrays.copyOf(chainCode, chainCode.length);
         this.depth = parent == null ? 0 : parent.depth + 1;
         this.parentFingerprint = (parent != null) ? parent.getFingerprint() : 0;
@@ -150,7 +150,7 @@ public class Ed25519DeterministicKey extends Ed25519Key implements IDeterministi
         super(null, pub);
         checkArgument(chainCode.length == 32);
         this.parent = parent;
-        this.childNumberPath = HDPath.of(checkNotNull(childNumberPath));
+        this.childNumberPath = HDPath.M(checkNotNull(childNumberPath));
         this.chainCode = Arrays.copyOf(chainCode, chainCode.length);
         this.depth = depth;
         this.parentFingerprint = ascertainParentFingerprint(parent, parentFingerprint);
@@ -170,7 +170,7 @@ public class Ed25519DeterministicKey extends Ed25519Key implements IDeterministi
         super(priv, priv.generatePublicKey(), true);
         checkArgument(chainCode.length == 32);
         this.parent = parent;
-        this.childNumberPath = HDPath.of(checkNotNull(childNumberPath));
+        this.childNumberPath = HDPath.M(checkNotNull(childNumberPath));
         this.chainCode = Arrays.copyOf(chainCode, chainCode.length);
         this.depth = depth;
         this.parentFingerprint = ascertainParentFingerprint(parent, parentFingerprint);
@@ -456,7 +456,7 @@ public class Ed25519DeterministicKey extends Ed25519Key implements IDeterministi
                 cursor.pub, parentalPrivateKey, cursor.parent);
         // Now we have to rederive the keys along the path back to ourselves. That path can be found by just truncating
         // our path with the length of the parents path.
-        HDPath path = HDPath.of(childNumberPath.subList(cursor.getPath().size(), childNumberPath.size()));
+        HDPath path = HDPath.M(childNumberPath.subList(cursor.getPath().size(), childNumberPath.size()));
         for (ChildNumber num : path) {
             downCursor = downCursor.deriveChildKey(num);
         }
@@ -666,8 +666,8 @@ public class Ed25519DeterministicKey extends Ed25519Key implements IDeterministi
                 // This can happen when deserializing an account key for a watching wallet.  In this case, we assume that
                 // the client wants to conceal the key's position in the hierarchy.  The path is truncated at the
                 // parent's node.
-                path = HDPath.of(childNumber);
-            else path = HDPath.of();
+                path = HDPath.M(childNumber);
+            else path = HDPath.M();
         }
         byte[] chainCode = new byte[32];
         buffer.get(chainCode);
@@ -697,7 +697,7 @@ public class Ed25519DeterministicKey extends Ed25519Key implements IDeterministi
 
         if (depth >= 1)
             path = fullPath;
-        else path = HDPath.of();
+        else path = HDPath.M();
 
         byte[] chainCode = new byte[32];
         buffer.get(chainCode);

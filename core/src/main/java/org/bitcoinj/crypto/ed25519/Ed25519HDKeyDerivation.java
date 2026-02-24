@@ -88,7 +88,7 @@ public final class Ed25519HDKeyDerivation {
     public static Ed25519DeterministicKey createMasterPrivKeyFromBytes(byte[] privKeyBytes, byte[] chainCode)
             throws HDDerivationException {
         // childNumberPath is an empty list because we are creating the root key.
-        return createMasterPrivKeyFromBytes(privKeyBytes, chainCode, HDPath.of());
+        return createMasterPrivKeyFromBytes(privKeyBytes, chainCode, HDPath.M());
     }
 
     /**
@@ -101,7 +101,7 @@ public final class Ed25519HDKeyDerivation {
     }
 
     public static Ed25519DeterministicKey createMasterPubKeyFromBytes(byte[] pubKeyBytes, byte[] chainCode) {
-        return new Ed25519DeterministicKey(HDPath.of(), chainCode, new Ed25519PublicKeyParameters(pubKeyBytes, 0), null, null);
+        return new Ed25519DeterministicKey(HDPath.M(), chainCode, new Ed25519PublicKeyParameters(pubKeyBytes, 0), null, null);
     }
 
     /**

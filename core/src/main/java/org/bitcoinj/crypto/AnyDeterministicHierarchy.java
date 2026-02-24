@@ -86,7 +86,7 @@ public class AnyDeterministicHierarchy {
     public IDeterministicKey get(List<ChildNumber> path, boolean relativePath, boolean create) {
         HDPath absolutePath = relativePath
                 ? rootPath.extend(path)
-                : HDPath.of(path);
+                : HDPath.M(path);
         if (!keys.containsKey(absolutePath)) {
             if (!create)
                 throw new IllegalArgumentException(String.format(Locale.US, "No key found for %s path %s.",
@@ -124,7 +124,7 @@ public class AnyDeterministicHierarchy {
     private ChildNumber getNextChildNumberToDerive(List<ChildNumber> path, boolean privateDerivation) {
         ChildNumber lastChildNumber = lastChildNumbers.get(path);
         ChildNumber nextChildNumber = new ChildNumber(lastChildNumber != null ? lastChildNumber.num() + 1 : 0, privateDerivation);
-        lastChildNumbers.put(HDPath.of(path), nextChildNumber);
+        lastChildNumbers.put(HDPath.M(path), nextChildNumber);
         return nextChildNumber;
     }
 

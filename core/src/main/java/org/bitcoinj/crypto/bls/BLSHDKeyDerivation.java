@@ -64,7 +64,7 @@ public final class BLSHDKeyDerivation {
     public static BLSDeterministicKey createMasterPrivKeyFromBytes(byte[] privKeyBytes, byte[] chainCode)
             throws HDDerivationException {
         // childNumberPath is an empty list because we are creating the root key.
-        return createMasterPrivKeyFromBytes(privKeyBytes, chainCode, HDPath.of());
+        return createMasterPrivKeyFromBytes(privKeyBytes, chainCode, HDPath.M());
     }
 
     /**
@@ -76,7 +76,7 @@ public final class BLSHDKeyDerivation {
     }
 
     public static BLSDeterministicKey createMasterPubKeyFromBytes(byte[] pubKeyBytes, byte[] chainCode) {
-        return new BLSDeterministicKey(HDPath.of(), chainCode, pubKeyBytes, null, false, null);
+        return new BLSDeterministicKey(HDPath.M(), chainCode, pubKeyBytes, null, false, null);
     }
 
     public static BLSDeterministicKey createMasterPubKeyFromBytes(byte[] seed) {

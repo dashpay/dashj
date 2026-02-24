@@ -183,7 +183,7 @@ public class AuthenticationKeyChain extends AnyExternalKeyChain {
          * Use an account path other than the default {@link DeterministicKeyChain#ACCOUNT_ZERO_PATH}.
          */
         public T accountPath(List<ChildNumber> accountPath) {
-            this.accountPath = HDPath.of(checkNotNull(accountPath));
+            this.accountPath = HDPath.M(checkNotNull(accountPath));
             return self();
         }
 

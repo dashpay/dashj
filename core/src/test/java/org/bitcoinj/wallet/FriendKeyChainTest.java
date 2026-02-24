@@ -65,7 +65,7 @@ public class FriendKeyChainTest {
     public void deriveMasterKey() throws Exception {
 
         FriendKeyChain friend = new FriendKeyChain(new DeterministicSeed(ENTROPY, "", secs),
-                HDPath.of(new ChildNumber(44, true)).extend(new ChildNumber(1, true), ChildNumber.ZERO_HARDENED));
+                HDPath.m(new ChildNumber(44, true)).extend(new ChildNumber(1, true), ChildNumber.ZERO_HARDENED));
 
         ECKey bip44chainMasterKey = bip44chain.getWatchingKey();
         ECKey friendMasterKey = friend.getWatchingKey();
