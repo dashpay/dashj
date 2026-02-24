@@ -16,9 +16,6 @@
 
 package org.bitcoinj.wallet.authentication;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.protobuf.ByteString;
 import org.bitcoinj.core.AbstractBlockChain;
 import org.bitcoinj.core.BlockChain;
@@ -96,7 +93,7 @@ public class AuthenticationGroupExtension extends AbstractKeyChainGroupExtension
 
     private static final Logger log = LoggerFactory.getLogger(AuthenticationGroupExtension.class);
     private AuthenticationKeyChainGroup keyChainGroup;
-    private final HashMap<IKey, AuthenticationKeyUsage> keyUsage = Maps.newHashMap();
+    private final HashMap<IKey, AuthenticationKeyUsage> keyUsage = new HashMap<>();
 
     private final CopyOnWriteArrayList<ListenerRegistration<AssetLockTransactionEventListener>> creditFundingListeners
             = new CopyOnWriteArrayList<>();

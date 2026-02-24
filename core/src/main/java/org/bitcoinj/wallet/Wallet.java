@@ -237,7 +237,7 @@ public class Wallet extends BaseTaggableObject
     private int onWalletChangedSuppressions;
     private boolean insideReorg;
     private final Map<Transaction, TransactionConfidence.Listener.ChangeReason> confidenceChanged;
-    private final HashMap<Transaction, Integer> manualConfidenceChangeTransactions = Maps.newHashMap();
+    private final HashMap<Transaction, Integer> manualConfidenceChangeTransactions = new HashMap<>();
     protected volatile WalletFiles vFileManager;
     // Object that is used to send transactions asynchronously when the wallet requires it.
     protected volatile TransactionBroadcaster vTransactionBroadcaster;

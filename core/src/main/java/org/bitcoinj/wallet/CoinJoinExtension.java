@@ -16,8 +16,6 @@
 
 package org.bitcoinj.wallet;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.CodedOutputStream;
@@ -91,7 +89,7 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
     protected final HashMap<KeyId, DeterministicKey> unusedKeys = Maps.newHashMapWithExpectedSize(1024);
     // TODO: we may not need keyUsage, it is used as a way to audit unusedKeys
     @GuardedBy("unusedKeysLock")
-    protected final HashMap<IDeterministicKey, Boolean> keyUsage = Maps.newHashMap();
+    protected final HashMap<IDeterministicKey, Boolean> keyUsage = new HashMap<>();
     private boolean loadedKeys = false;
 
     public CoinJoinExtension(Wallet wallet) {
@@ -338,7 +336,7 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
      */
     public TreeMap<Integer, List<TransactionOutput>> getOutputs() {
         checkNotNull(wallet);
-        TreeMap<Integer, List<TransactionOutput>> outputs = Maps.newTreeMap();
+        TreeMap<Integer, List<TransactionOutput>> outputs = new TreeMap<>();
         if (getKeyChainGroup() == null) {
             return outputs;
         }
@@ -597,7 +595,7 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
 
     public String getUnusedKeyReport() {
         List<IDeterministicKey> issuedKeys;
-        HashMap<HDPath, IDeterministicKey> unusedKeyMap = Maps.newHashMap();
+        HashMap<HDPath, IDeterministicKey> unusedKeyMap = new HashMap<>();
         Set<Transaction> txes = wallet.getTransactions(true);
         
         unusedKeysLock.lock();
@@ -672,7 +670,7 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
 
     public String getKeyUsageReport() {
         List<IDeterministicKey> issuedKeys;
-        HashMap<DeterministicKey, Integer> usedKeyMap = Maps.newHashMap();
+        HashMap<DeterministicKey, Integer> usedKeyMap = new HashMap<>();
         Set<Transaction> txes = wallet.getTransactions(true);
         
         unusedKeysLock.lock();
