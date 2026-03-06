@@ -142,7 +142,7 @@ public class DashSystem {
         signingManager = new SigningManager(context, recoveredSigsDB, quorumManager, masternodeSync);
 
         instantSendDB = new SPVInstantSendDatabase(context);
-        instantSendManager = new InstantSendManager(context, instantSendDB, signingManager);
+        instantSendManager = new InstantSendManager(context, instantSendDB, signingManager, false);
         chainLockHandler = new ChainLocksHandler(context);
         llmqBackgroundThread = new LLMQBackgroundThread(context, instantSendManager, chainLockHandler, signingManager, masternodeListManager);
         masternodeMetaDataManager = new MasternodeMetaDataManager(context);
