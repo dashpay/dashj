@@ -1431,7 +1431,7 @@ public class Peer extends PeerSocketHandler {
             } else {
                 if (log.isDebugEnabled())
                     log.debug("{}: getdata on tx {}", getAddress(), item.hash);
-                getdata.addTransaction(item.hash, vPeerVersionMessage.isWitnessSupported());
+                getdata.addTransaction(item.hash);
                 if (pendingTxDownloads.size() > PENDING_TX_DOWNLOADS_LIMIT) {
                     log.info("{}: Too many pending transactions, disconnecting", this);
                     close();
