@@ -231,13 +231,6 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
     private final WalletCoinsReceivedEventListener walletCoinsReceivedEventListener = new WalletCoinsReceivedEventListener() {
         @Override
         public void onCoinsReceived(Wallet wallet, Transaction tx, Coin prevBalance, Coin newBalance) {
-            onCoinsReceivedOrSent(wallet, tx);
-        }
-    };
-
-    private final WalletCoinsSentEventListener walletCoinsSentEventListener = new WalletCoinsSentEventListener() {
-        @Override
-        public void onCoinsSent(Wallet wallet, Transaction tx, Coin prevBalance, Coin newBalance) {
             // We received a relevant transaction. We MAY need to recalculate and resend the Bloom filter, but only
             // if we have received a transaction that includes a relevant P2PK or P2WPKH output.
             //
@@ -262,7 +255,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
             // and shouldn't, we should just recalculate and cache the new filter for next time.
             for (TransactionOutput output : tx.getOutputs()) {
                 Script scriptPubKey = output.getScriptPubKey();
-                if (ScriptPattern.isP2PK(scriptPubKey) || ScriptPattern.isP2WPKH(scriptPubKey)) {
+                if (ScriptPattern.isP2PK(scriptPubKey)) {
                     if (output.isMine(wallet)) {
                         if (tx.getConfidence().getConfidenceType() == TransactionConfidence.ConfidenceType.BUILDING)
                             recalculateFastCatchupAndFilter(FilterRecalculateMode.SEND_IF_CHANGED);
@@ -1476,7 +1469,6 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
             wallets.add(wallet);
             wallet.setTransactionBroadcaster(this);
             wallet.addCoinsReceivedEventListener(Threading.SAME_THREAD, walletCoinsReceivedEventListener);
-            wallet.addCoinsSentEventListener(Threading.SAME_THREAD, walletCoinsSentEventListener);
             wallet.addKeyChainEventListener(Threading.SAME_THREAD, walletKeyEventListener);
             wallet.addScriptsChangeEventListener(Threading.SAME_THREAD, walletScriptsEventListener);
             addPeerFilterProvider(wallet);
@@ -1549,7 +1541,6 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
         wallets.remove(checkNotNull(wallet));
         peerFilterProviders.remove(wallet);
         wallet.removeCoinsReceivedEventListener(walletCoinsReceivedEventListener);
-        wallet.removeCoinsSentEventListener(walletCoinsSentEventListener);
         wallet.removeKeyChainEventListener(walletKeyEventListener);
         wallet.removeScriptsChangeEventListener(walletScriptsEventListener);
         wallet.setTransactionBroadcaster(null);
