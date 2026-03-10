@@ -38,7 +38,7 @@ public class KeyCrypterAESCBCTest {
     @Test
     public void testEncryptionAndDecryption() {
         //Alice is sending to Bob
-        KeyCrypterECDH aliceKeyExchangeCrypter = new KeyCrypterECDH();
+        KeyCrypterAESCBC aliceKeyExchangeCrypter = new KeyCrypterAESCBC();
         KeyParameter aliceKeyParameter = aliceKeyExchangeCrypter.deriveKey(aliceKey);
 
         EncryptedData encryptedData = aliceKeyExchangeCrypter.encrypt(secret.getBytes(), aliceKeyParameter);
