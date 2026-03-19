@@ -444,4 +444,8 @@ public class DashSystem {
     public void addWallet(Wallet wallet) {
         instantSendManager.addWallet(wallet);
     }
+
+    public void removeWallet(Wallet wallet) {
+        instantSendManager.removeWallet(wallet);
+    }
 }
