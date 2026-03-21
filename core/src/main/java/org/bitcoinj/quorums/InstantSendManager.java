@@ -32,6 +32,7 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -55,7 +56,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
     private final boolean runWithoutThread;
     private ScheduledExecutorService scheduledExecutorService;
     private AbstractBlockChain blockChain;
-    private final ArrayList<Wallet> wallets = new ArrayList<>();
+    private final CopyOnWriteArrayList<Wallet> wallets = new CopyOnWriteArrayList<>();
 
     //Keep track of when the ISLOCK arrived
     HashMap<InstantSendLock, Long> invalidInstantSendLocks;
