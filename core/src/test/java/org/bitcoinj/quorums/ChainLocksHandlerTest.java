@@ -55,7 +55,7 @@ public class ChainLocksHandlerTest {
     void initContext() throws BlockStoreException {
         if (context == null || !context.getParams().equals(params))
             context = new Context(params);
-        blockStore = new SPVBlockStore(params, new File(Objects.requireNonNull(getClass().getResource(blockchainFile)).getPath()));
+        blockStore = new SPVBlockStore(params, new File(Objects.requireNonNull(getClass().getResource(blockchainFile)).getPath()), SPVBlockStore.DEFAULT_CAPACITY, true);
 
         blockChain = new BlockChain(context, blockStore);
         system = new DashSystem(context);

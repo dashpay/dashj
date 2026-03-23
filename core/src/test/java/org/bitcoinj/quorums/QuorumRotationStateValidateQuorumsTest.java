@@ -151,7 +151,7 @@ public class QuorumRotationStateValidateQuorumsTest {
         if (context == null || !context.getParams().equals(params))
             context = new Context(params);
         system = new DashSystem(context);
-        blockChain = new BlockChain(context, new SPVBlockStore(params, new File(Objects.requireNonNull(SimplifiedMasternodesTest.class.getResource(blockchainFile)).getPath())));
+        blockChain = new BlockChain(context, new SPVBlockStore(params, new File(Objects.requireNonNull(SimplifiedMasternodesTest.class.getResource(blockchainFile)).getPath()), SPVBlockStore.DEFAULT_CAPACITY, true));
         system.initDash(true, true);
         peerGroup = new PeerGroup(context.getParams(), blockChain, blockChain);
 

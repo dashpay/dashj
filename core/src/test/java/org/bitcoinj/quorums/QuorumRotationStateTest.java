@@ -66,7 +66,7 @@ public class QuorumRotationStateTest {
             blockChain.getBlockStore().close();
             blockChain = null;
         }
-        blockChain = new BlockChain(context, new SPVBlockStore(params, new File(SimplifiedMasternodesTest.class.getResource(blockchainFile).getFile())));
+        blockChain = new BlockChain(context, new SPVBlockStore(params, new File(SimplifiedMasternodesTest.class.getResource(blockchainFile).getFile()), SPVBlockStore.DEFAULT_CAPACITY, true));
         dualBlockChain = new DualBlockChain(blockChain, blockChain);
         peerGroup = new PeerGroup(context.getParams(), blockChain, blockChain);
         system.initDash(true, true);
@@ -150,7 +150,7 @@ public class QuorumRotationStateTest {
     @Test
     public void loadBasicSchemeQuorumRotationStateFromFile() throws Exception {
         Context context = new Context(PARAMS);
-        BlockChain blockChain = new BlockChain(context, new SPVBlockStore(PARAMS, new File(SimplifiedMasternodesTest.class.getResource("core19.spvchain").getFile())));
+        BlockChain blockChain = new BlockChain(context, new SPVBlockStore(PARAMS, new File(SimplifiedMasternodesTest.class.getResource("core19.spvchain").getFile()), SPVBlockStore.DEFAULT_CAPACITY, true));
         PeerGroup peerGroup = new PeerGroup(context.getParams(), blockChain, blockChain);
         system.initDash(true, true);
         system.setPeerGroupAndBlockChain(peerGroup, blockChain, blockChain);
@@ -181,7 +181,7 @@ public class QuorumRotationStateTest {
     @Test
     public void loadQuorumRotationStateFromFile_70227_v3() throws Exception {
         Context context = new Context(MAINPARAMS);
-        BlockChain blockChain = new BlockChain(context, new SPVBlockStore(MAINPARAMS, new File(getClass().getResource("mainnet_70227_v3.spvchain").getFile())));
+        BlockChain blockChain = new BlockChain(context, new SPVBlockStore(MAINPARAMS, new File(getClass().getResource("mainnet_70227_v3.spvchain").getFile()), SPVBlockStore.DEFAULT_CAPACITY, true));
         PeerGroup peerGroup = new PeerGroup(context.getParams(), blockChain, blockChain);
         system.initDash(true, true);
         system.setPeerGroupAndBlockChain(peerGroup, blockChain, blockChain);
