@@ -62,7 +62,7 @@ public class TransactionBuilder implements AutoCloseable {
 
     final private boolean dryRun;
     /// Protect vecOutputs
-    private final ReentrantLock lock = Threading.lock("outputs");
+    private final ReentrantLock lock = Threading.lock(TransactionBuilder.class);
     /// Contains all outputs already added to the transaction
     @GuardedBy("lock")
     private final ArrayList<TransactionBuilderOutput> vecOutputs = new ArrayList<>();

@@ -56,7 +56,7 @@ public class StoredPaymentChannelClientStates implements WalletExtension {
     private Wallet containingWallet;
     private final SettableFuture<TransactionBroadcaster> announcePeerGroupFuture = SettableFuture.create();
 
-    protected final ReentrantLock lock = Threading.lock("StoredPaymentChannelClientStates");
+    protected final ReentrantLock lock = Threading.lock(StoredPaymentChannelClientStates.class);
 
     /**
      * Creates a new StoredPaymentChannelClientStates and associates it with the given {@link Wallet} and

@@ -15,7 +15,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class MasternodeMetaInfo extends ChildMessage {
-    ReentrantLock lock = Threading.lock("masternode_meta_info");
+    final ReentrantLock lock = Threading.lock(MasternodeMetaInfo.class);
 
     @GuardedBy("lock")
     Sha256Hash proTxHash;

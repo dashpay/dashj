@@ -52,7 +52,7 @@ public class CoinJoinBaseSession {
     private final Logger log = LoggerFactory.getLogger(CoinJoinBaseSession.class);
     protected final Context context;
 
-    protected final ReentrantLock lock = Threading.lock("coinjoin_base_session");
+    protected final ReentrantLock lock = Threading.lock(CoinJoinBaseSession.class);
     @GuardedBy("lock")
     protected final ArrayList<CoinJoinEntry> entries; // Masternode/clients entries
 

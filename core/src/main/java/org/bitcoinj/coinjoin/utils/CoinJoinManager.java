@@ -104,7 +104,7 @@ public class CoinJoinManager {
     private RequestDecryptedKey requestDecryptedKey;
     private final ScheduledExecutorService scheduledExecutorService;
     private volatile ExecutorService messageProcessingExecutor = null;
-    protected final ReentrantLock lock = Threading.lock("coinjoin-manager");
+    protected final ReentrantLock lock = Threading.lock(CoinJoinManager.class);
 
     private boolean finishCurrentSessions = false;
 

@@ -88,11 +88,11 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
     LinkedHashMap<Sha256Hash, SimplifiedQuorumList> quorumsCache;
     LinkedHashMap<Sha256Hash, QuorumSnapshot> quorumSnapshotCache = new LinkedHashMap<>();
 
-    private ReentrantLock memberLock = Threading.lock("memberLock");
+    private final ReentrantLock memberLock = Threading.lock("QuorumRotationState-Member lock");
     @GuardedBy("memberLock")
     EnumMap<LLMQParameters.LLMQType, HashMap<Sha256Hash, ArrayList<Masternode>>> mapQuorumMembers = new EnumMap<>(LLMQParameters.LLMQType.class);
 
-    private ReentrantLock indexedMemberLock = Threading.lock("indexedMemberLock");
+    private final ReentrantLock indexedMemberLock = Threading.lock("QuorumRotationState-IndexedMember lock");
     @GuardedBy("indexedMemberLock")
     EnumMap<LLMQParameters.LLMQType, HashMap<Pair<Sha256Hash, Integer>, ArrayList<Masternode>>> mapIndexedQuorumMembers = new EnumMap<>(LLMQParameters.LLMQType.class);
 

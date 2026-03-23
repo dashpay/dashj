@@ -43,7 +43,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
  * all GovernanceVotes not currently included in the best chain - it's simply a cache.</p>
  */
 public class VoteConfidenceTable {
-    protected ReentrantLock lock = Threading.lock("txconfidencetable");
+    protected final ReentrantLock lock = Threading.lock(VoteConfidenceTable.class);
 
     private static class WeakConfidenceReference extends WeakReference<GovernanceVoteConfidence> {
         public Sha256Hash hash;

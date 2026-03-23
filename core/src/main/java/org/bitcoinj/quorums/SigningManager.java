@@ -37,7 +37,7 @@ public class SigningManager {
     Context context;
 
     private static final Logger log = LoggerFactory.getLogger(SigningManager.class);
-    ReentrantLock lock = Threading.lock("SigningManager");
+    final ReentrantLock lock = Threading.lock(SigningManager.class);
     RecoveredSignaturesDatabase db;
 
     HashMap<Integer, ArrayList<RecoveredSignature>> pendingRecoveredSigs;

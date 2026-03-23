@@ -45,7 +45,7 @@ public class HashStore {
     protected int numHeaders;
     protected NetworkParameters params;
 
-    protected ReentrantLock lock = Threading.lock("SPVBlockStore");
+    protected final ReentrantLock lock = Threading.lock(HashStore.class);
 
     // The entire ring-buffer is mmapped and accessing it should be as fast as accessing regular memory once it's
     // faulted in. Unfortunately, in theory practice and theory are the same. In practice they aren't.

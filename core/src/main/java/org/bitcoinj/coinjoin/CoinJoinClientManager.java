@@ -75,7 +75,7 @@ public class CoinJoinClientManager implements WalletCoinsReceivedEventListener {
     // Keep track of the used Masternodes
     private final ArrayList<Sha256Hash> masternodesUsed = new ArrayList<>();
 
-    private final ReentrantLock lock = Threading.lock("deqsessions");
+    private final ReentrantLock lock = Threading.lock(CoinJoinClientManager.class);
 
     // TODO: or map<denom, CoinJoinClientSession> ??
     @GuardedBy("lock")

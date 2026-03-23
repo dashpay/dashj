@@ -74,7 +74,7 @@ import static org.bitcoinj.utils.Threading.SAME_THREAD;
 
 public class SimplifiedMasternodeListManager extends MasternodeListManager {
     private static final Logger log = LoggerFactory.getLogger(SimplifiedMasternodeListManager.class);
-    private final ReentrantLock lock = Threading.lock("SimplifiedMasternodeListManager");
+    private final ReentrantLock lock = Threading.lock(SimplifiedMasternodeListManager.class);
 
     public static final int DMN_FORMAT_VERSION = 1;
     public static final int LLMQ_FORMAT_VERSION = 2;

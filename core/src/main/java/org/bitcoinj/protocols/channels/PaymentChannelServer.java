@@ -53,7 +53,7 @@ public class PaymentChannelServer {
     //TODO: Update JavaDocs with notes for communication over stateless protocols
     private static final org.slf4j.Logger log = LoggerFactory.getLogger(PaymentChannelServer.class);
 
-    protected final ReentrantLock lock = Threading.lock("channelserver");
+    protected final ReentrantLock lock = Threading.lock(PaymentChannelServer.class);
 
     /**
      * A map of supported versions; keys are major versions, and the corresponding

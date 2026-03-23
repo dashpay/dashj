@@ -14,7 +14,7 @@ import java.util.Arrays;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class BLSLazySignature extends BLSAbstractLazyObject {
-    ReentrantLock lock = Threading.lock("BLSLazySignature");
+    final ReentrantLock lock = Threading.lock(BLSLazySignature.class);
     private static final Logger log = LoggerFactory.getLogger(BLSLazySignature.class);
     private BLSSignature signature;
 

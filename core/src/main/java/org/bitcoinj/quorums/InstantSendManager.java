@@ -45,7 +45,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
     SigningManager quorumSigningManager;
 
     private static final Logger log = LoggerFactory.getLogger(InstantSendManager.class);
-    ReentrantLock lock = Threading.lock("InstantSendManager");
+    final ReentrantLock lock = Threading.lock(InstantSendManager.class);
     protected InstantSendDatabase db;
     protected ChainLocksHandler chainLocksHandler;
     protected PeerGroup peerGroup;

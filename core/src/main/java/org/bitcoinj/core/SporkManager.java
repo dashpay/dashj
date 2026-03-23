@@ -48,7 +48,7 @@ import static org.bitcoinj.utils.Threading.SAME_THREAD;
  */
 public class SporkManager {
     private static final Logger log = LoggerFactory.getLogger(SporkManager.class);
-    ReentrantLock lock = Threading.lock("SporkManager");
+    final ReentrantLock lock = Threading.lock(SporkManager.class);
 
     private static final HashMap<SporkId, SporkDefinition> mapSporkDefaults = new HashMap<>();
     private static void makeSporkDefinition(SporkId sporkId, long defaultValue) {

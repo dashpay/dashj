@@ -29,7 +29,7 @@ public abstract class AbstractManager extends Message {
 
     // Saving to files
     public static final int DELAY_TIME = 100;
-    private final ReentrantLock fileManagerLock = Threading.lock("abstract-manager-save-lock");
+    private final ReentrantLock fileManagerLock = Threading.lock("AbstractManager-FileManager lock");
     protected volatile ManagerFiles vFileManager;
 
     /**

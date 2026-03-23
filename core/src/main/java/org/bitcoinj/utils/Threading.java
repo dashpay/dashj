@@ -172,6 +172,10 @@ public class Threading {
         return new DebugReentrantLock(name);
     }
 
+    public static ReentrantLock debugLock(Class clazz) {
+        return debugLock(clazz.getSimpleName() + " lock");
+    }
+
     public static void setUseDefaultAndroidPolicy(boolean use) {
         useDefaultAndroidPolicy = use;
     }
@@ -202,6 +206,10 @@ public class Threading {
             return new ReentrantReadWriteLock(true);
         else
             return factory.newReentrantReadWriteLock(name, true);
+    }
+
+    public static ReentrantReadWriteLock readWriteLock(Class clazz) {
+        return readWriteLock(clazz.getSimpleName() + " lock");
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////

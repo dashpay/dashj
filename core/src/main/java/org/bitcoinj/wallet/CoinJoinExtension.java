@@ -84,7 +84,7 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
     protected int rounds = CoinJoinClientOptions.getRounds();
     protected Sha256Hash coinJoinSalt = Sha256Hash.ZERO_HASH;
 
-    private final ReentrantLock unusedKeysLock = Threading.lock("unusedKeysLock");
+    private final ReentrantLock unusedKeysLock = Threading.lock("CoinJoinExtension-UnusedKeys lock");
     @GuardedBy("unusedKeysLock")
     protected final HashMap<KeyId, DeterministicKey> unusedKeys = Maps.newHashMapWithExpectedSize(1024);
     // TODO: we may not need keyUsage, it is used as a way to audit unusedKeys

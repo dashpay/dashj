@@ -15,7 +15,7 @@ import java.util.concurrent.locks.ReentrantLock;
 public class SPVInstantSendDatabase extends AbstractManager implements InstantSendDatabase {
 
     private static final Logger log = LoggerFactory.getLogger(SPVInstantSendDatabase.class);
-    private ReentrantLock lock = Threading.lock("SPVInstantSendDatabase");
+    private final ReentrantLock lock = Threading.lock(SPVInstantSendDatabase.class);
 
     InstantSendManager manager;
     HashMap<Sha256Hash, InstantSendLock> islockCache;

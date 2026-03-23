@@ -28,7 +28,7 @@ import java.util.Map;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class SPVRecoveredSignaturesDatabase extends AbstractManager implements RecoveredSignaturesDatabase {
-    private ReentrantLock lock = Threading.lock("SPVRecoveredSignaturesDatabase");
+    private final ReentrantLock lock = Threading.lock(SPVRecoveredSignaturesDatabase.class);
 
     HashMap<Sha256Hash, RecoveredSignature> mapByMessageHash;
     HashMap<Sha256Hash, RecoveredSignature> mapBySignHash;

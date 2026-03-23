@@ -124,7 +124,7 @@ public class AnyDeterministicKeyChain implements IEncryptableKeyChain {
     private static final Logger log = LoggerFactory.getLogger(AnyDeterministicKeyChain.class);
     public static final String DEFAULT_PASSPHRASE_FOR_MNEMONIC = "";
 
-    protected final ReentrantLock lock = Threading.lock("AnyDeterministicKeyChain");
+    protected final ReentrantLock lock = Threading.lock(AnyDeterministicKeyChain.class);
 
     protected AnyDeterministicHierarchy hierarchy;
     @Nullable private IDeterministicKey rootKey;

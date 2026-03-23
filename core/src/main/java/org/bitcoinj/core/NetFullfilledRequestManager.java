@@ -18,7 +18,7 @@ public class NetFullfilledRequestManager extends AbstractManager {
     HashMap<PeerAddress, HashMap<String, Long>> mapFulfilledRequests;
 
     // critical section to protect the inner data structures
-    ReentrantLock lock = Threading.lock("NetFullfilledRequestManager");
+    final ReentrantLock lock = Threading.lock(NetFullfilledRequestManager.class);
 
 
     public NetFullfilledRequestManager(Context context) {

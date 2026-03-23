@@ -31,7 +31,7 @@ public class SPVDirectIOBlockStore implements BlockStore {
     protected ByteBuffer buffer;
     protected final NetworkParameters params;
 
-    protected ReentrantLock lock = Threading.lock("SPVBlockStore");
+    protected final ReentrantLock lock = Threading.lock(SPVDirectIOBlockStore.class);
 
     // The entire ring-buffer is accessed through a FileChannel and ByteBuffer, avoiding MappedByteBuffer issues.
     protected FileChannel fileChannel;

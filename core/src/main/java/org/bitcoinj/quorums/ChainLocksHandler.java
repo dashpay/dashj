@@ -60,7 +60,7 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
     private SigningManager quorumSigningManager;
 
     private static final Logger log = LoggerFactory.getLogger(ChainLocksHandler.class);
-    private final ReentrantLock lock = Threading.lock("ChainLocksHandler");
+    private final ReentrantLock lock = Threading.lock(ChainLocksHandler.class);
     boolean tryLockChainTipScheduled;
     boolean isSporkActive;
     boolean isEnforced;

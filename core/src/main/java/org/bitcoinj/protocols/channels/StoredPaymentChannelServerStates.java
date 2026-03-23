@@ -53,7 +53,7 @@ public class StoredPaymentChannelServerStates implements WalletExtension {
 
     private final Timer channelTimeoutHandler = new Timer(true);
 
-    private final ReentrantLock lock = Threading.lock("StoredPaymentChannelServerStates");
+    private final ReentrantLock lock = Threading.lock(StoredPaymentChannelServerStates.class);
 
     /**
      * The offset between the refund transaction's lock time and the time channels will be automatically closed.

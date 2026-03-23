@@ -75,7 +75,7 @@ public class ProtobufConnection<MessageType extends MessageLite> extends Abstrac
     // attacking clients can be made to timeout/get blocked if they are sending crap to fill buffers.
     @GuardedBy("lock") private int messageBytesOffset = 0;
     @GuardedBy("lock") private byte[] messageBytes;
-    private final ReentrantLock lock = Threading.lock("ProtobufConnection");
+    private final ReentrantLock lock = Threading.lock(ProtobufConnection.class);
 
     @VisibleForTesting final AtomicReference<MessageWriteTarget> writeTarget = new AtomicReference<>();
 

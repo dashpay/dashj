@@ -50,7 +50,7 @@ public class GovernanceObject extends Message implements Serializable {
     private static final Logger log = LoggerFactory.getLogger(GovernanceObject.class);
 
     // critical section to protect the inner data structures
-    ReentrantLock lock = Threading.lock("MasternodeManager");
+    final ReentrantLock lock = Threading.lock(GovernanceObject.class);
 
     public static final int MAX_GOVERNANCE_OBJECT_DATA_SIZE = 16 * 1024;
     public static final int MIN_GOVERNANCE_PEER_PROTO_VERSION = 70206;

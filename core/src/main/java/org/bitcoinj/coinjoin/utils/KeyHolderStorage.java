@@ -30,7 +30,7 @@ import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_EXTRA;
 
 public class KeyHolderStorage {
     static final Logger log = LoggerFactory.getLogger(KeyHolderStorage.class);
-    private final ReentrantLock lock = Threading.lock("storage");
+    private final ReentrantLock lock = Threading.lock(KeyHolderStorage.class);
     @GuardedBy("lock")
     ArrayList<KeyHolder> storage = new ArrayList<>();
 

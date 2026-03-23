@@ -16,7 +16,7 @@ public abstract class QuorumManager {
     AbstractBlockChain blockChain;
 
     private static final Logger log = LoggerFactory.getLogger(QuorumManager.class);
-    protected ReentrantLock lock = Threading.lock("QuorumManager");
+    protected final ReentrantLock lock = Threading.lock(QuorumManager.class);
 
     public QuorumManager(Context context) {
         this.context = context;

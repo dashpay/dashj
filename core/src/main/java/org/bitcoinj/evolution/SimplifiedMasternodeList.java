@@ -43,7 +43,7 @@ import static org.bitcoinj.evolution.SimplifiedMasternodeListDiff.CURRENT_VERSIO
 public class SimplifiedMasternodeList extends Message {
 
     private static final Logger log = LoggerFactory.getLogger(SimplifiedMasternodeList.class);
-    private final ReentrantLock lock = Threading.lock("SimplifiedMasternodeList");
+    private final ReentrantLock lock = Threading.lock(SimplifiedMasternodeList.class);
 
     private short version;
     private Sha256Hash blockHash;

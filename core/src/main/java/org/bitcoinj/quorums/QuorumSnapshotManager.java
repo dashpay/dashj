@@ -37,7 +37,7 @@ import java.util.concurrent.locks.ReentrantLock;
 public class QuorumSnapshotManager extends AbstractManager {
 
     private static final Logger log = LoggerFactory.getLogger(InstantSendManager.class);
-    ReentrantLock lock = Threading.lock("QuorumSnapshotManager");
+    final ReentrantLock lock = Threading.lock(QuorumSnapshotManager.class);
 
     private HashMap<Sha256Hash, QuorumSnapshot> quorumSnapshotCache;
 

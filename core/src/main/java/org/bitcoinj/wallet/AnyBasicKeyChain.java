@@ -57,7 +57,7 @@ import static com.google.common.base.Preconditions.checkState;
  * it will automatically add one to itself if it's empty or if encryption is requested.
  */
 public class AnyBasicKeyChain implements IEncryptableKeyChain {
-    private final ReentrantLock lock = Threading.lock("AnyBasicKeyChain");
+    private final ReentrantLock lock = Threading.lock(AnyBasicKeyChain.class);
 
     // Maps used to let us quickly look up a key given data we find in transactions or the block chain.
     private final LinkedHashMap<ByteString, IKey> hashToKeys;

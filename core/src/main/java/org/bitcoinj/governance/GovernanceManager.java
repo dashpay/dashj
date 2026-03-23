@@ -35,7 +35,7 @@ public class GovernanceManager extends AbstractManager {
     private static final Logger log = LoggerFactory.getLogger(GovernanceManager.class);
     private static final Random random = new Random();
     // critical section to protect the inner data structures
-    ReentrantLock lock = Threading.lock("GovernanceManager");
+    final ReentrantLock lock = Threading.lock(GovernanceManager.class);
 
     public static final int MAX_GOVERNANCE_OBJECT_DATA_SIZE = 16 * 1024;
     public static final int MIN_GOVERNANCE_PEER_PROTO_VERSION = 70208;

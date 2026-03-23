@@ -36,7 +36,7 @@ import java.util.concurrent.locks.ReentrantLock;
 public class SimplifiedQuorumList extends Message {
 
     // critical section to protect the inner data structures
-    ReentrantLock lock = Threading.lock("SimplifiedQuorumList");
+    final ReentrantLock lock = Threading.lock(SimplifiedQuorumList.class);
     private static final Logger log = LoggerFactory.getLogger(SimplifiedQuorumList.class);
 
 

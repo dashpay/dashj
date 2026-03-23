@@ -56,7 +56,7 @@ import static com.google.common.base.Preconditions.checkState;
 public class PaymentChannelClient implements IPaymentChannelClient {
     private static final org.slf4j.Logger log = LoggerFactory.getLogger(PaymentChannelClient.class);
 
-    protected final ReentrantLock lock = Threading.lock("channelclient");
+    protected final ReentrantLock lock = Threading.lock(PaymentChannelClient.class);
     protected final ClientChannelProperties clientChannelProperties;
 
     // Used to track the negotiated version number

@@ -33,7 +33,7 @@ import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_EXTRA;
 public class CoinJoinBaseManager {
 
     private final Logger log = LoggerFactory.getLogger(CoinJoinBaseManager.class);
-    protected final ReentrantLock queueLock = Threading.lock("queueLock");
+    protected final ReentrantLock queueLock = Threading.lock("CoinJoinBaseManager-Queue lock");
 
     @GuardedBy("queueLock")
     protected final ArrayList<CoinJoinQueue> coinJoinQueue;

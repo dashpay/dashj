@@ -15,7 +15,7 @@ import java.util.List;
 
 public class MasternodeMetaDataManager extends AbstractManager {
 
-    ReentrantLock lock = Threading.lock("metadatamanager");
+    final ReentrantLock lock = Threading.lock(MasternodeMetaDataManager.class);
 
     @GuardedBy("lock")
     HashMap<Sha256Hash, MasternodeMetaInfo> metaInfos = new HashMap<>();

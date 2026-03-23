@@ -64,7 +64,7 @@ import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_EXTRA;
 public class MasternodeGroup extends PeerGroup implements NewBestBlockListener {
     private static final Logger log = LoggerFactory.getLogger(MasternodeGroup.class);
 
-    private final ReentrantLock pendingMasternodesLock = Threading.lock("pendingMasternodes");
+    private final ReentrantLock pendingMasternodesLock = Threading.lock("MasternodeGroup-PendingMasternodes lock");
     //@GuardedBy("pendingMasternodesLock")
     protected final HashSet<CoinJoinClientSession> pendingSessions = Sets.newHashSet();
     protected final HashMap<Sha256Hash, CoinJoinClientSession> masternodeMap = new HashMap<>();
