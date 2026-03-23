@@ -46,6 +46,7 @@ public abstract class BLSAbstractLazyObject extends Message {
 
     @Override
     protected void parse() throws ProtocolException {
+        int protocolVersion = serializer.getProtocolVersion();
         legacy = protocolVersion == NetworkParameters.ProtocolVersion.BLS_LEGACY.getBitcoinProtocolVersion();
         initialized = false;
     }

@@ -613,7 +613,7 @@ public class Peer extends PeerSocketHandler {
         if (vPeerVersionMessage != null)
             throw new ProtocolException("Got two version messages from peer");
         vPeerVersionMessage = peerVersionMessage;
-        peerAddress.protocolVersion = peerVersionMessage.clientVersion;
+        peerAddress.setProtocolVersion(peerVersionMessage.clientVersion);
         // Switch to the new protocol version.
         log.info(toString());
         // bitcoinj is a client mode implementation. That means there's not much point in us talking to other client

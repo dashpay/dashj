@@ -57,6 +57,7 @@ public class QuorumRotationInfo extends AbstractDiffMessage {
 
     @Override
     protected void parse() throws ProtocolException {
+        int protocolVersion = serializer.getProtocolVersion();
         quorumSnapshotAtHMinusC = new QuorumSnapshot(params, payload, cursor);
         cursor += quorumSnapshotAtHMinusC.getMessageSize();
         quorumSnapshotAtHMinus2C = new QuorumSnapshot(params, payload, cursor);

@@ -442,17 +442,9 @@ public abstract class Message {
     }
 
     /**
-     *
-     * @return the protocol version of the message
-     */
-    public int getProtocolVersion() {
-        return protocolVersion;
-    }
-
-    /**
      * Set protocol version for future serialization of the message
      */
     public void setProtocolVersion(int protocolVersion) {
-        this.protocolVersion = protocolVersion;
+        setSerializer(serializer.withProtocolVersion(protocolVersion));
     }
 }

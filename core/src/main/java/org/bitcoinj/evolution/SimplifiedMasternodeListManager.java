@@ -193,7 +193,7 @@ public class SimplifiedMasternodeListManager extends MasternodeListManager {
 
     @Override
     protected void parse() throws ProtocolException {
-        protocolVersion = getProtocolVersion();
+        int protocolVersion = serializer.getProtocolVersion();
         quorumState = new QuorumState(context, MasternodeListSyncOptions.SYNC_MINIMUM, payload, cursor, protocolVersion);
         quorumState.setStateManager(this);
         cursor += quorumState.getMessageSize();

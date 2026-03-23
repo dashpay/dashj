@@ -36,7 +36,7 @@ public class GovernanceSyncMessage extends Message {
     protected void parse()
     {
         prop = readHash();
-        if(protocolVersion >= GovernanceManager.GOVERNANCE_FILTER_PROTO_VERSION) {
+        if(serializer.getProtocolVersion() >= GovernanceManager.GOVERNANCE_FILTER_PROTO_VERSION) {
             bloomFilter = new BloomFilter(params, payload);
             offset += bloomFilter.getMessageSize();
         }

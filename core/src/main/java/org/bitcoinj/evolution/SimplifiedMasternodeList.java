@@ -64,7 +64,7 @@ public class SimplifiedMasternodeList extends Message {
     }
 
     private void initProtocolVersion() {
-        protocolVersion = params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.CURRENT);
+        setSerializer(serializer.withProtocolVersion(params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.CURRENT)));
     }
 
     SimplifiedMasternodeList(NetworkParameters params, byte [] payload, int offset, int protocolVersion) {
@@ -83,7 +83,7 @@ public class SimplifiedMasternodeList extends Message {
 
     SimplifiedMasternodeList(NetworkParameters params, ArrayList<SimplifiedMasternodeListEntry> entries, int protocolVersion) {
         super(params);
-        this.protocolVersion = protocolVersion;
+        setSerializer(serializer.withProtocolVersion(protocolVersion));
         this.version = CURRENT_VERSION;
         this.blockHash = params.getGenesisBlock().getHash();
         this.height = -1;
@@ -96,6 +96,7 @@ public class SimplifiedMasternodeList extends Message {
 
     @Override
     protected void parse() throws ProtocolException {
+        int protocolVersion = serializer.getProtocolVersion();
         if (protocolVersion >= NetworkParameters.ProtocolVersion.BLS_SCHEME.getBitcoinProtocolVersion()) {
             version = (short) readUint16();
         } else {
@@ -132,6 +133,7 @@ public class SimplifiedMasternodeList extends Message {
 
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
+        int protocolVersion = serializer.getProtocolVersion();
         if (protocolVersion >= NetworkParameters.ProtocolVersion.BLS_SCHEME.getBitcoinProtocolVersion()) {
             Utils.uint16ToByteStreamLE(version, stream);
         }

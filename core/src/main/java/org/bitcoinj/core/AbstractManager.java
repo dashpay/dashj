@@ -133,7 +133,6 @@ public abstract class AbstractManager extends Message {
     }
 
     public void load(byte [] payload, int offset, int version) {
-        this.protocolVersion = params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.CURRENT);
         this.payload = payload;
         this.cursor = this.offset = offset;
         this.length = payload.length;

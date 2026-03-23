@@ -62,6 +62,7 @@ public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
 
     @Override
     protected void parse() throws ProtocolException {
+        int protocolVersion = serializer.getProtocolVersion();
         if (protocolVersion >= NetworkParameters.ProtocolVersion.MNLISTDIFF_VERSION_ORDER.getBitcoinProtocolVersion()) {
             version = (short) readUint16();
         }
@@ -132,6 +133,7 @@ public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
 
     @Override
     protected void bitcoinSerializeToStream(OutputStream stream) throws IOException {
+        int protocolVersion = serializer.getProtocolVersion();
         if (protocolVersion >= NetworkParameters.ProtocolVersion.MNLISTDIFF_VERSION_ORDER.getBitcoinProtocolVersion()) {
             Utils.uint16ToByteStreamLE(version, stream);
         }

@@ -161,13 +161,13 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
         this.bootstrapStream = bootstrapStream;
         this.bootStrapFileFormat = bootStrapFileFormat;
         if (bootStrapFileFormat == SimplifiedMasternodeListManager.SMLE_VERSION_FORMAT_VERSION) {
-            protocolVersion = NetworkParameters.ProtocolVersion.CURRENT.getBitcoinProtocolVersion();
+            setProtocolVersion(NetworkParameters.ProtocolVersion.CURRENT.getBitcoinProtocolVersion());
         } else if (bootStrapFileFormat == SimplifiedMasternodeListManager.BLS_SCHEME_FORMAT_VERSION) {
-            protocolVersion = NetworkParameters.ProtocolVersion.DMN_TYPE.getBitcoinProtocolVersion();
+            setProtocolVersion(NetworkParameters.ProtocolVersion.DMN_TYPE.getBitcoinProtocolVersion());
         } else if (bootStrapFileFormat == SimplifiedMasternodeListManager.QUORUM_ROTATION_FORMAT_VERSION) {
-            protocolVersion = NetworkParameters.ProtocolVersion.BLS_LEGACY.getBitcoinProtocolVersion();
+            setProtocolVersion(NetworkParameters.ProtocolVersion.BLS_LEGACY.getBitcoinProtocolVersion());
         } else {
-            protocolVersion = NetworkParameters.ProtocolVersion.CORE17.getBitcoinProtocolVersion();
+            setProtocolVersion(NetworkParameters.ProtocolVersion.CORE17.getBitcoinProtocolVersion());
         }
     }
 
@@ -815,7 +815,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
 
             isLoadingBootstrap = true;
             if (buffer != null) {
-                DiffMessage mnlistdiff = loadDiffMessageFromBuffer(buffer, protocolVersion);
+                DiffMessage mnlistdiff = loadDiffMessageFromBuffer(buffer, serializer.getProtocolVersion());
                 if (mnlistdiff instanceof SimplifiedMasternodeListDiff) {
                     stateManager.processDiffMessage(null, (SimplifiedMasternodeListDiff) mnlistdiff, true);
                 } else if (mnlistdiff instanceof QuorumRotationInfo) {

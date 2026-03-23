@@ -125,6 +125,7 @@ public abstract class BLSAbstractObject extends ChildMessage {
 
     @Override
     protected void parse() throws ProtocolException {
+        int protocolVersion = serializer.getProtocolVersion();
         legacy = protocolVersion == params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.BLS_LEGACY);
     }
 

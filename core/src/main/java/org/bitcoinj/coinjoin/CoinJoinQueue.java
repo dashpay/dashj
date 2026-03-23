@@ -67,7 +67,6 @@ public class CoinJoinQueue extends Message {
         this.time = time;
         this.ready = ready;
         this.signature = null;
-        this.protocolVersion = params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.CURRENT);
     }
 
     public CoinJoinQueue(

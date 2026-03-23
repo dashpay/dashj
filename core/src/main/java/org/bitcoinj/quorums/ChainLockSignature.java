@@ -50,7 +50,7 @@ public class ChainLockSignature extends Message {
     protected void parse() throws ProtocolException {
         height = readUint32();
         blockHash = readHash();
-        signature = new BLSSignature(params, payload, cursor, protocolVersion == NetworkParameters.ProtocolVersion.BLS_LEGACY.getBitcoinProtocolVersion());
+        signature = new BLSSignature(params, payload, cursor, serializer.getProtocolVersion() == NetworkParameters.ProtocolVersion.BLS_LEGACY.getBitcoinProtocolVersion());
         cursor += signature.getMessageSize();
         length = cursor - offset;
     }

@@ -949,6 +949,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
 
     @Override
     protected void parse() throws ProtocolException {
+        int protocolVersion = serializer.getProtocolVersion();
         mnListTip = new SimplifiedMasternodeList(params, payload, cursor, protocolVersion);
         cursor += mnListTip.getMessageSize();
         mnListAtH = new SimplifiedMasternodeList(params, payload, cursor, protocolVersion);

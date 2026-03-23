@@ -404,7 +404,7 @@ public class MasternodeSync {
                     }
                     netFullfilledRequestManager.addFulfilledRequest(peer.getAddress(), "governance-sync");
 
-                    if (peer.getPeerVersionMessage().protocolVersion < MIN_GOVERNANCE_PEER_PROTO_VERSION) {
+                    if (peer.getPeerVersionMessage().serializer.getProtocolVersion() < MIN_GOVERNANCE_PEER_PROTO_VERSION) {
                         continue;
                     }
                     triedPeerCount.incrementAndGet();
