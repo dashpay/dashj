@@ -23,10 +23,6 @@ import static org.junit.Assert.assertTrue;
 
 public class AbstractBitcoinNetParamsTest {
     private final AbstractBitcoinNetParams DASH_PARAMS = new AbstractBitcoinNetParams() {
-        {
-            subsidyDecreaseBlockCount = 210240;
-        }
-
         @Override
         public String getPaymentProtocolId() {
             return null;
@@ -35,9 +31,10 @@ public class AbstractBitcoinNetParamsTest {
 
     @Test
     public void isDifficultyTransitionPoint() {
-        assertFalse(BITCOIN_PARAMS.isDifficultyTransitionPoint(2014));
-        assertTrue(BITCOIN_PARAMS.isDifficultyTransitionPoint(2015));
-        assertFalse(BITCOIN_PARAMS.isDifficultyTransitionPoint(2016));
+        // difficulty changes every block
+        assertTrue(DASH_PARAMS.isDifficultyTransitionPoint(210240 - 2));
+        assertTrue(DASH_PARAMS.isDifficultyTransitionPoint(210240 - 1));
+        assertTrue(DASH_PARAMS.isDifficultyTransitionPoint(210240));
     }
 
     @Test
