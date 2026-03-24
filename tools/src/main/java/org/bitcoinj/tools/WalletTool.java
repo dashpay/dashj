@@ -869,9 +869,6 @@ public class WalletTool {
             }
             if (feePerKb != null)
                 req.feePerKb = feePerKb;
-            if (allowUnconfirmed) {
-                wallet.allowSpendingUnconfirmedTransactions();
-            }
             if (password != null) {
                 req.aesKey = passwordToKey(true);
                 if (req.aesKey == null)
@@ -958,9 +955,6 @@ public class WalletTool {
                 System.err.println("You must spend all the money in the input transaction");
             }
 
-            if (allowUnconfirmed) {
-                wallet.allowSpendingUnconfirmedTransactions();
-            }
             if (password != null) {
                 req.aesKey = passwordToKey(true);
                 if (req.aesKey == null)
@@ -1064,9 +1058,6 @@ public class WalletTool {
                 System.err.println("You must spend all the money in the input transaction");
             }
 
-            if (allowUnconfirmed) {
-                wallet.allowSpendingUnconfirmedTransactions();
-            }
             if (password != null) {
                 req.aesKey = passwordToKey(true);
                 if (req.aesKey == null)
