@@ -106,8 +106,8 @@ public class HttpDiscovery implements PeerDiscovery {
                 zip.close(); // will close InputStream as well
             }
 
-            final InetSocketAddress[] peers = protoToAddrs(proto);
-            log.info("Got {} peers from {}", peers.length, url);
+            final List<InetSocketAddress> peers = protoToAddrs(proto);
+            log.info("Got {} peers from {}", peers.size(), url);
             return peers;
         } catch (PeerDiscoveryException e1) {
             throw e1;

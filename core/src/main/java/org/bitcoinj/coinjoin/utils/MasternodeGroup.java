@@ -75,7 +75,7 @@ public class MasternodeGroup extends PeerGroup implements NewBestBlockListener {
 
     private final PeerDiscovery masternodeDiscovery = new PeerDiscovery() {
         @Override
-        public InetSocketAddress[] getPeers(long services, long timeoutValue, TimeUnit timeoutUnit) throws PeerDiscoveryException {
+        public List<InetSocketAddress> getPeers(long services, long timeoutValue, TimeUnit timeoutUnit) throws PeerDiscoveryException {
             ArrayList<InetSocketAddress> addresses = new ArrayList<>();
             pendingMasternodesLock.lock();
             try {
@@ -89,7 +89,7 @@ public class MasternodeGroup extends PeerGroup implements NewBestBlockListener {
             } finally {
                 pendingMasternodesLock.unlock();
             }
-            return addresses.toArray(new InetSocketAddress[0]);
+            return addresses;
         }
 
         @Override

@@ -7,6 +7,7 @@ import javax.annotation.Nullable;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -68,7 +69,7 @@ public class MasternodePeerDiscovery implements PeerDiscovery {
      * Returns an array containing all the Dash nodes within the list.
      */
     @Override
-    public InetSocketAddress[] getPeers(long services, long timeoutValue, TimeUnit timeoutUnit) throws PeerDiscoveryException {
+    public List<InetSocketAddress> getPeers(long services, long timeoutValue, TimeUnit timeoutUnit) throws PeerDiscoveryException {
         if (services != 0)
             throw new PeerDiscoveryException("Pre-determined peers cannot be filtered by services: " + services);
         try {
@@ -78,8 +79,8 @@ public class MasternodePeerDiscovery implements PeerDiscovery {
         }
     }
 
-    private InetSocketAddress[] allPeers() throws UnknownHostException {
-        return masternodeSeeds.toArray(new InetSocketAddress[0]);
+    private List<InetSocketAddress> allPeers() throws UnknownHostException {
+        return masternodeSeeds;
     }
 
     @Override

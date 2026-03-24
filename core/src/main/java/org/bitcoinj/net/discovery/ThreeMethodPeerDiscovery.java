@@ -63,14 +63,13 @@ public class ThreeMethodPeerDiscovery implements PeerDiscovery {
     }
 
     @Override
-    public InetSocketAddress[] getPeers(final long services, final long timeoutValue,
+    public List<InetSocketAddress> getPeers(final long services, final long timeoutValue,
                                         final TimeUnit timeoutUnit) throws PeerDiscoveryException {
         final List<InetSocketAddress> peers = new LinkedList<InetSocketAddress>();
 
         if (includeDNS) {
             try {
-                peers.addAll(
-                        Arrays.asList(normalPeerDiscovery.getPeers(services, timeoutValue, timeoutUnit)));
+                peers.addAll(normalPeerDiscovery.getPeers(services, timeoutValue, timeoutUnit));
             } catch (PeerDiscoveryException x) {
                 //swallow and continue with another method of connection.
             }
@@ -80,7 +79,7 @@ public class ThreeMethodPeerDiscovery implements PeerDiscovery {
             try {
                 if (masternodeListManager != null && masternodeListManager.getListAtChainTip().size() > 0) {
                     MasternodePeerDiscovery discovery = new MasternodePeerDiscovery(masternodeListManager.getListAtChainTip());
-                    peers.addAll(Arrays.asList(discovery.getPeers(services, timeoutValue, timeoutUnit)));
+                    peers.addAll(discovery.getPeers(services, timeoutValue, timeoutUnit));
                 }
             } catch (PeerDiscoveryException x) {
                 //swallow and continue with another method of connection
@@ -89,19 +88,19 @@ public class ThreeMethodPeerDiscovery implements PeerDiscovery {
             if (peers.size() < 10) {
                 log.info("The DML does not have enough nodes.  Now attempting to access the default ML");
                 if (params.getDefaultMasternodeList().length > 0) {
-                    peers.addAll(Arrays.asList(masternodeSeedDiscovery.getPeers(services, timeoutValue, timeoutUnit)));
+                    peers.addAll(masternodeSeedDiscovery.getPeers(services, timeoutValue, timeoutUnit));
                 }
             }
 
             if(peers.size() < 10) {
                 log.info("The ML seed list does not have enough nodes.  Now attempting to access the seed list");
                 if (params.getAddrSeeds() != null) {
-                    peers.addAll(Arrays.asList(seedPeerDiscovery.getPeers(services, timeoutValue, timeoutUnit)));
+                    peers.addAll(seedPeerDiscovery.getPeers(services, timeoutValue, timeoutUnit));
                 }
             }
         }
         log.info("peer discovery found " + peers.size() + " items");
-        return peers.toArray(new InetSocketAddress[0]);
+        return peers;
     }
 
     @Override
