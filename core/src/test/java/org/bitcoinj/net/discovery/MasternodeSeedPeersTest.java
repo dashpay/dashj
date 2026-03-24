@@ -23,12 +23,12 @@ import org.bitcoinj.params.TestNet3Params;
 import org.junit.Test;
 
 import java.net.InetSocketAddress;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 
 public class MasternodeSeedPeersTest {
@@ -37,23 +37,23 @@ public class MasternodeSeedPeersTest {
     @Test
     public void getPeer_one() throws Exception{
         MasternodeSeedPeers seedPeers = new MasternodeSeedPeers(TESTNET);
-        assertThat(seedPeers.getPeer(), notNullValue());
+        assertNotNull(seedPeers.getPeer());
     }
     
     @Test
     public void getPeer_all() throws Exception{
         MasternodeSeedPeers seedPeers = new MasternodeSeedPeers(TESTNET);
         for (int i = 0; i < TESTNET.getDefaultMasternodeList().length; ++i) {
-            assertThat("Failed on index: "+i, seedPeers.getPeer(), notNullValue());
+            assertNotNull("Failed on index: "+i, seedPeers.getPeer());
         }
-        assertThat(seedPeers.getPeer(), equalTo(null));
+        assertNull(seedPeers.getPeer());
     }
     
     @Test
     public void getPeers_length() throws Exception{
         MasternodeSeedPeers seedPeers = new MasternodeSeedPeers(TESTNET);
-        InetSocketAddress[] addresses = seedPeers.getPeers(0, 0, TimeUnit.SECONDS);
-        assertThat(addresses.length, equalTo(TESTNET.getDefaultMasternodeList().length));
+        List<InetSocketAddress> addresses = seedPeers.getPeers(0, 0, TimeUnit.SECONDS);
+        assertEquals(addresses.size(), TESTNET.getDefaultMasternodeList().length);
     }
 
     @Test
