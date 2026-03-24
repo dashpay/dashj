@@ -60,6 +60,10 @@ public abstract class AbstractBitcoinNetParams extends NetworkParameters {
         super();
     }
 
+    /** Dash doesn't have halving, but this is when there are changes in the max rewards */
+    protected boolean isRewardHalvingPoint(final int previousHeight) {
+        return ((previousHeight + 1) % subsidyDecreaseBlockCount) == 0;
+    }
 
     /**
      * Checks if we are at a difficulty transition point.

@@ -22,7 +22,11 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public class AbstractBitcoinNetParamsTest {
-    private final AbstractBitcoinNetParams BITCOIN_PARAMS = new AbstractBitcoinNetParams() {
+    private final AbstractBitcoinNetParams DASH_PARAMS = new AbstractBitcoinNetParams() {
+        {
+            subsidyDecreaseBlockCount = 210240;
+        }
+
         @Override
         public String getPaymentProtocolId() {
             return null;
@@ -31,14 +35,14 @@ public class AbstractBitcoinNetParamsTest {
 
     @Test
     public void isRewardHalvingPoint() {
-        assertTrue(BITCOIN_PARAMS.isRewardHalvingPoint(209999));
+        assertTrue(DASH_PARAMS.isRewardHalvingPoint(210239));
 
-        assertTrue(BITCOIN_PARAMS.isRewardHalvingPoint(419999));
+        assertTrue(DASH_PARAMS.isRewardHalvingPoint(420479));
 
-        assertFalse(BITCOIN_PARAMS.isRewardHalvingPoint(629998));
-        assertTrue(BITCOIN_PARAMS.isRewardHalvingPoint(629999));
-        assertFalse(BITCOIN_PARAMS.isRewardHalvingPoint(630000));
+        assertFalse(DASH_PARAMS.isRewardHalvingPoint(630718));
+        assertTrue(DASH_PARAMS.isRewardHalvingPoint(630719));
+        assertFalse(DASH_PARAMS.isRewardHalvingPoint(630720));
 
-        assertTrue(BITCOIN_PARAMS.isRewardHalvingPoint(839999));
+        assertTrue(DASH_PARAMS.isRewardHalvingPoint(840959));
     }
 }
