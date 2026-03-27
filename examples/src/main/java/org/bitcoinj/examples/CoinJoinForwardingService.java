@@ -102,10 +102,11 @@ public class CoinJoinForwardingService {
 
         String clientPath = "";
         String confPath = "";
-        if (lastArg + 1 < args.length) {
+        if (lastArg < args.length) {
             clientPath = args[lastArg];
-            if (lastArg + 2 > args.length)
-                confPath = args[lastArg];
+        }
+        if (lastArg + 1 < args.length) {
+            confPath = args[lastArg + 1];
         }
 
         txReport = new TransactionReport(clientPath, confPath, params);
@@ -169,7 +170,7 @@ public class CoinJoinForwardingService {
                 FileInputStream checkpointStream = new FileInputStream("./" + checkpoints);
                 kit.setCheckpoints(checkpointStream);
             } catch (FileNotFoundException x) {
-                //swallow
+                System.err.println("Checkpoint file not found: " + checkpoints + " (continuing without checkpoints)");
             }
         }
 
