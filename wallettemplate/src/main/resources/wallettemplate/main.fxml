@@ -33,7 +33,7 @@
             <Color blue="0.750" green="0.750" red="0.750" fx:id="x2" />
           </textFill>
         </Label>
-        <Label font="$x1" text="BTC" textFill="$x2" />
+        <Label font="$x1" text="DASH" textFill="$x2" />
       </children>
     </HBox>
     <HBox fx:id="controlsBox" alignment="TOP_LEFT" fillHeight="true" layoutX="14.0" layoutY="347.0" minHeight="16.0" prefHeight="36.0" prefWidth="243.0" spacing="10.0" translateY="60.0" visible="true" AnchorPane.bottomAnchor="17.0">
@@ -51,7 +51,7 @@
         </ColorAdjust>
       </effect>
       <image>
-        <Image url="@bitcoin_logo_plain.png" />
+        <Image url="@dash_logo_plain.png" />
       </image>
     </ImageView>
     <ClickableBitcoinAddress fx:id="addressControl" layoutY="45.0" prefHeight="21.0" prefWidth="391.0" AnchorPane.leftAnchor="14.0" AnchorPane.rightAnchor="195.0" />
