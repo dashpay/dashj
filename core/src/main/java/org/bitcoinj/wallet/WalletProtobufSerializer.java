@@ -110,6 +110,7 @@ public class WalletProtobufSerializer {
 
     private final WalletFactory factory;
     private KeyChainFactory keyChainFactory;
+    private final Object factoryLock = new Object();
     private volatile boolean lastSaveParallel = false;
 
     public WalletProtobufSerializer() {
@@ -128,7 +129,9 @@ public class WalletProtobufSerializer {
     }
 
     public void setKeyChainFactory(KeyChainFactory keyChainFactory) {
-        this.keyChainFactory = keyChainFactory;
+        synchronized (factoryLock) {
+            this.keyChainFactory = keyChainFactory;
+        }
     }
 
     /**
@@ -925,236 +928,352 @@ public class WalletProtobufSerializer {
         if (!walletProto.getNetworkIdentifier().equals(params.getId()))
             throw new UnreadableWalletException.WrongNetwork();
 
+        // Snapshot the factory once under the lock so concurrent setKeyChainFactory calls
+        // cannot affect an in-flight parse (especially important for the parallel path).
+        final KeyChainFactory effectiveFactory;
+        synchronized (factoryLock) {
+            effectiveFactory = this.keyChainFactory;
+        }
+
         long methodStart = System.currentTimeMillis();
         int complexityScore = getProtoComplexityScore(walletProto);
         boolean isLargeWallet = parallelLoad && complexityScore > 10_000;
 
-        if (isLargeWallet) {
-            final long[] keysTime = {0}, friendRecvTime = {0}, friendSendTime = {0}, txTime = {0}, addWalletTime = {0};
-            final boolean hasEncryption = walletProto.hasEncryptionParameters();
-            final KeyCrypterScrypt keyCrypter = hasEncryption ?
-                    new KeyCrypterScrypt(walletProto.getEncryptionParameters()) : null;
+        try {
+            if (isLargeWallet) {
+                final long[] keysTime = {0}, friendRecvTime = {0}, friendSendTime = {0}, txTime = {0}, addWalletTime = {0};
+                final boolean hasEncryption = walletProto.hasEncryptionParameters();
+                final KeyCrypterScrypt keyCrypter = hasEncryption ?
+                        new KeyCrypterScrypt(walletProto.getEncryptionParameters()) : null;
 
-            int numThreads = Math.min(Runtime.getRuntime().availableProcessors(), 8);
-            // +3 extra threads so keys/friendRecv/friendSend don't compete with tx batch threads
-            ExecutorService executor = Executors.newFixedThreadPool(numThreads + 3,
-                    new ContextPropagatingThreadFactory("wallet-deserializer"));
-            try {
-                // Future 1: Parse key chain group (most expensive)
-                CompletableFuture<KeyChainGroup> keysFuture = CompletableFuture.supplyAsync(() -> {
-                    log.info("readWallet: keys thread started ({} keys)", walletProto.getKeyCount());
-                    long start = System.currentTimeMillis();
-                    try {
-                        KeyChainGroup kcg = hasEncryption ?
-                                KeyChainGroup.fromProtobufEncrypted(params, walletProto.getKeyList(), keyCrypter, keyChainFactory) :
-                                KeyChainGroup.fromProtobufUnencrypted(params, walletProto.getKeyList(), keyChainFactory);
-                        keysTime[0] = System.currentTimeMillis() - start;
-                        log.info("readWallet: keys thread done in {}ms", keysTime[0]);
-                        return kcg;
-                    } catch (UnreadableWalletException e) {
-                        throw new RuntimeException(e);
-                    }
-                }, executor);
-
-                // Future 2: Parse receiving friend key chains (if present)
-                CompletableFuture<FriendKeyChainGroup> friendRecvFuture = null;
-                if (walletProto.getKeysForFriendsCount() > 0) {
-                    friendRecvFuture = CompletableFuture.supplyAsync(() -> {
-                        log.info("readWallet: friendRecv thread started ({} keys)", walletProto.getKeysForFriendsCount());
-                        long start = System.currentTimeMillis();
-                        try {
-                            FriendKeyChainGroup fkcg = hasEncryption ?
-                                    FriendKeyChainGroup.fromProtobufEncrypted(params, walletProto.getKeysForFriendsList(), keyCrypter, keyChainFactory, FriendKeyChain.KeyChainType.RECEIVING_CHAIN) :
-                                    FriendKeyChainGroup.fromProtobufUnencrypted(params, walletProto.getKeysForFriendsList(), keyChainFactory, FriendKeyChain.KeyChainType.RECEIVING_CHAIN);
-                            friendRecvTime[0] = System.currentTimeMillis() - start;
-                            log.info("readWallet: friendRecv thread done in {}ms", friendRecvTime[0]);
-                            return fkcg;
-                        } catch (UnreadableWalletException e) {
-                            throw new RuntimeException(e);
-                        }
-                    }, executor);
-                }
-
-                // Future 3: Parse sending friend key chains (if present)
-                CompletableFuture<FriendKeyChainGroup> friendSendFuture = null;
-                if (walletProto.getKeysFromFriendsCount() > 0) {
-                    friendSendFuture = CompletableFuture.supplyAsync(() -> {
-                        log.info("readWallet: friendSend thread started ({} keys)", walletProto.getKeysFromFriendsCount());
-                        long start = System.currentTimeMillis();
-                        try {
-                            FriendKeyChainGroup fkcg = hasEncryption ?
-                                    FriendKeyChainGroup.fromProtobufEncrypted(params, walletProto.getKeysFromFriendsList(), keyCrypter, keyChainFactory, FriendKeyChain.KeyChainType.SENDING_CHAIN) :
-                                    FriendKeyChainGroup.fromProtobufUnencrypted(params, walletProto.getKeysFromFriendsList(), keyChainFactory, FriendKeyChain.KeyChainType.SENDING_CHAIN);
-                            friendSendTime[0] = System.currentTimeMillis() - start;
-                            log.info("readWallet: friendSend thread done in {}ms", friendSendTime[0]);
-                            return fkcg;
-                        } catch (UnreadableWalletException e) {
-                            throw new RuntimeException(e);
-                        }
-                    }, executor);
-                }
-
-                // Parse transactions in batches (one future per thread) to avoid per-tx future overhead
-                Map<ByteString, Transaction> parsedTxs = new ConcurrentHashMap<>();
-                List<CompletableFuture<Void>> txFutures = new ArrayList<>();
-                long txFuturesStart = System.currentTimeMillis();
-                if (!forceReset) {
-                    List<Protos.Transaction> allTxProtos = walletProto.getTransactionList();
-                    // Use total pool size as batch count so freed key/friend threads can pick up tx work
-                    int txBatchCount = numThreads + 3;
-                    int txBatchSize = Math.max(1, (allTxProtos.size() + txBatchCount - 1) / txBatchCount);
-                    log.info("readWallet: tx threads starting ({} transactions, batchCount={}, batchSize={})",
-                            allTxProtos.size(), txBatchCount, txBatchSize);
-                    for (int i = 0; i < allTxProtos.size(); i += txBatchSize) {
-                        final int from = i;
-                        final int to = Math.min(i + txBatchSize, allTxProtos.size());
-                        txFutures.add(CompletableFuture.runAsync(() -> {
-                            for (int j = from; j < to; j++) {
-                                Protos.Transaction txProto = allTxProtos.get(j);
-                                try {
-                                    Transaction tx = parseTransactionFromProto(txProto, params);
-                                    if (parsedTxs.putIfAbsent(txProto.getHash(), tx) != null)
-                                        throw new RuntimeException(new UnreadableWalletException(
-                                                "Wallet contained duplicate transaction " + byteStringToHash(txProto.getHash())));
-                                } catch (UnreadableWalletException e) {
-                                    throw new RuntimeException(e);
-                                }
-                            }
-                        }, executor));
-                    }
-                }
-
-                // While parallel tasks run, parse the quick sequential parts
-                List<Script> scripts = new ArrayList<>();
-                for (Protos.Script protoScript : walletProto.getWatchedScriptList()) {
-                    try {
-                        scripts.add(new Script(protoScript.getProgram().toByteArray(),
-                                protoScript.getCreationTimestamp() / 1000));
-                    } catch (ScriptException e) {
-                        throw new UnreadableWalletException("Unparseable script in wallet");
-                    }
-                }
-
-                // Retrieve key chain group and create wallet (blocks on keysFuture)
-                KeyChainGroup keyChainGroup;
+                int numThreads = Math.min(Runtime.getRuntime().availableProcessors(), 8);
+                // +3 extra threads so keys/friendRecv/friendSend don't compete with tx batch threads
+                ExecutorService executor = Executors.newFixedThreadPool(numThreads + 3,
+                        new ContextPropagatingThreadFactory("wallet-deserializer"));
                 try {
-                    keyChainGroup = keysFuture.get();
-                } catch (ExecutionException e) {
-                    Throwable cause = e.getCause();
-                    if (cause instanceof UnreadableWalletException) throw (UnreadableWalletException) cause;
-                    throw new UnreadableWalletException("Failed to parse key chain group", e);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    throw new UnreadableWalletException("Interrupted while parsing key chain group");
-                }
-                Wallet wallet = factory.create(params, keyChainGroup);
-
-                if (friendRecvFuture != null) {
-                    try {
-                        wallet.setReceivingFromFriendsGroup(friendRecvFuture.get());
-                    } catch (ExecutionException e) {
-                        Throwable cause = e.getCause();
-                        if (cause instanceof UnreadableWalletException) throw (UnreadableWalletException) cause;
-                        throw new UnreadableWalletException("Failed to parse receiving friend keys", e);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                        throw new UnreadableWalletException("Interrupted while parsing receiving friend keys");
-                    }
-                }
-
-                if (friendSendFuture != null) {
-                    try {
-                        wallet.setSendingToFriendsGroup(friendSendFuture.get());
-                    } catch (ExecutionException e) {
-                        Throwable cause = e.getCause();
-                        if (cause instanceof UnreadableWalletException) throw (UnreadableWalletException) cause;
-                        throw new UnreadableWalletException("Failed to parse sending friend keys", e);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                        throw new UnreadableWalletException("Interrupted while parsing sending friend keys");
-                    }
-                }
-
-                wallet.addWatchedScripts(scripts);
-                if (walletProto.hasDescription()) {
-                    wallet.setDescription(walletProto.getDescription());
-                }
-
-                // load extensions before processing transactions
-                long extStart = System.currentTimeMillis();
-                loadExtensions(wallet, extensions != null ? extensions : new WalletExtension[0], walletProto);
-                long extTime = System.currentTimeMillis() - extStart;
-                log.info("readWallet: loadExtensions done in {}ms", extTime);
-
-                long connectTime = 0;
-                if (forceReset) {
-                    wallet.setLastBlockSeenHash(null);
-                    wallet.setLastBlockSeenHeight(-1);
-                    wallet.setLastBlockSeenTimeSecs(0);
-                } else {
-                    // Wait for all transaction futures, then populate txMap
-                    if (!txFutures.isEmpty()) {
+                    // Future 1: Parse key chain group (most expensive)
+                    CompletableFuture<KeyChainGroup> keysFuture = CompletableFuture.supplyAsync(() -> {
+                        log.info("readWallet: keys thread started ({} keys)", walletProto.getKeyCount());
+                        long start = System.currentTimeMillis();
                         try {
-                            CompletableFuture.allOf(txFutures.toArray(new CompletableFuture[0])).get();
+                            KeyChainGroup kcg = hasEncryption ?
+                                    KeyChainGroup.fromProtobufEncrypted(params, walletProto.getKeyList(), keyCrypter, effectiveFactory) :
+                                    KeyChainGroup.fromProtobufUnencrypted(params, walletProto.getKeyList(), effectiveFactory);
+                            keysTime[0] = System.currentTimeMillis() - start;
+                            log.info("readWallet: keys thread done in {}ms", keysTime[0]);
+                            return kcg;
+                        } catch (UnreadableWalletException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }, executor);
+
+                    // Future 2: Parse receiving friend key chains (if present)
+                    CompletableFuture<FriendKeyChainGroup> friendRecvFuture = null;
+                    if (walletProto.getKeysForFriendsCount() > 0) {
+                        friendRecvFuture = CompletableFuture.supplyAsync(() -> {
+                            log.info("readWallet: friendRecv thread started ({} keys)", walletProto.getKeysForFriendsCount());
+                            long start = System.currentTimeMillis();
+                            try {
+                                FriendKeyChainGroup fkcg = hasEncryption ?
+                                        FriendKeyChainGroup.fromProtobufEncrypted(params, walletProto.getKeysForFriendsList(), keyCrypter, effectiveFactory, FriendKeyChain.KeyChainType.RECEIVING_CHAIN) :
+                                        FriendKeyChainGroup.fromProtobufUnencrypted(params, walletProto.getKeysForFriendsList(), effectiveFactory, FriendKeyChain.KeyChainType.RECEIVING_CHAIN);
+                                friendRecvTime[0] = System.currentTimeMillis() - start;
+                                log.info("readWallet: friendRecv thread done in {}ms", friendRecvTime[0]);
+                                return fkcg;
+                            } catch (UnreadableWalletException e) {
+                                throw new RuntimeException(e);
+                            }
+                        }, executor);
+                    }
+
+                    // Future 3: Parse sending friend key chains (if present)
+                    CompletableFuture<FriendKeyChainGroup> friendSendFuture = null;
+                    if (walletProto.getKeysFromFriendsCount() > 0) {
+                        friendSendFuture = CompletableFuture.supplyAsync(() -> {
+                            log.info("readWallet: friendSend thread started ({} keys)", walletProto.getKeysFromFriendsCount());
+                            long start = System.currentTimeMillis();
+                            try {
+                                FriendKeyChainGroup fkcg = hasEncryption ?
+                                        FriendKeyChainGroup.fromProtobufEncrypted(params, walletProto.getKeysFromFriendsList(), keyCrypter, effectiveFactory, FriendKeyChain.KeyChainType.SENDING_CHAIN) :
+                                        FriendKeyChainGroup.fromProtobufUnencrypted(params, walletProto.getKeysFromFriendsList(), effectiveFactory, FriendKeyChain.KeyChainType.SENDING_CHAIN);
+                                friendSendTime[0] = System.currentTimeMillis() - start;
+                                log.info("readWallet: friendSend thread done in {}ms", friendSendTime[0]);
+                                return fkcg;
+                            } catch (UnreadableWalletException e) {
+                                throw new RuntimeException(e);
+                            }
+                        }, executor);
+                    }
+
+                    // Parse transactions in batches (one future per thread) to avoid per-tx future overhead
+                    Map<ByteString, Transaction> parsedTxs = new ConcurrentHashMap<>();
+                    List<CompletableFuture<Void>> txFutures = new ArrayList<>();
+                    long txFuturesStart = System.currentTimeMillis();
+                    if (!forceReset) {
+                        List<Protos.Transaction> allTxProtos = walletProto.getTransactionList();
+                        // Use total pool size as batch count so freed key/friend threads can pick up tx work
+                        int txBatchCount = numThreads + 3;
+                        int txBatchSize = Math.max(1, (allTxProtos.size() + txBatchCount - 1) / txBatchCount);
+                        log.info("readWallet: tx threads starting ({} transactions, batchCount={}, batchSize={})",
+                                allTxProtos.size(), txBatchCount, txBatchSize);
+                        for (int i = 0; i < allTxProtos.size(); i += txBatchSize) {
+                            final int from = i;
+                            final int to = Math.min(i + txBatchSize, allTxProtos.size());
+                            txFutures.add(CompletableFuture.runAsync(() -> {
+                                for (int j = from; j < to; j++) {
+                                    Protos.Transaction txProto = allTxProtos.get(j);
+                                    try {
+                                        Transaction tx = parseTransactionFromProto(txProto, params);
+                                        if (parsedTxs.putIfAbsent(txProto.getHash(), tx) != null)
+                                            throw new RuntimeException(new UnreadableWalletException(
+                                                    "Wallet contained duplicate transaction " + byteStringToHash(txProto.getHash())));
+                                    } catch (UnreadableWalletException e) {
+                                        throw new RuntimeException(e);
+                                    }
+                                }
+                            }, executor));
+                        }
+                    }
+
+                    // While parallel tasks run, parse the quick sequential parts
+                    List<Script> scripts = new ArrayList<>();
+                    for (Protos.Script protoScript : walletProto.getWatchedScriptList()) {
+                        try {
+                            scripts.add(new Script(protoScript.getProgram().toByteArray(),
+                                    protoScript.getCreationTimestamp() / 1000));
+                        } catch (ScriptException e) {
+                            throw new UnreadableWalletException("Unparseable script in wallet");
+                        }
+                    }
+
+                    // Retrieve key chain group and create wallet (blocks on keysFuture)
+                    KeyChainGroup keyChainGroup;
+                    try {
+                        keyChainGroup = keysFuture.get();
+                    } catch (ExecutionException e) {
+                        Throwable cause = e.getCause();
+                        if (cause instanceof UnreadableWalletException) throw (UnreadableWalletException) cause;
+                        throw new UnreadableWalletException("Failed to parse key chain group", e);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        throw new UnreadableWalletException("Interrupted while parsing key chain group");
+                    }
+                    Wallet wallet = factory.create(params, keyChainGroup);
+
+                    if (friendRecvFuture != null) {
+                        try {
+                            wallet.setReceivingFromFriendsGroup(friendRecvFuture.get());
+                        } catch (ExecutionException e) {
+                            Throwable cause = e.getCause();
+                            if (cause instanceof UnreadableWalletException) throw (UnreadableWalletException) cause;
+                            throw new UnreadableWalletException("Failed to parse receiving friend keys", e);
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            throw new UnreadableWalletException("Interrupted while parsing receiving friend keys");
+                        }
+                    }
+
+                    if (friendSendFuture != null) {
+                        try {
+                            wallet.setSendingToFriendsGroup(friendSendFuture.get());
+                        } catch (ExecutionException e) {
+                            Throwable cause = e.getCause();
+                            if (cause instanceof UnreadableWalletException) throw (UnreadableWalletException) cause;
+                            throw new UnreadableWalletException("Failed to parse sending friend keys", e);
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            throw new UnreadableWalletException("Interrupted while parsing sending friend keys");
+                        }
+                    }
+
+                    wallet.addWatchedScripts(scripts);
+                    if (walletProto.hasDescription()) {
+                        wallet.setDescription(walletProto.getDescription());
+                    }
+
+                    // load extensions before processing transactions
+                    long extStart = System.currentTimeMillis();
+                    loadExtensions(wallet, extensions != null ? extensions : new WalletExtension[0], walletProto);
+                    long extTime = System.currentTimeMillis() - extStart;
+                    log.info("readWallet: loadExtensions done in {}ms", extTime);
+
+                    long connectTime = 0;
+                    if (forceReset) {
+                        wallet.setLastBlockSeenHash(null);
+                        wallet.setLastBlockSeenHeight(-1);
+                        wallet.setLastBlockSeenTimeSecs(0);
+                    } else {
+                        // Wait for all transaction futures, then populate txMap
+                        if (!txFutures.isEmpty()) {
+                            try {
+                                CompletableFuture.allOf(txFutures.toArray(new CompletableFuture[0])).get();
+                            } catch (ExecutionException e) {
+                                Throwable cause = e.getCause();
+                                if (cause instanceof RuntimeException && cause.getCause() instanceof UnreadableWalletException)
+                                    throw (UnreadableWalletException) cause.getCause();
+                                if (cause instanceof UnreadableWalletException) throw (UnreadableWalletException) cause;
+                                throw new UnreadableWalletException("Failed to parse transactions", e);
+                            } catch (InterruptedException e) {
+                                Thread.currentThread().interrupt();
+                                throw new UnreadableWalletException("Interrupted while parsing transactions");
+                            }
+                        }
+                        txTime[0] = System.currentTimeMillis() - txFuturesStart;
+                        log.info("readWallet: tx threads done in {}ms ({} transactions)", txTime[0], parsedTxs.size());
+                        txMap.putAll(parsedTxs);
+
+                        // Connect outputs in parallel: txMap is fully populated and read-only here.
+                        // Each call only touches its own tx's outputs and unique inputs of spending txs,
+                        // so concurrent calls do not write to the same fields.
+                        long connectStart = System.currentTimeMillis();
+                        List<Protos.Transaction> txProtoList = walletProto.getTransactionList();
+                        final WalletTransaction[] walletTxns = new WalletTransaction[txProtoList.size()];
+                        int connectBatchSize = Math.max(1, (txProtoList.size() + numThreads + 2) / (numThreads + 3));
+                        List<CompletableFuture<Void>> connectFutures = new ArrayList<>(numThreads);
+                        for (int i = 0; i < txProtoList.size(); i += connectBatchSize) {
+                            final int from = i;
+                            final int to = Math.min(i + connectBatchSize, txProtoList.size());
+                            connectFutures.add(CompletableFuture.runAsync(() -> {
+                                for (int j = from; j < to; j++) {
+                                    try {
+                                        walletTxns[j] = connectTransactionOutputs(params, txProtoList.get(j));
+                                    } catch (UnreadableWalletException e) {
+                                        throw new RuntimeException(e);
+                                    }
+                                }
+                            }, executor));
+                        }
+                        try {
+                            CompletableFuture.allOf(connectFutures.toArray(new CompletableFuture[0])).get();
                         } catch (ExecutionException e) {
                             Throwable cause = e.getCause();
                             if (cause instanceof RuntimeException && cause.getCause() instanceof UnreadableWalletException)
                                 throw (UnreadableWalletException) cause.getCause();
                             if (cause instanceof UnreadableWalletException) throw (UnreadableWalletException) cause;
-                            throw new UnreadableWalletException("Failed to parse transactions", e);
+                            throw new UnreadableWalletException("Failed to connect transaction outputs", e);
                         } catch (InterruptedException e) {
                             Thread.currentThread().interrupt();
-                            throw new UnreadableWalletException("Interrupted while parsing transactions");
+                            throw new UnreadableWalletException("Interrupted while connecting transaction outputs");
+                        }
+                        connectTime = System.currentTimeMillis() - connectStart;
+                        log.info("readWallet: connectOutputs done in {}ms (parallel)", connectTime);
+
+                        // Add to wallet sequentially (addWalletTransaction acquires write lock per call)
+                        long addWalletStart = System.currentTimeMillis();
+                        for (WalletTransaction wtx : walletTxns) {
+                            wallet.addWalletTransaction(wtx);
+                        }
+                        addWalletTime[0] = System.currentTimeMillis() - addWalletStart;
+                        log.info("readWallet: addWalletTransactions done in {}ms ({} txs)", addWalletTime[0], walletTxns.length);
+
+                        if (!walletProto.hasLastSeenBlockHash()) {
+                            wallet.setLastBlockSeenHash(null);
+                        } else {
+                            wallet.setLastBlockSeenHash(byteStringToHash(walletProto.getLastSeenBlockHash()));
+                        }
+                        if (!walletProto.hasLastSeenBlockHeight()) {
+                            wallet.setLastBlockSeenHeight(-1);
+                        } else {
+                            wallet.setLastBlockSeenHeight(walletProto.getLastSeenBlockHeight());
+                        }
+                        wallet.setLastBlockSeenTimeSecs(walletProto.getLastSeenBlockTimeSecs());
+                        if (walletProto.hasKeyRotationTime()) {
+                            wallet.setKeyRotationTime(new Date(walletProto.getKeyRotationTime() * 1000));
                         }
                     }
-                    txTime[0] = System.currentTimeMillis() - txFuturesStart;
-                    log.info("readWallet: tx threads done in {}ms ({} transactions)", txTime[0], parsedTxs.size());
-                    txMap.putAll(parsedTxs);
 
-                    // Connect outputs in parallel: txMap is fully populated and read-only here.
-                    // Each call only touches its own tx's outputs and unique inputs of spending txs,
-                    // so concurrent calls do not write to the same fields.
-                    long connectStart = System.currentTimeMillis();
-                    List<Protos.Transaction> txProtoList = walletProto.getTransactionList();
-                    final WalletTransaction[] walletTxns = new WalletTransaction[txProtoList.size()];
-                    int connectBatchSize = Math.max(1, (txProtoList.size() + numThreads + 2) / (numThreads + 3));
-                    List<CompletableFuture<Void>> connectFutures = new ArrayList<>(numThreads);
-                    for (int i = 0; i < txProtoList.size(); i += connectBatchSize) {
-                        final int from = i;
-                        final int to = Math.min(i + connectBatchSize, txProtoList.size());
-                        connectFutures.add(CompletableFuture.runAsync(() -> {
-                            for (int j = from; j < to; j++) {
-                                try {
-                                    walletTxns[j] = connectTransactionOutputs(params, txProtoList.get(j));
-                                } catch (UnreadableWalletException e) {
-                                    throw new RuntimeException(e);
-                                }
-                            }
-                        }, executor));
+                    for (Protos.Tag tag : walletProto.getTagsList()) {
+                        wallet.setTag(tag.getTag(), tag.getData());
                     }
+                    if (walletProto.hasVersion()) {
+                        wallet.setVersion(walletProto.getVersion());
+                    }
+
+                    long totalTime = System.currentTimeMillis() - methodStart;
+                    log.info("readWallet (parallel={}, threads={}) timing: {}ms total, keys={}ms, friendRecv={}ms, friendSend={}ms, tx={}ms[{}tx], ext={}ms, connect={}ms, addWallet={}ms",
+                            complexityScore, numThreads, totalTime, keysTime[0], friendRecvTime[0], friendSendTime[0],
+                            txTime[0], walletProto.getTransactionCount(), extTime, connectTime, addWalletTime[0]);
+                    return wallet;
+                } finally {
+                    executor.shutdown();
+                }
+            } else {
+                // Serial path for small wallets
+                // Read the scrypt parameters that specify how encryption and decryption is performed.
+                KeyChainGroup keyChainGroup;
+                if (walletProto.hasEncryptionParameters()) {
+                    Protos.ScryptParameters encryptionParameters = walletProto.getEncryptionParameters();
+                    final KeyCrypterScrypt keyCrypter = new KeyCrypterScrypt(encryptionParameters);
+                    keyChainGroup = KeyChainGroup.fromProtobufEncrypted(params, walletProto.getKeyList(), keyCrypter, effectiveFactory);
+                } else {
+                    keyChainGroup = KeyChainGroup.fromProtobufUnencrypted(params, walletProto.getKeyList(), effectiveFactory);
+                }
+                Wallet wallet = factory.create(params, keyChainGroup);
+
+                List<Script> scripts = Lists.newArrayList();
+                for (Protos.Script protoScript : walletProto.getWatchedScriptList()) {
                     try {
-                        CompletableFuture.allOf(connectFutures.toArray(new CompletableFuture[0])).get();
-                    } catch (ExecutionException e) {
-                        Throwable cause = e.getCause();
-                        if (cause instanceof RuntimeException && cause.getCause() instanceof UnreadableWalletException)
-                            throw (UnreadableWalletException) cause.getCause();
-                        if (cause instanceof UnreadableWalletException) throw (UnreadableWalletException) cause;
-                        throw new UnreadableWalletException("Failed to connect transaction outputs", e);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                        throw new UnreadableWalletException("Interrupted while connecting transaction outputs");
+                        Script script =
+                                new Script(protoScript.getProgram().toByteArray(),
+                                        protoScript.getCreationTimestamp() / 1000);
+                        scripts.add(script);
+                    } catch (ScriptException e) {
+                        throw new UnreadableWalletException("Unparseable script in wallet");
                     }
-                    connectTime = System.currentTimeMillis() - connectStart;
-                    log.info("readWallet: connectOutputs done in {}ms (parallel)", connectTime);
+                }
 
-                    // Add to wallet sequentially (addWalletTransaction acquires write lock per call)
-                    long addWalletStart = System.currentTimeMillis();
-                    for (WalletTransaction wtx : walletTxns) {
+                //read the keys for friends (they send, we spend)
+                if (walletProto.getKeysForFriendsCount() > 0) {
+                    FriendKeyChainGroup friendKeyChainGroup;
+                    if (walletProto.hasEncryptionParameters()) {
+                        Protos.ScryptParameters encryptionParameters = walletProto.getEncryptionParameters();
+                        KeyCrypterScrypt keyCrypter = new KeyCrypterScrypt(encryptionParameters);
+                        friendKeyChainGroup = FriendKeyChainGroup.fromProtobufEncrypted(params, walletProto.getKeysForFriendsList(), keyCrypter, effectiveFactory, FriendKeyChain.KeyChainType.RECEIVING_CHAIN);
+                    } else {
+                        friendKeyChainGroup = FriendKeyChainGroup.fromProtobufUnencrypted(params, walletProto.getKeysForFriendsList(), effectiveFactory, FriendKeyChain.KeyChainType.RECEIVING_CHAIN);
+                    }
+                    wallet.setReceivingFromFriendsGroup(friendKeyChainGroup);
+                }
+
+                if (walletProto.getKeysFromFriendsCount() > 0) {
+                    FriendKeyChainGroup friendKeyChainGroup;
+                    if (walletProto.hasEncryptionParameters()) {
+                        Protos.ScryptParameters encryptionParameters = walletProto.getEncryptionParameters();
+                        KeyCrypterScrypt keyCrypter = new KeyCrypterScrypt(encryptionParameters);
+                        friendKeyChainGroup = FriendKeyChainGroup.fromProtobufEncrypted(params, walletProto.getKeysFromFriendsList(), keyCrypter, effectiveFactory, FriendKeyChain.KeyChainType.SENDING_CHAIN);
+                    } else {
+                        friendKeyChainGroup = FriendKeyChainGroup.fromProtobufUnencrypted(params, walletProto.getKeysFromFriendsList(), effectiveFactory, FriendKeyChain.KeyChainType.SENDING_CHAIN);
+                    }
+                    wallet.setSendingToFriendsGroup(friendKeyChainGroup);
+                }
+
+                wallet.addWatchedScripts(scripts);
+
+                if (walletProto.hasDescription()) {
+                    wallet.setDescription(walletProto.getDescription());
+                }
+
+                // load extensions before processing transactions
+                loadExtensions(wallet, extensions != null ? extensions : new WalletExtension[0], walletProto);
+
+                if (forceReset) {
+                    // Should mirror Wallet.reset()
+                    wallet.setLastBlockSeenHash(null);
+                    wallet.setLastBlockSeenHeight(-1);
+                    wallet.setLastBlockSeenTimeSecs(0);
+                } else {
+                    // Read all transactions and insert into the txMap.
+                    for (Protos.Transaction txProto : walletProto.getTransactionList()) {
+                        readTransaction(txProto, wallet.getParams());
+                    }
+
+                    // Update transaction outputs to point to inputs that spend them
+                    for (Protos.Transaction txProto : walletProto.getTransactionList()) {
+                        WalletTransaction wtx = connectTransactionOutputs(params, txProto);
                         wallet.addWalletTransaction(wtx);
                     }
-                    addWalletTime[0] = System.currentTimeMillis() - addWalletStart;
-                    log.info("readWallet: addWalletTransactions done in {}ms ({} txs)", addWalletTime[0], walletTxns.length);
 
+                    // Update the lastBlockSeenHash.
                     if (!walletProto.hasLastSeenBlockHash()) {
                         wallet.setLastBlockSeenHash(null);
                     } else {
@@ -1165,7 +1284,9 @@ public class WalletProtobufSerializer {
                     } else {
                         wallet.setLastBlockSeenHeight(walletProto.getLastSeenBlockHeight());
                     }
+                    // Will default to zero if not present.
                     wallet.setLastBlockSeenTimeSecs(walletProto.getLastSeenBlockTimeSecs());
+
                     if (walletProto.hasKeyRotationTime()) {
                         wallet.setKeyRotationTime(new Date(walletProto.getKeyRotationTime() * 1000));
                     }
@@ -1174,126 +1295,17 @@ public class WalletProtobufSerializer {
                 for (Protos.Tag tag : walletProto.getTagsList()) {
                     wallet.setTag(tag.getTag(), tag.getData());
                 }
+
                 if (walletProto.hasVersion()) {
                     wallet.setVersion(walletProto.getVersion());
                 }
 
-                txMap.clear();
-                long totalTime = System.currentTimeMillis() - methodStart;
-                log.info("readWallet (parallel={}, threads={}) timing: {}ms total, keys={}ms, friendRecv={}ms, friendSend={}ms, tx={}ms[{}tx], ext={}ms, connect={}ms, addWallet={}ms",
-                        complexityScore, numThreads, totalTime, keysTime[0], friendRecvTime[0], friendSendTime[0],
-                        txTime[0], walletProto.getTransactionCount(), extTime, connectTime, addWalletTime[0]);
                 return wallet;
-            } finally {
-                executor.shutdown();
             }
-        } else {
-            // Serial path for small wallets
-            // Read the scrypt parameters that specify how encryption and decryption is performed.
-            KeyChainGroup keyChainGroup;
-            if (walletProto.hasEncryptionParameters()) {
-                Protos.ScryptParameters encryptionParameters = walletProto.getEncryptionParameters();
-                final KeyCrypterScrypt keyCrypter = new KeyCrypterScrypt(encryptionParameters);
-                keyChainGroup = KeyChainGroup.fromProtobufEncrypted(params, walletProto.getKeyList(), keyCrypter, keyChainFactory);
-            } else {
-                keyChainGroup = KeyChainGroup.fromProtobufUnencrypted(params, walletProto.getKeyList(), keyChainFactory);
-            }
-            Wallet wallet = factory.create(params, keyChainGroup);
-
-            List<Script> scripts = Lists.newArrayList();
-            for (Protos.Script protoScript : walletProto.getWatchedScriptList()) {
-                try {
-                    Script script =
-                            new Script(protoScript.getProgram().toByteArray(),
-                                    protoScript.getCreationTimestamp() / 1000);
-                    scripts.add(script);
-                } catch (ScriptException e) {
-                    throw new UnreadableWalletException("Unparseable script in wallet");
-                }
-            }
-
-            //read the keys for friends (they send, we spend)
-            if (walletProto.getKeysForFriendsCount() > 0) {
-                FriendKeyChainGroup friendKeyChainGroup;
-                if (walletProto.hasEncryptionParameters()) {
-                    Protos.ScryptParameters encryptionParameters = walletProto.getEncryptionParameters();
-                    KeyCrypterScrypt keyCrypter = new KeyCrypterScrypt(encryptionParameters);
-                    friendKeyChainGroup = FriendKeyChainGroup.fromProtobufEncrypted(params, walletProto.getKeysForFriendsList(), keyCrypter, keyChainFactory, FriendKeyChain.KeyChainType.RECEIVING_CHAIN);
-                } else {
-                    friendKeyChainGroup = FriendKeyChainGroup.fromProtobufUnencrypted(params, walletProto.getKeysForFriendsList(), keyChainFactory, FriendKeyChain.KeyChainType.RECEIVING_CHAIN);
-                }
-                wallet.setReceivingFromFriendsGroup(friendKeyChainGroup);
-            }
-
-            if (walletProto.getKeysFromFriendsCount() > 0) {
-                FriendKeyChainGroup friendKeyChainGroup;
-                if (walletProto.hasEncryptionParameters()) {
-                    Protos.ScryptParameters encryptionParameters = walletProto.getEncryptionParameters();
-                    KeyCrypterScrypt keyCrypter = new KeyCrypterScrypt(encryptionParameters);
-                    friendKeyChainGroup = FriendKeyChainGroup.fromProtobufEncrypted(params, walletProto.getKeysFromFriendsList(), keyCrypter, keyChainFactory, FriendKeyChain.KeyChainType.SENDING_CHAIN);
-                } else {
-                    friendKeyChainGroup = FriendKeyChainGroup.fromProtobufUnencrypted(params, walletProto.getKeysFromFriendsList(), keyChainFactory, FriendKeyChain.KeyChainType.SENDING_CHAIN);
-                }
-                wallet.setSendingToFriendsGroup(friendKeyChainGroup);
-            }
-
-            wallet.addWatchedScripts(scripts);
-
-            if (walletProto.hasDescription()) {
-                wallet.setDescription(walletProto.getDescription());
-            }
-
-            // load extensions before processing transactions
-            loadExtensions(wallet, extensions != null ? extensions : new WalletExtension[0], walletProto);
-
-            if (forceReset) {
-                // Should mirror Wallet.reset()
-                wallet.setLastBlockSeenHash(null);
-                wallet.setLastBlockSeenHeight(-1);
-                wallet.setLastBlockSeenTimeSecs(0);
-            } else {
-                // Read all transactions and insert into the txMap.
-                for (Protos.Transaction txProto : walletProto.getTransactionList()) {
-                    readTransaction(txProto, wallet.getParams());
-                }
-
-                // Update transaction outputs to point to inputs that spend them
-                for (Protos.Transaction txProto : walletProto.getTransactionList()) {
-                    WalletTransaction wtx = connectTransactionOutputs(params, txProto);
-                    wallet.addWalletTransaction(wtx);
-                }
-
-                // Update the lastBlockSeenHash.
-                if (!walletProto.hasLastSeenBlockHash()) {
-                    wallet.setLastBlockSeenHash(null);
-                } else {
-                    wallet.setLastBlockSeenHash(byteStringToHash(walletProto.getLastSeenBlockHash()));
-                }
-                if (!walletProto.hasLastSeenBlockHeight()) {
-                    wallet.setLastBlockSeenHeight(-1);
-                } else {
-                    wallet.setLastBlockSeenHeight(walletProto.getLastSeenBlockHeight());
-                }
-                // Will default to zero if not present.
-                wallet.setLastBlockSeenTimeSecs(walletProto.getLastSeenBlockTimeSecs());
-
-                if (walletProto.hasKeyRotationTime()) {
-                    wallet.setKeyRotationTime(new Date(walletProto.getKeyRotationTime() * 1000));
-                }
-            }
-
-            for (Protos.Tag tag : walletProto.getTagsList()) {
-                wallet.setTag(tag.getTag(), tag.getData());
-            }
-
-            if (walletProto.hasVersion()) {
-                wallet.setVersion(walletProto.getVersion());
-            }
-
-            // Make sure the object can be re-used to read another wallet without corruption.
+        } finally {
+            // Make sure the object can be re-used to read another wallet without corruption,
+            // even if loadExtensions, connectTransactionOutputs, or addWalletTransaction throws.
             txMap.clear();
-
-            return wallet;
         }
     }
 
