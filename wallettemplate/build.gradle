@@ -2,7 +2,7 @@ plugins {
     id 'java'
     id 'eclipse'
     id 'application'
-    id 'org.openjfx.javafxplugin' version '0.0.8'
+    id 'org.openjfx.javafxplugin' version '0.1.0'
 }
 
 dependencies {
@@ -16,8 +16,19 @@ dependencies {
 }
 
 javafx {
-    version = '15'
+    version = '17'
     modules = [ 'javafx.controls', 'javafx.fxml' ]
+}
+
+tasks.withType(JavaExec).configureEach {
+    systemProperty "java.library.path", "${rootProject.projectDir}/contrib/dashj-bls/bls/target/cmake"
+    doFirst {
+        def jfxJars = configurations.runtimeClasspath.files.findAll { it.name.contains('javafx') }
+        if (jfxJars) {
+            jvmArgs '--module-path', jfxJars.join(File.pathSeparator),
+                    '--add-modules', 'javafx.controls,javafx.fxml'
+        }
+    }
 }
 
 sourceCompatibility = 1.11
