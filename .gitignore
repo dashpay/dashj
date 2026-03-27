@@ -26,3 +26,4 @@ checkpoints-krupnik.txt
 *.gobjects
 /*.log
 .DS_Store
+*.inventory
