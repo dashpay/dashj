@@ -68,13 +68,6 @@ public class TestWithWallet {
         MAINNET = MainNetParams.get();
     }
 
-    @BeforeClass
-    public static void setUpClass() throws Exception {
-        Utils.resetMocking();
-        UNITTEST = UnitTestParams.get();
-        MAINNET = MainNetParams.get();
-    }
-
     public void setUp() throws Exception {
         BriefLogFormatter.init();
         Context.propagate(new Context(UNITTEST, 100, Coin.ZERO, false));
