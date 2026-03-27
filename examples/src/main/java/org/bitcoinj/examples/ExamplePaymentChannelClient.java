@@ -17,9 +17,6 @@
  */
 package org.bitcoinj.examples;
 
-import joptsimple.OptionParser;
-import joptsimple.OptionSet;
-import joptsimple.OptionSpec;
 import org.bitcoinj.core.*;
 import org.bitcoinj.kits.WalletAppKit;
 import org.bitcoinj.params.RegTestParams;
@@ -28,6 +25,7 @@ import org.bitcoinj.utils.BriefLogFormatter;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.Wallet;
 import org.bitcoinj.wallet.WalletExtension;
+import picocli.CommandLine;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.FutureCallback;
@@ -40,6 +38,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 
@@ -48,54 +47,54 @@ import static org.bitcoinj.core.Coin.CENT;
 /**
  * Simple client that connects to the given host, opens a channel, and pays one cent.
  */
-public class ExamplePaymentChannelClient {
+@CommandLine.Command(name = "payment-channel-client", usageHelpAutoWidth = true, description = "Connects to a payment channel server and pays one cent.")
+public class ExamplePaymentChannelClient implements Callable<Integer> {
     private static final org.slf4j.Logger log = LoggerFactory.getLogger(ExamplePaymentChannelClient.class);
+
+    @CommandLine.Parameters(index = "0", description = "The host to connect to.")
+    private String host;
+    @CommandLine.Option(names = "--net", description = "The network to run the examples on. Valid values: ${COMPLETION-CANDIDATES}. Default: ${DEFAULT-VALUE}")
+    private NetworkEnum net = NetworkEnum.TEST;
+    @CommandLine.Option(names = "--version", description = "The payment channel protocol version to use (1 or 2). Default: ${DEFAULT-VALUE}")
+    private int version = 1;
+    @CommandLine.Option(names = "--help", usageHelp = true, description = "Displays program options.")
+    private boolean help;
+
     private WalletAppKit appKit;
-    private final Coin channelSize;
-    private final ECKey myKey;
-    private final NetworkParameters params;
+    private final Coin channelSize = CENT;
+    private final ECKey myKey = new ECKey();
+    private NetworkParameters params;
 
     public static void main(String[] args) throws Exception {
         BriefLogFormatter.init();
-        OptionParser parser = new OptionParser();
-        OptionSpec<NetworkEnum> net = parser.accepts("net", "The network to run the examples on").withRequiredArg().ofType(NetworkEnum.class).defaultsTo(NetworkEnum.TEST);
-        OptionSpec<Integer> version = parser.accepts("version", "The payment channel protocol to use").withRequiredArg().ofType(Integer.class);
-        parser.accepts("help", "Displays program options");
-        OptionSet opts = parser.parse(args);
-        if (opts.has("help") || !opts.has(net) || opts.nonOptionArguments().size() != 1) {
-            System.err.println("usage: ExamplePaymentChannelClient --net=MAIN/TEST/REGTEST --version=1/2 host");
-            parser.printHelpOn(System.err);
-            return;
-        }
-        IPaymentChannelClient.ClientChannelProperties clientChannelProperties = new PaymentChannelClient.DefaultClientChannelProperties(){
-            @Override
-            public PaymentChannelClient.VersionSelector versionSelector() { return PaymentChannelClient.VersionSelector.VERSION_1; }
-        };
-
-        if (opts.has("version")) {
-            switch (version.value(opts)) {
-                case 1:
-                    // Keep the default
-                    break;
-                case 2:
-                    clientChannelProperties = new PaymentChannelClient.DefaultClientChannelProperties(){
-                        @Override
-                        public PaymentChannelClient.VersionSelector versionSelector() { return PaymentChannelClient.VersionSelector.VERSION_2; }
-                    };
-                    break;
-                default:
-                    System.err.println("Invalid version - valid versions are 1, 2");
-                    return;
-            }
-        }
-        NetworkParameters params = net.value(opts).get();
-        new ExamplePaymentChannelClient().run((String) opts.nonOptionArguments().get(0), clientChannelProperties, params);
+        System.exit(new CommandLine(new ExamplePaymentChannelClient()).execute(args));
     }
 
-    public ExamplePaymentChannelClient() {
-        channelSize = CENT;
-        myKey = new ECKey();
-        params = RegTestParams.get();
+    @Override
+    public Integer call() throws Exception {
+        params = net.get();
+
+        IPaymentChannelClient.ClientChannelProperties clientChannelProperties;
+        switch (version) {
+            case 1:
+                clientChannelProperties = new PaymentChannelClient.DefaultClientChannelProperties() {
+                    @Override
+                    public PaymentChannelClient.VersionSelector versionSelector() { return PaymentChannelClient.VersionSelector.VERSION_1; }
+                };
+                break;
+            case 2:
+                clientChannelProperties = new PaymentChannelClient.DefaultClientChannelProperties() {
+                    @Override
+                    public PaymentChannelClient.VersionSelector versionSelector() { return PaymentChannelClient.VersionSelector.VERSION_2; }
+                };
+                break;
+            default:
+                System.err.println("Invalid version - valid versions are 1, 2");
+                return 1;
+        }
+
+        run(host, clientChannelProperties, params);
+        return 0;
     }
 
     public void run(final String host, IPaymentChannelClient.ClientChannelProperties clientChannelProperties, final NetworkParameters params) throws Exception {

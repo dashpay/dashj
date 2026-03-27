@@ -17,9 +17,6 @@
 
 package org.bitcoinj.examples;
 
-import joptsimple.OptionParser;
-import joptsimple.OptionSet;
-import joptsimple.OptionSpec;
 import org.bitcoinj.core.Coin;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Sha256Hash;
@@ -29,6 +26,7 @@ import org.bitcoinj.params.RegTestParams;
 import org.bitcoinj.protocols.channels.*;
 import org.bitcoinj.utils.BriefLogFormatter;
 import org.bitcoinj.wallet.WalletExtension;
+import picocli.CommandLine;
 
 import com.google.common.collect.ImmutableList;
 
@@ -39,28 +37,32 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.net.SocketAddress;
 import java.util.List;
+import java.util.concurrent.Callable;
 
 /**
  * Simple server that listens on port 4242 for incoming payment channels.
  */
-public class ExamplePaymentChannelServer implements PaymentChannelServerListener.HandlerFactory {
+@CommandLine.Command(name = "payment-channel-server", usageHelpAutoWidth = true, description = "Runs a payment channel server.")
+public class ExamplePaymentChannelServer implements PaymentChannelServerListener.HandlerFactory, Callable<Integer> {
     private static final org.slf4j.Logger log = LoggerFactory.getLogger(ExamplePaymentChannelServer.class);
+
+    @CommandLine.Option(names = "--net", description = "The network to run the examples on. Valid values: ${COMPLETION-CANDIDATES}. Default: ${DEFAULT-VALUE}")
+    private NetworkEnum net = NetworkEnum.TEST;
+    @CommandLine.Option(names = "--help", usageHelp = true, description = "Displays program options.")
+    private boolean help;
 
     private WalletAppKit appKit;
 
     public static void main(String[] args) throws Exception {
         BriefLogFormatter.init();
-        OptionParser parser = new OptionParser();
-        OptionSpec<NetworkEnum> net = parser.accepts("net", "The network to run the examples on").withRequiredArg().ofType(NetworkEnum.class).defaultsTo(NetworkEnum.TEST);
-        parser.accepts("help", "Displays program options");
-        OptionSet opts = parser.parse(args);
-        if (opts.has("help") || !opts.has(net)) {
-            System.err.println("usage: ExamplePaymentChannelServer --net=MAIN/TEST/REGTEST");
-            parser.printHelpOn(System.err);
-            return;
-        }
-        NetworkParameters params = net.value(opts).get();
-        new ExamplePaymentChannelServer().run(params);
+        System.exit(new CommandLine(new ExamplePaymentChannelServer()).execute(args));
+    }
+
+    @Override
+    public Integer call() throws Exception {
+        NetworkParameters params = net.get();
+        run(params);
+        return 0;
     }
 
     public void run(NetworkParameters params) throws Exception {
