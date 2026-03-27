@@ -519,6 +519,90 @@ public class LargeCoinJoinWalletTest {
     }
 
     @Test
+    public void walletLoadPerformanceTest() throws IOException, UnreadableWalletException {
+        info("=== Wallet Load Performance Test (serial vs parallel) ===");
+
+        // Serialize the wallet once so we reload from identical bytes each time
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        new WalletProtobufSerializer().writeWallet(wallet, baos);
+        final byte[] walletBytes = baos.toByteArray();
+        info("Wallet serialized: {} bytes", walletBytes.length);
+
+        int warmupRuns = 2;
+        int timedRuns = 5;
+
+        // --- Serial ---
+        WalletProtobufSerializer serialSerializer = new WalletProtobufSerializer();
+        serialSerializer.setParallelLoad(false);
+
+        for (int i = 0; i < warmupRuns; i++) {
+            serialSerializer.readWallet(new ByteArrayInputStream(walletBytes));
+        }
+
+        long[] serialTimes = new long[timedRuns];
+        for (int i = 0; i < timedRuns; i++) {
+            Stopwatch w = Stopwatch.createStarted();
+            WalletEx loaded = (WalletEx) serialSerializer.readWallet(new ByteArrayInputStream(walletBytes));
+            serialTimes[i] = w.elapsed().toMillis();
+            assertEquals(wallet.getTransactionCount(true), loaded.getTransactionCount(true));
+            assertEquals(wallet.getBalance(Wallet.BalanceType.ESTIMATED), loaded.getBalance(Wallet.BalanceType.ESTIMATED));
+        }
+
+        // --- Parallel ---
+        WalletProtobufSerializer parallelSerializer = new WalletProtobufSerializer();
+        parallelSerializer.setParallelLoad(true);
+
+        for (int i = 0; i < warmupRuns; i++) {
+            parallelSerializer.readWallet(new ByteArrayInputStream(walletBytes));
+        }
+
+        long[] parallelTimes = new long[timedRuns];
+        for (int i = 0; i < timedRuns; i++) {
+            Stopwatch w = Stopwatch.createStarted();
+            WalletEx loaded = (WalletEx) parallelSerializer.readWallet(new ByteArrayInputStream(walletBytes));
+            parallelTimes[i] = w.elapsed().toMillis();
+            assertEquals(wallet.getTransactionCount(true), loaded.getTransactionCount(true));
+            assertEquals(wallet.getBalance(Wallet.BalanceType.ESTIMATED), loaded.getBalance(Wallet.BalanceType.ESTIMATED));
+        }
+
+        long serialAvg = average(serialTimes);
+        long serialMin = min(serialTimes);
+        long parallelAvg = average(parallelTimes);
+        long parallelMin = min(parallelTimes);
+
+        info("Serial   avg={}ms  min={}ms  runs={}", serialAvg, serialMin, formatTimes(serialTimes));
+        info("Parallel avg={}ms  min={}ms  runs={}", parallelAvg, parallelMin, formatTimes(parallelTimes));
+
+        if (parallelAvg < serialAvg) {
+            double speedup = (double) serialAvg / parallelAvg;
+            info("Parallel is {:.2f}x faster (avg)", speedup);
+        } else {
+            info("Serial is faster on this device — consider setParallelLoad(false)");
+        }
+    }
+
+    private static long average(long[] times) {
+        long sum = 0;
+        for (long t : times) sum += t;
+        return sum / times.length;
+    }
+
+    private static long min(long[] times) {
+        long m = times[0];
+        for (long t : times) if (t < m) m = t;
+        return m;
+    }
+
+    private static String formatTimes(long[] times) {
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < times.length; i++) {
+            if (i > 0) sb.append(", ");
+            sb.append(times[i]).append("ms");
+        }
+        return sb.append("]").toString();
+    }
+
+    @Test
     public void walletProtoSaveTest() {
         WalletProtobufSerializer serializer = new WalletProtobufSerializer();
         Protos.Wallet fullWalletProto = serializer.walletToProto(wallet);

@@ -102,6 +102,7 @@ public class WalletProtobufSerializer {
     private boolean requireAllExtensionsKnown = false;
     private int walletWriteBufferSize = CodedOutputStream.DEFAULT_BUFFER_SIZE;
     private boolean useAdaptiveBufferSizing = true;
+    private boolean parallelLoad = true;
 
     public interface WalletFactory {
         Wallet create(NetworkParameters params, KeyChainGroup keyChainGroup);
@@ -162,6 +163,21 @@ public class WalletProtobufSerializer {
      */
     public void setUseAdaptiveBufferSizing(boolean useAdaptiveBufferSizing) {
         this.useAdaptiveBufferSizing = useAdaptiveBufferSizing;
+    }
+
+    /**
+     * Enable or disable parallel loading of large wallets. When enabled, key chain parsing and
+     * transaction deserialization are performed concurrently across multiple threads.
+     * Disable this if benchmarking or if parallel loading is slower on the target device.
+     * Default is true.
+     * @param parallelLoad true to enable parallel loading, false to use single-threaded loading
+     */
+    public void setParallelLoad(boolean parallelLoad) {
+        this.parallelLoad = parallelLoad;
+    }
+
+    public boolean isParallelLoad() {
+        return parallelLoad;
     }
 
     /**
@@ -911,15 +927,17 @@ public class WalletProtobufSerializer {
 
         long methodStart = System.currentTimeMillis();
         int complexityScore = getProtoComplexityScore(walletProto);
-        boolean isLargeWallet = complexityScore > 10_000;
+        boolean isLargeWallet = parallelLoad && complexityScore > 10_000;
 
         if (isLargeWallet) {
-            final long[] keysTime = {0}, friendRecvTime = {0}, friendSendTime = {0}, txTime = {0};
+            final long[] keysTime = {0}, friendRecvTime = {0}, friendSendTime = {0}, txTime = {0}, addWalletTime = {0};
             final boolean hasEncryption = walletProto.hasEncryptionParameters();
             final KeyCrypterScrypt keyCrypter = hasEncryption ?
                     new KeyCrypterScrypt(walletProto.getEncryptionParameters()) : null;
 
-            ExecutorService executor = Executors.newFixedThreadPool(4,
+            int numThreads = Math.min(Runtime.getRuntime().availableProcessors(), 8);
+            // +3 extra threads so keys/friendRecv/friendSend don't compete with tx batch threads
+            ExecutorService executor = Executors.newFixedThreadPool(numThreads + 3,
                     new ContextPropagatingThreadFactory("wallet-deserializer"));
             try {
                 // Future 1: Parse key chain group (most expensive)
@@ -976,21 +994,31 @@ public class WalletProtobufSerializer {
                     }, executor);
                 }
 
-                // Futures 4+: Parse each transaction independently (no txMap writes yet)
+                // Parse transactions in batches (one future per thread) to avoid per-tx future overhead
                 Map<ByteString, Transaction> parsedTxs = new ConcurrentHashMap<>();
                 List<CompletableFuture<Void>> txFutures = new ArrayList<>();
                 long txFuturesStart = System.currentTimeMillis();
                 if (!forceReset) {
-                    log.info("readWallet: tx threads starting ({} transactions)", walletProto.getTransactionCount());
-                    for (Protos.Transaction txProto : walletProto.getTransactionList()) {
+                    List<Protos.Transaction> allTxProtos = walletProto.getTransactionList();
+                    // Use total pool size as batch count so freed key/friend threads can pick up tx work
+                    int txBatchCount = numThreads + 3;
+                    int txBatchSize = Math.max(1, (allTxProtos.size() + txBatchCount - 1) / txBatchCount);
+                    log.info("readWallet: tx threads starting ({} transactions, batchCount={}, batchSize={})",
+                            allTxProtos.size(), txBatchCount, txBatchSize);
+                    for (int i = 0; i < allTxProtos.size(); i += txBatchSize) {
+                        final int from = i;
+                        final int to = Math.min(i + txBatchSize, allTxProtos.size());
                         txFutures.add(CompletableFuture.runAsync(() -> {
-                            try {
-                                Transaction tx = parseTransactionFromProto(txProto, params);
-                                if (parsedTxs.putIfAbsent(txProto.getHash(), tx) != null)
-                                    throw new RuntimeException(new UnreadableWalletException(
-                                            "Wallet contained duplicate transaction " + byteStringToHash(txProto.getHash())));
-                            } catch (UnreadableWalletException e) {
-                                throw new RuntimeException(e);
+                            for (int j = from; j < to; j++) {
+                                Protos.Transaction txProto = allTxProtos.get(j);
+                                try {
+                                    Transaction tx = parseTransactionFromProto(txProto, params);
+                                    if (parsedTxs.putIfAbsent(txProto.getHash(), tx) != null)
+                                        throw new RuntimeException(new UnreadableWalletException(
+                                                "Wallet contained duplicate transaction " + byteStringToHash(txProto.getHash())));
+                                } catch (UnreadableWalletException e) {
+                                    throw new RuntimeException(e);
+                                }
                             }
                         }, executor));
                     }
@@ -1089,15 +1117,18 @@ public class WalletProtobufSerializer {
                     long connectStart = System.currentTimeMillis();
                     List<Protos.Transaction> txProtoList = walletProto.getTransactionList();
                     final WalletTransaction[] walletTxns = new WalletTransaction[txProtoList.size()];
-                    List<CompletableFuture<Void>> connectFutures = new ArrayList<>(txProtoList.size());
-                    for (int i = 0; i < txProtoList.size(); i++) {
-                        final int idx = i;
-                        final Protos.Transaction txProto = txProtoList.get(idx);
+                    int connectBatchSize = Math.max(1, (txProtoList.size() + numThreads + 2) / (numThreads + 3));
+                    List<CompletableFuture<Void>> connectFutures = new ArrayList<>(numThreads);
+                    for (int i = 0; i < txProtoList.size(); i += connectBatchSize) {
+                        final int from = i;
+                        final int to = Math.min(i + connectBatchSize, txProtoList.size());
                         connectFutures.add(CompletableFuture.runAsync(() -> {
-                            try {
-                                walletTxns[idx] = connectTransactionOutputs(params, txProto);
-                            } catch (UnreadableWalletException e) {
-                                throw new RuntimeException(e);
+                            for (int j = from; j < to; j++) {
+                                try {
+                                    walletTxns[j] = connectTransactionOutputs(params, txProtoList.get(j));
+                                } catch (UnreadableWalletException e) {
+                                    throw new RuntimeException(e);
+                                }
                             }
                         }, executor));
                     }
@@ -1117,9 +1148,12 @@ public class WalletProtobufSerializer {
                     log.info("readWallet: connectOutputs done in {}ms (parallel)", connectTime);
 
                     // Add to wallet sequentially (addWalletTransaction acquires write lock per call)
+                    long addWalletStart = System.currentTimeMillis();
                     for (WalletTransaction wtx : walletTxns) {
                         wallet.addWalletTransaction(wtx);
                     }
+                    addWalletTime[0] = System.currentTimeMillis() - addWalletStart;
+                    log.info("readWallet: addWalletTransactions done in {}ms ({} txs)", addWalletTime[0], walletTxns.length);
 
                     if (!walletProto.hasLastSeenBlockHash()) {
                         wallet.setLastBlockSeenHash(null);
@@ -1146,9 +1180,9 @@ public class WalletProtobufSerializer {
 
                 txMap.clear();
                 long totalTime = System.currentTimeMillis() - methodStart;
-                log.info("readWallet (parallel={}) timing: {}ms total, keys={}ms, friendRecv={}ms, friendSend={}ms, tx={}ms[{}tx], ext={}ms, connect={}ms",
-                        complexityScore, totalTime, keysTime[0], friendRecvTime[0], friendSendTime[0],
-                        txTime[0], walletProto.getTransactionCount(), extTime, connectTime);
+                log.info("readWallet (parallel={}, threads={}) timing: {}ms total, keys={}ms, friendRecv={}ms, friendSend={}ms, tx={}ms[{}tx], ext={}ms, connect={}ms, addWallet={}ms",
+                        complexityScore, numThreads, totalTime, keysTime[0], friendRecvTime[0], friendSendTime[0],
+                        txTime[0], walletProto.getTransactionCount(), extTime, connectTime, addWalletTime[0]);
                 return wallet;
             } finally {
                 executor.shutdown();
