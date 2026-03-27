@@ -25,6 +25,9 @@ import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
 
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+
 import java.util.Date;
 
 /**
@@ -34,6 +37,7 @@ public class BitcoinUIModel {
     private SimpleObjectProperty<Address> address = new SimpleObjectProperty<>();
     private SimpleObjectProperty<Coin> balance = new SimpleObjectProperty<>(Coin.ZERO);
     private SimpleDoubleProperty syncProgress = new SimpleDoubleProperty(-1);
+    private ObservableList<Transaction> transactions = FXCollections.observableArrayList();
     private ProgressBarUpdater syncProgressUpdater = new ProgressBarUpdater();
 
     public BitcoinUIModel() {
@@ -44,10 +48,14 @@ public class BitcoinUIModel {
     }
 
     public final void setWallet(Wallet wallet) {
-        wallet.addChangeEventListener(Platform::runLater, w -> updateBalance(wallet));
+        wallet.addChangeEventListener(Platform::runLater, w -> {
+            updateBalance(wallet);
+            updateTransactions(wallet);
+        });
         wallet.addCurrentKeyChangeEventListener(Platform::runLater, () -> updateAddress(wallet));
         updateBalance(wallet);
         updateAddress(wallet);
+        updateTransactions(wallet);
     }
 
     private void updateBalance(Wallet wallet) {
@@ -56,6 +64,10 @@ public class BitcoinUIModel {
 
     private void updateAddress(Wallet wallet) {
         address.set(wallet.currentReceiveAddress());
+    }
+
+    private void updateTransactions(Wallet wallet) {
+        transactions.setAll(wallet.getTransactionsByTime());
     }
 
     private class ProgressBarUpdater extends DownloadProgressTracker {
@@ -75,6 +87,8 @@ public class BitcoinUIModel {
     public DownloadProgressTracker getDownloadProgressTracker() { return syncProgressUpdater; }
 
     public ReadOnlyDoubleProperty syncProgressProperty() { return syncProgress; }
+
+    public ObservableList<Transaction> getTransactions() { return transactions; }
 
     public ReadOnlyObjectProperty<Address> addressProperty() {
         return address;

@@ -55,11 +55,7 @@
       </image>
     </ImageView>
     <ClickableBitcoinAddress fx:id="addressControl" layoutY="45.0" prefHeight="21.0" prefWidth="391.0" AnchorPane.leftAnchor="14.0" AnchorPane.rightAnchor="195.0" />
-    <StackPane layoutX="14.0" layoutY="81.0" prefHeight="249.0" prefWidth="572.0" style="-fx-border-color: lightgrey; -fx-border-style: dashed" AnchorPane.bottomAnchor="70.0" AnchorPane.leftAnchor="15.0" AnchorPane.rightAnchor="15.0" AnchorPane.topAnchor="81.0">
-      <children>
-        <Label text="Your content goes here" />
-      </children>
-    </StackPane>
+    <ListView fx:id="transactionList" AnchorPane.bottomAnchor="70.0" AnchorPane.leftAnchor="15.0" AnchorPane.rightAnchor="15.0" AnchorPane.topAnchor="81.0" />
     <HBox spacing="20" AnchorPane.rightAnchor="14.0" AnchorPane.topAnchor="17.0">
        <children>
            <Button onAction="#settingsClicked" style="-fx-base: white;" styleClass="fat-button" text="Settings" />

@@ -19,6 +19,7 @@ import javafx.beans.binding.Bindings;
 import javafx.beans.value.ObservableValue;
 import org.bitcoinj.core.listeners.DownloadProgressTracker;
 import org.bitcoinj.core.Coin;
+import org.bitcoinj.core.Transaction;
 import org.bitcoinj.utils.MonetaryFormat;
 import javafx.animation.FadeTransition;
 import javafx.animation.ParallelTransition;
@@ -26,6 +27,8 @@ import javafx.animation.TranslateTransition;
 import javafx.event.ActionEvent;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.ListCell;
+import javafx.scene.control.ListView;
 import javafx.scene.layout.HBox;
 import javafx.util.Duration;
 import wallettemplate.controls.ClickableBitcoinAddress;
@@ -33,6 +36,9 @@ import wallettemplate.controls.NotificationBarPane;
 import wallettemplate.utils.BitcoinUIModel;
 import wallettemplate.utils.easing.EasingMode;
 import wallettemplate.utils.easing.ElasticInterpolator;
+
+import java.text.DateFormat;
+import java.util.Date;
 
 import static wallettemplate.Main.bitcoin;
 
@@ -45,6 +51,7 @@ public class MainController {
     public Label balance;
     public Button sendMoneyOutBtn;
     public ClickableBitcoinAddress addressControl;
+    public ListView<Transaction> transactionList;
 
     private BitcoinUIModel model = new BitcoinUIModel();
     private NotificationBarPane.Item syncItem;
@@ -61,6 +68,26 @@ public class MainController {
         balance.textProperty().bind(createBalanceStringBinding(model.balanceProperty()));
         // Don't let the user click send money when the wallet is empty.
         sendMoneyOutBtn.disableProperty().bind(model.balanceProperty().isEqualTo(Coin.ZERO));
+
+        transactionList.setItems(model.getTransactions());
+        transactionList.setCellFactory(list -> new ListCell<Transaction>() {
+            private final DateFormat dateFormat = DateFormat.getDateTimeInstance(DateFormat.SHORT, DateFormat.SHORT);
+
+            @Override
+            protected void updateItem(Transaction tx, boolean empty) {
+                super.updateItem(tx, empty);
+                if (empty || tx == null) {
+                    setText(null);
+                } else {
+                    Coin value = tx.getValue(bitcoin.wallet());
+                    String sign = value.isPositive() ? "+" : "";
+                    Date date = tx.getUpdateTime();
+                    String dateStr = date != null ? dateFormat.format(date) : "Unknown date";
+                    String hash = tx.getTxId().toString();
+                    setText(String.format("%s   %s%s DASH   %s", dateStr, sign, MONETARY_FORMAT.format(value), hash));
+                }
+            }
+        });
 
         showBitcoinSyncMessage();
         model.syncProgressProperty().addListener(x -> {
