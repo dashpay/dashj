@@ -219,19 +219,19 @@ public class InstantSendManager implements RecoveredSignatureListener {
                     isLock.txid, hash, peer.hashCode());
 
             pendingInstantSendLocks.put(hash, new Pair<>((long)peer.hashCode(), isLock));
-
-            if (runWithoutThread) {
-                try {
-                    processPendingInstantSendLocks();
-                } catch (RuntimeException x) {
-                    if (x.getCause() instanceof BlockStoreException) {
-                        throw new VerificationException(x.getCause().getMessage());
-                    }
-                    throw x;
-                }
-            }
         } finally {
             lock.unlock();
+        }
+
+        if (runWithoutThread) {
+            try {
+                processPendingInstantSendLocks();
+            } catch (RuntimeException x) {
+                if (x.getCause() instanceof BlockStoreException) {
+                    throw new VerificationException(x.getCause().getMessage());
+                }
+                throw x;
+            }
         }
     }
 
@@ -716,7 +716,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
             if (db.getInstantSendLockByHash(hash) != null) {
                 // ISLock already verified and in DB. TX may have arrived late in the wallet
                 // (deferred case) — apply IX_LOCKED to it now if present.
-                updateWalletTransaction(islock.txid);
+                updateWalletTransaction(islock.txid, islock);
                 return;
             }
             otherIsLock = db.getInstantSendLockByTxid(islock.txid);
@@ -747,21 +747,25 @@ public class InstantSendManager implements RecoveredSignatureListener {
         }
 
         removeMempoolConflictsForLock(hash, islock);
-        updateWalletTransaction(islock.txid);
+        updateWalletTransaction(islock.txid, islock);
     }
 
-    /** apply Locked */
-    private void updateWalletTransaction(Sha256Hash txid) {
+    /** apply Locked and attach the ISLock to confidence for every matching wallet */
+    private void updateWalletTransaction(Sha256Hash txid, InstantSendLock islock) {
+        boolean found = false;
         for (Wallet wallet : wallets) {
             Transaction walletTx = wallet.getTransaction(txid);
             if (walletTx != null) {
                 TransactionConfidence confidence = walletTx.getConfidence();
+                confidence.setInstantSendLock(islock);
                 confidence.setIXType(TransactionConfidence.IXType.IX_LOCKED);
                 confidence.queueListeners(TransactionConfidence.Listener.ChangeReason.IX_TYPE);
-                return;
+                found = true;
             }
         }
-        log.debug("ignoring ISLock for txid {} — not a wallet transaction", txid);
+        if (!found) {
+            log.debug("ignoring ISLock for txid {} — not a wallet transaction", txid);
+        }
     }
 
     @Nullable
@@ -886,7 +890,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
         }
 
         for (Map.Entry<Sha256Hash, InstantSendLock> p : removeISLocks.entrySet()) {
-            updateWalletTransaction(p.getValue().txid);
+            updateWalletTransaction(p.getValue().txid, p.getValue());
         }
     }
     static final String INPUTLOCK_REQUESTID_PREFIX = "inlock";
