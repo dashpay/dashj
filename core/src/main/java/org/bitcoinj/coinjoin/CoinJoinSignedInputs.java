@@ -41,8 +41,8 @@ public class CoinJoinSignedInputs extends Message {
 
     @Override
     protected void parse() throws ProtocolException {
-        long numInputs = readVarInt();
-        inputs = new ArrayList<>();
+        int numInputs = readVarInt().intValue();
+        inputs = new ArrayList<>(numInputs);
 
         for (int i = 0; i < numInputs; i++) {
             TransactionInput input = new TransactionInput(params, null, payload, cursor);

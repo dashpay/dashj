@@ -197,9 +197,9 @@ public class CacheMultiMap<K, V> extends Message {
     protected void parse() throws ProtocolException {
         nMaxSize = readInt64();
         nCurrentSize = readInt64();
-        long size = readVarInt();
-        mapIndex = new LinkedHashMap<K, HashMap<V, CacheItem<K, V>>>();
-        listItems = new LinkedList<CacheItem<K, V>>();
+        int size = readVarInt().intValue();
+        mapIndex = new LinkedHashMap<>(size);
+        listItems = new LinkedList<>();
         for (int i = 0; i < size; ++i) {
             CacheItem<K, V> item = new CacheItem<K, V>(params, payload, cursor);
             cursor += item.getMessageSize();

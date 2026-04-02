@@ -50,7 +50,7 @@ public class GetQuorumRotationInfo extends AbstractQuorumRequest {
 
     @Override
     protected void parse() throws ProtocolException {
-        int count = (int)readVarInt();
+        int count = readVarInt().intValue();
         baseBlockHashes = new ArrayList<>(count);
         for (int i = 0; i < count; ++i) {
             baseBlockHashes.add(readHash());

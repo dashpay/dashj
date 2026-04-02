@@ -107,7 +107,7 @@ public class Headers2Message extends Message {
 
     @Override
     protected void parse() throws ProtocolException {
-        long numHeaders = readVarInt();
+        long numHeaders = readVarInt().longValue();
         log.info("Parsing headers2 message: numHeaders={}, payloadLength={}", numHeaders, payload.length);
 
         if (numHeaders > MAX_HEADERS) {

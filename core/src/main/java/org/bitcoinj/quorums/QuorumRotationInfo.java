@@ -86,7 +86,7 @@ public class QuorumRotationInfo extends AbstractDiffMessage {
             cursor += mnListDiffAtHMinus4C.getMessageSize();
         }
 
-        int size = (int)readVarInt();
+        int size = readVarInt().intValue();
         lastCommitmentPerIndex = new ArrayList<>(size);
         for (int i = 0; i < size; ++i) {
             FinalCommitment commitment = new FinalCommitment(params, payload, cursor);
@@ -94,7 +94,7 @@ public class QuorumRotationInfo extends AbstractDiffMessage {
             lastCommitmentPerIndex.add(commitment);
         }
 
-        size = (int)readVarInt();
+        size = readVarInt().intValue();
         quorumSnapshotList = new ArrayList<>(size);
         for (int i = 0; i < size; ++i) {
             QuorumSnapshot snapshot = new QuorumSnapshot(params, payload, cursor);
@@ -102,7 +102,7 @@ public class QuorumRotationInfo extends AbstractDiffMessage {
             quorumSnapshotList.add(snapshot);
         }
 
-        size = (int)readVarInt();
+        size = readVarInt().intValue();
         mnListDiffLists = new ArrayList<>(size);
         for (int i = 0; i < size; ++i) {
             SimplifiedMasternodeListDiff mnlistdiff = new SimplifiedMasternodeListDiff(params, payload, cursor, serializer);

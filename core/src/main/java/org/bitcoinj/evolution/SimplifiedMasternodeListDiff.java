@@ -81,13 +81,13 @@ public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
             version = 0;
         }
 
-        int size = (int)readVarInt();
+        int size = readVarInt().intValue();
         deletedMNs = new HashSet<>(size);
         for(int i = 0; i < size; ++i) {
             deletedMNs.add(readHash());
         }
 
-        size = (int)readVarInt();
+        size = readVarInt().intValue();
         mnList = new ArrayList<>(size);
         for (int i = 0; i < size; ++i) {
             SimplifiedMasternodeListEntry mn = new SimplifiedMasternodeListEntry(params, payload, cursor, serializer);
@@ -96,13 +96,13 @@ public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
         }
 
         // process quorum changes
-        size = (int)readVarInt();
+        size = readVarInt().intValue();
         deletedQuorums = new ArrayList<>(size);
         for(int i = 0; i < size; ++i) {
             deletedQuorums.add(new Pair<>((int)readBytes(1)[0], readHash()));
         }
 
-        size = (int)readVarInt();
+        size = readVarInt().intValue();
         newQuorums = new ArrayList<>(size);
         for(int i = 0; i < size; ++i) {
             FinalCommitment commitment = new FinalCommitment(params, payload, cursor);
@@ -112,13 +112,13 @@ public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
 
         // process quorum ChainlockSignatures
         if (protocolVersion >= NetworkParameters.ProtocolVersion.MNLISTDIFF_CHAINLOCKS.getBitcoinProtocolVersion()) {
-            size = (int)readVarInt();
+            size = readVarInt().intValue();
             quorumsCLSigs = new HashMap<>(size);
             for (int i = 0; i < size; ++i) {
                 BLSSignature signature = new BLSSignature(params, payload, cursor);
                 cursor += signature.getMessageSize();
 
-                int setSize = (int)readVarInt();
+                int setSize = readVarInt().intValue();
                 HashSet<Integer> heightSet = new HashSet<>(setSize);
                 for (int j = 0; j < setSize; ++j) {
                     int height = readUint16();

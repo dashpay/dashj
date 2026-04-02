@@ -134,11 +134,11 @@ public class CacheMap<K, V> extends ChildMessage {
     protected void parse() throws ProtocolException {
         nMaxSize = readInt64();
         nCurrentSize = readInt64();
-        long size = readVarInt();
-        mapIndex = new LinkedHashMap<K, CacheItem<K, V>>();
-        listItems = new LinkedList<CacheItem<K, V>>();
+        int size = readVarInt().intValue();
+        mapIndex = new LinkedHashMap<>(size);
+        listItems = new LinkedList<>();
         for (int i = 0; i < size; ++i) {
-            CacheItem<K, V> item = new CacheItem<K, V>(params, payload, cursor);
+            CacheItem<K, V> item = new CacheItem<>(params, payload, cursor);
             cursor += item.getMessageSize();
             listItems.add(item);
         }

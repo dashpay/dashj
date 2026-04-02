@@ -34,7 +34,7 @@ public class DeterministicMasternodeList extends Message {
     protected void parse() throws ProtocolException {
         blockHash = readHash();
         height = (int)readUint32();
-        int size = (int)readVarInt();
+        int size = readVarInt().intValue();
         mnMap = new HashMap<>(size);
         for(int i = 0; i < size; ++i)
         {
@@ -44,7 +44,7 @@ public class DeterministicMasternodeList extends Message {
             mnMap.put(hash, mn);
         }
 
-        size = (int)readVarInt();
+        size = readVarInt().intValue();
         mnUniquePropertyMap = new HashMap<>(size);
         for(long i = 0; i < size; ++i)
         {

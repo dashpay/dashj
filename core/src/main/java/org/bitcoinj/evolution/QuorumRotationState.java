@@ -1006,7 +1006,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
         quorumSnapshotCache.put(mnListAtHMinus3C.getBlockHash(), quorumSnapshotAtHMinus3C);
         quorumSnapshotCache.put(mnListAtHMinus4C.getBlockHash(), quorumSnapshotAtHMinus4C);
 
-        int size = (int)readVarInt(); // generally this should be 2, but could be 1
+        int size = readVarInt().intValue(); // generally this should be 2, but could be 1
         activeQuorumLists = new HashMap<>(size);
         for (int i = 0; i < size; ++i) {
             SimplifiedQuorumList activeQuorum = new SimplifiedQuorumList(params, payload, cursor, serializer);

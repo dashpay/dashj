@@ -104,7 +104,7 @@ public class SimplifiedMasternodeList extends Message {
         }
         blockHash = readHash();
         height = (int)readUint32();
-        int size = (int)readVarInt();
+        int size = readVarInt().intValue();
         mnMap = new HashMap<>(size);
         for(int i = 0; i < size; ++i)
         {
@@ -115,7 +115,7 @@ public class SimplifiedMasternodeList extends Message {
         }
 
         // read the number of properties, which should be zero
-        size = (int)readVarInt();
+        size = readVarInt().intValue();
         Preconditions.checkArgument(size == 0, "There is an offset error with this data file, rejecting...");
 
         // TODO: we need to find a way out of this

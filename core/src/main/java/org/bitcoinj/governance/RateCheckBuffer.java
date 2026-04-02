@@ -103,8 +103,8 @@ public class RateCheckBuffer extends ChildMessage {
 
     protected void parse()
     {
-        long size = readVarInt();
-        vecTimestamps = new ArrayList<Long>((int)size);
+        int size = readVarInt().intValue();
+        vecTimestamps = new ArrayList<>(size);
         for(int i = 0; i < size; ++i) {
             vecTimestamps.add(readInt64());
         }

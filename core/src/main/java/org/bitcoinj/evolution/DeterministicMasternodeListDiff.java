@@ -25,7 +25,7 @@ public class DeterministicMasternodeListDiff extends Message {
         prevBlockHash = readHash();
         blockHash = readHash();
         height = readUint32();
-        int size = (int)readVarInt();
+        int size = readVarInt().intValue();
         addedMNs = new HashMap<Sha256Hash, DeterministicMasternode>(size);
         for(int i = 0; i < size; ++i)
         {
@@ -34,7 +34,7 @@ public class DeterministicMasternodeListDiff extends Message {
             cursor += mn.getMessageSize();
             addedMNs.put(hash, mn);
         }
-        size = (int)readVarInt();
+        size = readVarInt().intValue();
         updatedMNs = new HashMap<Sha256Hash, DeterministicMasternodeState>(size);
         for(int i = 0; i < size; ++i)
         {
@@ -43,7 +43,7 @@ public class DeterministicMasternodeListDiff extends Message {
             cursor += state.getMessageSize();
             updatedMNs.put(hash, state);
         }
-        size = (int)readVarInt();
+        size = readVarInt().intValue();
         removedMNs = new HashSet<Sha256Hash>(size);
         for(int i = 0; i < size; ++i) {
             removedMNs.add(readHash());

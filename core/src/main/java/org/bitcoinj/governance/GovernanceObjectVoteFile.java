@@ -118,7 +118,7 @@ public class GovernanceObjectVoteFile extends Message {
 	@Override
 	protected void parse() throws ProtocolException {
 		nMemoryVotes = (int)readUint32();
-		int size = (int)readVarInt();
+		int size = readVarInt().intValue();
 		listVotes = new LinkedList<GovernanceVote>();
 		for(int i = 0; i < size; ++i) {
 			GovernanceVote vote = new GovernanceVote(params, payload, cursor);

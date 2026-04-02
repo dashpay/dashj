@@ -312,7 +312,7 @@ public abstract class Message {
         try {
             VarInt varint = new VarInt(payload, cursor + offset);
             cursor += offset + varint.getOriginalSizeInBytes();
-            return varint;
+            return varint.longValue();
         } catch (ArrayIndexOutOfBoundsException e) {
             throw new ProtocolException(e);
         }
@@ -377,12 +377,11 @@ public abstract class Message {
         }
     }
 
-    public ArrayList<Boolean> readBooleanArrayList()
-    {
+    public ArrayList<Boolean> readBooleanArrayList() {
         ArrayList<Boolean> vec = new ArrayList<>();
-        int size = (int)readVarInt();
+        int size = readVarInt().intValue();
 
-        byte[] vBytes = readBytes((int)((size + 7) / 8));
+        byte[] vBytes = readBytes(((size + 7) / 8));
 
         for (int p = 0; p < size; p++)
             vec.add((vBytes[p / 8] & (1 << (p % 8))) != 0);
@@ -398,7 +397,7 @@ public abstract class Message {
 
     public ArrayList<Integer> readIntArrayList()
     {
-        int size = (int)readVarInt();
+        int size = readVarInt().intValue();
         ArrayList<Integer> list = new ArrayList<>(size);
         for (int p = 0; p < size; p++) {
             list.add((int) readUint32());

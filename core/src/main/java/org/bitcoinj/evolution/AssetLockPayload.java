@@ -58,7 +58,7 @@ public class AssetLockPayload extends SpecialTxPayload {
     @Override
     protected void parse() throws ProtocolException {
         version = readBytes(1)[0];
-        int size = (int) readVarInt();
+        int size = readVarInt().intValue();
         creditOutputs = new ArrayList<>();
         for (int i = 0; i < size; ++i) {
             TransactionOutput output = new TransactionOutput(params, null, payload, cursor);

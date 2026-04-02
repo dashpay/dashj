@@ -73,7 +73,7 @@ public class SimplifiedQuorumList extends Message {
     protected void parse() throws ProtocolException {
         blockHash = readHash();
         height = (int)readUint32();
-        int size = (int)readVarInt();
+        int size = readVarInt().intValue();
         minableCommitmentsByQuorum = new HashMap<>(size);
         for(int i = 0; i < size; ++i)
         {
@@ -83,7 +83,7 @@ public class SimplifiedQuorumList extends Message {
             minableCommitmentsByQuorum.put(new Pair<>(type, hash), hash2);
         }
 
-        size = (int)readVarInt();
+        size = readVarInt().intValue();
         minableCommitments = new LinkedHashMap<>(size);
         for(long i = 0; i < size; ++i)
         {

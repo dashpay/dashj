@@ -71,7 +71,7 @@ public class InstantSendLock extends Message {
         if (protocolVersion >= NetworkParameters.ProtocolVersion.ISDLOCK.getBitcoinProtocolVersion()) {
             version = readBytes(1)[0];
         }
-        int countInputs = (int)readVarInt();
+        int countInputs = readVarInt().intValue();
         inputs = new ArrayList<>(countInputs);
         for(int i = 0; i < countInputs; ++i) {
             TransactionOutPoint outpoint = new TransactionOutPoint(params, payload, cursor);

@@ -264,7 +264,7 @@ public class GovernanceObject extends Message implements Serializable {
     void parseFromDisk() {
         nDeletionTime = readInt64();
         fExpired = readBytes(1)[0] == 0 ? false : true;
-        int size = (int)readVarInt();
+        int size = readVarInt().intValue();
         mapCurrentMNVotes = new HashMap<>();
         for(int i = 0; i < size; ++i) {
             TransactionOutPoint vin = new TransactionOutPoint(params, payload, offset);

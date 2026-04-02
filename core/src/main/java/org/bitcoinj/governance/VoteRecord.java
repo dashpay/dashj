@@ -25,7 +25,7 @@ public class VoteRecord extends Message {
 
     @Override
     protected void parse() throws ProtocolException {
-        int size = (int)readVarInt();
+        int size = readVarInt().intValue();
         mapInstances = new HashMap<Integer, VoteInstance>();
         for(int i = 0; i < size; ++i) {
             int value = (int)readUint32();

@@ -64,7 +64,7 @@ public class CoinbaseTx extends SpecialTxPayload {
         if(version >= CB_V19_VERSION) {
             merkleRootQuorums = readHash();
             if (version >= CB_V20_VERSION) {
-                bestCLHeightDiff = (int)readVarInt();
+                bestCLHeightDiff = readVarInt().intValue();
                 bestCLSignature = new BLSSignature(params, payload, cursor);
                 cursor += bestCLSignature.getMessageSize();
                 creditPoolBalance = Coin.valueOf(readInt64());

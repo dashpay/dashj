@@ -60,8 +60,8 @@ public class CoinJoinEntry extends Message {
 
     @Override
     protected void parse() throws ProtocolException {
-        long numInputs = readVarInt();
-        mixingInputs = new ArrayList<>();
+        int numInputs = readVarInt().intValue();
+        mixingInputs = new ArrayList<>(numInputs);
 
         for (int i = 0; i < numInputs; i++) {
             CoinJoinTransactionInput input = new CoinJoinTransactionInput(params, payload, cursor);
@@ -72,8 +72,8 @@ public class CoinJoinEntry extends Message {
         txCollateral = new Transaction(params, payload, cursor);
         cursor += txCollateral.getMessageSize();
 
-        long numOutputs = readVarInt();
-        mixingOutputs = new ArrayList<>();
+        int numOutputs = readVarInt().intValue();
+        mixingOutputs = new ArrayList<>(numOutputs);
 
         for (int i = 0; i < numOutputs; i++) {
             TransactionOutput output = new TransactionOutput(params, null, payload, cursor);

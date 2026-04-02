@@ -35,12 +35,12 @@ public class NetFullfilledRequestManager extends AbstractManager {
         lock.lock();
         int messageSize = 0;
         try {
-            int size = (int) readVarInt();
+            int size = readVarInt().intValue();
             messageSize += VarInt.sizeOf(size);
             mapFulfilledRequests = new HashMap<PeerAddress, HashMap<String, Long>>(size);
             for (int i = 0; i < size; ++i) {
                 messageSize += PeerAddress.MESSAGE_SIZE;
-                int size2 = (int) readVarInt();
+                int size2 = readVarInt().intValue();
                 messageSize += VarInt.sizeOf(size);
                 for (int j = 0; j < size2; ++j) {
                     cursor = messageSize;
@@ -59,11 +59,11 @@ public class NetFullfilledRequestManager extends AbstractManager {
     @Override
     protected void parse() throws ProtocolException {
 
-        int size = (int) readVarInt();
+        int size = readVarInt().intValue();
         mapFulfilledRequests = new HashMap<PeerAddress, HashMap<String, Long>>(size);
         for (int i = 0; i < size; ++i) {
             PeerAddress address = new PeerAddress(params, payload, offset, this, serializer.withProtocolVersion(0));
-            int size2 = (int) readVarInt();
+            int size2 = readVarInt().intValue();
             HashMap<String, Long> addressData = new HashMap<String, Long>(size2);
             for (int j = 0; j < size2; ++j) {
                 String message = readStr();

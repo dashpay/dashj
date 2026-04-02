@@ -72,7 +72,7 @@ public class MasternodeMetaDataManager extends AbstractManager {
     @Override
     protected void parse() throws ProtocolException {
         clear();
-        int size = (int)readVarInt();
+        int size = readVarInt().intValue();
         for (int i = 0; i< size; ++i) {
             MasternodeMetaInfo info = new MasternodeMetaInfo(params, payload, cursor);
             cursor += info.getMessageSize();

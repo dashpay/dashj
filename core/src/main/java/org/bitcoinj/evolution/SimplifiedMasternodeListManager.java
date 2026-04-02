@@ -234,7 +234,7 @@ public class SimplifiedMasternodeListManager extends MasternodeListManager {
     }
 
     private <T extends AbstractQuorumRequest, D extends AbstractDiffMessage> void parsePendingBlocks(AbstractQuorumState<T, D> state) {
-        int size = (int)readVarInt();
+        int size = readVarInt().intValue();
         ByteBuffer buffer = ByteBuffer.allocate(StoredBlock.COMPACT_SERIALIZED_SIZE);
         for(int i = 0; i < size; ++i) {
             buffer.put(readBytes(StoredBlock.COMPACT_SERIALIZED_SIZE));

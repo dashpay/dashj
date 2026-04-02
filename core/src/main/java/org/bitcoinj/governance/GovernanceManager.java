@@ -143,7 +143,7 @@ public class GovernanceManager extends AbstractManager {
         String version = readStr();
 
         //READWRITE(mapErasedGovernanceObjects);
-        int size = (int)readVarInt();
+        int size = readVarInt().intValue();
         mapErasedGovernanceObjects = new HashMap<Sha256Hash, Long>(size);
         for(int i = 0; i < size; ++i) {
             Sha256Hash hash = readHash();
@@ -158,7 +158,7 @@ public class GovernanceManager extends AbstractManager {
         mapOrphanVotes = new CacheMultiMap<Sha256Hash, Pair<GovernanceVote, Long>>(params, payload, cursor);
         cursor += mapOrphanVotes.getMessageSize();
         //READWRITE(mapObjects);
-        size = (int)readVarInt();
+        size = readVarInt().intValue();
         mapObjects = new HashMap<Sha256Hash, GovernanceObject>(size);
         for(int i = 0; i < size; ++i) {
             Sha256Hash hash = readHash();
@@ -168,7 +168,7 @@ public class GovernanceManager extends AbstractManager {
             mapObjects.put(hash, govobj);
         }
         //READWRITE(mapWatchdogObjects);
-        size = (int)readVarInt();
+        size = readVarInt().intValue();
         mapWatchdogObjects = new HashMap<Sha256Hash, Long>(size);
         for(int i = 0; i < size; ++i) {
             Sha256Hash hash = readHash();
@@ -180,7 +180,7 @@ public class GovernanceManager extends AbstractManager {
         //READWRITE(nTimeWatchdogCurrent);
         nTimeWatchdogCurrent = readInt64();
         //READWRITE(mapLastMasternodeObject);
-        size = (int)readVarInt();
+        size = readVarInt().intValue();
         mapLastMasternodeObject = new HashMap<TransactionOutPoint, LastObjectRecord>(size);
         for(int i = 0; i < size; ++i) {
             TransactionOutPoint outPoint = new TransactionOutPoint(params, payload, cursor);
