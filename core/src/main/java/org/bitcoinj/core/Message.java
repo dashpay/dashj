@@ -312,7 +312,7 @@ public abstract class Message {
         try {
             VarInt varint = new VarInt(payload, cursor + offset);
             cursor += offset + varint.getOriginalSizeInBytes();
-            return varint.longValue();
+            return varint;
         } catch (ArrayIndexOutOfBoundsException e) {
             throw new ProtocolException(e);
         }
