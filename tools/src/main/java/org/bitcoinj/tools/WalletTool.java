@@ -812,7 +812,7 @@ public class WalletTool implements Callable<Integer> {
     private void send(CoinSelector coinSelector, List<String> outputs, Coin feePerVkb, String lockTimeStr,
                       boolean allowUnconfirmed, boolean isCoinJoin, boolean returnChange)
             throws VerificationException {
-        Coin balance = isCoinJoin ? wallet.getBalance(BalanceType.COINJOIN) : (coinSelector != null ? (wallet.getBalance(coinSelector) : wallet.getBalance(allowUnconfirmed ?
+        Coin balance = isCoinJoin ? wallet.getBalance(BalanceType.COINJOIN) : (coinSelector != null ? wallet.getBalance(coinSelector) : wallet.getBalance(allowUnconfirmed ?
                 BalanceType.ESTIMATED : BalanceType.AVAILABLE));
         // Convert the input strings to outputs.
         Transaction t = new Transaction(params);
