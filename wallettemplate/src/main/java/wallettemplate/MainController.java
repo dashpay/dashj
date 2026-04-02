@@ -111,7 +111,7 @@ public class MainController extends MainWindowController {
                 if (empty || tx == null) {
                     setText(null);
                 } else {
-                    Coin value = tx.getValue(bitcoin.wallet());
+                    Coin value = tx.getValue(app.walletAppKit().wallet());
                     String sign = value.isPositive() ? "+" : "";
                     Date date = tx.getUpdateTime();
                     String dateStr = date != null ? dateFormat.format(date) : "Unknown date";
