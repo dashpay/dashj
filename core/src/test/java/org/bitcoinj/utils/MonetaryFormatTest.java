@@ -190,7 +190,7 @@ public class MonetaryFormatTest {
     public void sat() throws Exception {
         assertEquals("0", format(ZERO, 8, 0));
         assertEquals("100000000", format(COIN, 8, 0));
-        assertEquals("2100000000000000", format(NetworkParameters.MAX_MONEY, 8, 0));
+        assertEquals("2200000000000000", format(NetworkParameters.MAX_MONEY, 8, 0));
     }
 
     private String format(Coin coin, int shift, int minDecimals, int... decimalGroups) {
@@ -222,7 +222,7 @@ public class MonetaryFormatTest {
         assertEquals("DASH 0.00", MonetaryFormat.BTC.format(Coin.ZERO).toString());
         assertEquals("mDASH 0.00", MonetaryFormat.MBTC.format(Coin.ZERO).toString());
         assertEquals("µDASH 0", MonetaryFormat.UBTC.format(Coin.ZERO).toString());
-         assertEquals("sat 0", MonetaryFormat.SAT.format(Coin.ZERO).toString());
+         assertEquals("duffs 0", MonetaryFormat.SAT.format(Coin.ZERO).toString());
     }
 
     @Test

@@ -63,7 +63,7 @@ public final class MonetaryFormat {
     /** Currency code for base 1/1000000 Bitcoin. */
     public static final String CODE_UBTC = "µDASH";
     /** Currency code for base 1 satoshi. */
-    public static final String CODE_SAT = "sat";
+    public static final String CODE_SAT = "duffs";
     /** Currency symbol for base 1 Bitcoin. */
     public static final String SYMBOL_BTC = "\u00d0";
     /** Currency symbol for base 1/1000 Bitcoin. */
