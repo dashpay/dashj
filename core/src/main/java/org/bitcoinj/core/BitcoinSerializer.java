@@ -327,7 +327,7 @@ public class BitcoinSerializer extends MessageSerializer {
         } else if(command.equals("getmnlistd")) {
             return new GetSimplifiedMasternodeListDiff(params, payloadBytes);
         } else if(command.equals("mnlistdiff")) {
-            return new SimplifiedMasternodeListDiff(params, payloadBytes, protocolVersion);
+            return new SimplifiedMasternodeListDiff(params, payloadBytes, params.getDefaultSerializer().withProtocolVersion(protocolVersion));
         } else if(command.equals("senddsq")) {
             return new SendCoinJoinQueue(params, payloadBytes);
         } else if(command.equals("qsendrecsigs")) {
@@ -339,17 +339,17 @@ public class BitcoinSerializer extends MessageSerializer {
         } else if(command.equals("clsig")) {
             return new ChainLockSignature(params, payloadBytes, BLSScheme.isLegacyDefault());
         } else if(command.equals("qrinfo")) {
-            return new QuorumRotationInfo(params, payloadBytes, protocolVersion);
+            return new QuorumRotationInfo(params, payloadBytes, params.getDefaultSerializer().withProtocolVersion(protocolVersion));
         } else if(command.equals("dssu")) {
-            return new CoinJoinStatusUpdate(params, payloadBytes, protocolVersion);
+            return new CoinJoinStatusUpdate(params, payloadBytes, params.getDefaultSerializer().withProtocolVersion(protocolVersion));
         } else if (command.equals("dsq")) {
-            return new CoinJoinQueue(params, payloadBytes, protocolVersion);
+            return new CoinJoinQueue(params, payloadBytes, params.getDefaultSerializer().withProtocolVersion(protocolVersion));
         } else if (command.equals("dsf")) {
             return new CoinJoinFinalTransaction(params, payloadBytes);
         } else if (command.equals("dsc")) {
             return new CoinJoinComplete(params, payloadBytes);
         } else if (command.equals("dstx")) {
-            return new CoinJoinBroadcastTx(params, payloadBytes, protocolVersion);
+            return new CoinJoinBroadcastTx(params, payloadBytes, params.getDefaultSerializer().withProtocolVersion(protocolVersion));
         } else if(command.equals("dsa")) {
             return new CoinJoinAccept(params, payloadBytes);
         } else if(command.equals("dsi")) {

@@ -17,6 +17,7 @@
 package org.bitcoinj.quorums;
 
 import org.bitcoinj.core.DualBlockChain;
+import org.bitcoinj.core.MessageSerializer;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.ProtocolException;
 import org.bitcoinj.core.Sha256Hash;
@@ -51,8 +52,8 @@ public class QuorumRotationInfo extends AbstractDiffMessage {
     ArrayList<QuorumSnapshot> quorumSnapshotList;
     ArrayList<SimplifiedMasternodeListDiff> mnListDiffLists;
 
-    public QuorumRotationInfo(NetworkParameters params, byte [] payload, int protocolVersion) {
-        super(params, payload, 0, protocolVersion);
+    public QuorumRotationInfo(NetworkParameters params, byte [] payload, MessageSerializer serializer) {
+        super(params, payload, 0, serializer);
     }
 
     @Override
@@ -65,15 +66,15 @@ public class QuorumRotationInfo extends AbstractDiffMessage {
         quorumSnapshotAtHMinus3C = new QuorumSnapshot(params, payload, cursor);
         cursor += quorumSnapshotAtHMinus3C.getMessageSize();
 
-        mnListDiffTip = new SimplifiedMasternodeListDiff(params, payload, cursor, protocolVersion);
+        mnListDiffTip = new SimplifiedMasternodeListDiff(params, payload, cursor, serializer);
         cursor += mnListDiffTip.getMessageSize();
-        mnListDiffAtH = new SimplifiedMasternodeListDiff(params, payload, cursor, protocolVersion);
+        mnListDiffAtH = new SimplifiedMasternodeListDiff(params, payload, cursor, serializer);
         cursor += mnListDiffAtH.getMessageSize();
-        mnListDiffAtHMinusC = new SimplifiedMasternodeListDiff(params, payload, cursor, protocolVersion);
+        mnListDiffAtHMinusC = new SimplifiedMasternodeListDiff(params, payload, cursor, serializer);
         cursor += mnListDiffAtHMinusC.getMessageSize();
-        mnListDiffAtHMinus2C = new SimplifiedMasternodeListDiff(params, payload, cursor, protocolVersion);
+        mnListDiffAtHMinus2C = new SimplifiedMasternodeListDiff(params, payload, cursor, serializer);
         cursor += mnListDiffAtHMinus2C.getMessageSize();
-        mnListDiffAtHMinus3C = new SimplifiedMasternodeListDiff(params, payload, cursor, protocolVersion);
+        mnListDiffAtHMinus3C = new SimplifiedMasternodeListDiff(params, payload, cursor, serializer);
         cursor += mnListDiffAtHMinus3C.getMessageSize();
 
         // extra share?
@@ -81,7 +82,7 @@ public class QuorumRotationInfo extends AbstractDiffMessage {
         if (extraShare) {
             quorumSnapshotAtHMinus4C = new QuorumSnapshot(params, payload, cursor);
             cursor += quorumSnapshotAtHMinus4C.getMessageSize();
-            mnListDiffAtHMinus4C = new SimplifiedMasternodeListDiff(params, payload, cursor, protocolVersion);
+            mnListDiffAtHMinus4C = new SimplifiedMasternodeListDiff(params, payload, cursor, serializer);
             cursor += mnListDiffAtHMinus4C.getMessageSize();
         }
 
@@ -104,7 +105,7 @@ public class QuorumRotationInfo extends AbstractDiffMessage {
         size = (int)readVarInt();
         mnListDiffLists = new ArrayList<>(size);
         for (int i = 0; i < size; ++i) {
-            SimplifiedMasternodeListDiff mnlistdiff = new SimplifiedMasternodeListDiff(params, payload, cursor, protocolVersion);
+            SimplifiedMasternodeListDiff mnlistdiff = new SimplifiedMasternodeListDiff(params, payload, cursor, serializer);
             cursor += mnlistdiff.getMessageSize();
             mnListDiffLists.add(mnlistdiff);
         }

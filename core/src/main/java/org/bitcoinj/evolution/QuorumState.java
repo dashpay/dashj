@@ -21,6 +21,7 @@ import com.google.common.collect.Lists;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.DualBlockChain;
 import org.bitcoinj.core.MasternodeSync;
+import org.bitcoinj.core.MessageSerializer;
 import org.bitcoinj.core.Peer;
 import org.bitcoinj.core.PeerGroup;
 import org.bitcoinj.core.ProtocolException;
@@ -72,8 +73,8 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
         init();
     }
 
-    public QuorumState(Context context, MasternodeListSyncOptions syncOptions, byte [] payload, int offset, int protocolVersion) {
-        super(context.getParams(), payload, offset, protocolVersion);
+    public QuorumState(Context context, MasternodeListSyncOptions syncOptions, byte [] payload, int offset, MessageSerializer serializer) {
+        super(context.getParams(), payload, offset, serializer);
         this.context = context;
         this.syncOptions = syncOptions;
         finishInitialization();
@@ -99,7 +100,7 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
 
     @Override
     SimplifiedMasternodeListDiff loadDiffMessageFromBuffer(byte[] buffer, int protocolVersion) {
-        return new SimplifiedMasternodeListDiff(params, buffer, protocolVersion);
+        return new SimplifiedMasternodeListDiff(params, buffer, serializer.withProtocolVersion(protocolVersion));
     }
 
     @Override
@@ -216,7 +217,7 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
 
     @Override
     protected void parse() throws ProtocolException {
-        mnList = new SimplifiedMasternodeList(params, payload, cursor, serializer.getProtocolVersion());
+        mnList = new SimplifiedMasternodeList(params, payload, cursor, serializer);
         cursor += mnList.getMessageSize();
 
         // specify an empty quorumList for now
@@ -225,7 +226,7 @@ public class QuorumState extends AbstractQuorumState<GetSimplifiedMasternodeList
     }
 
     public int parseQuorums(byte [] payload, int offset) {
-        quorumList = new SimplifiedQuorumList(params, payload, offset, serializer.getProtocolVersion());
+        quorumList = new SimplifiedQuorumList(params, payload, offset, serializer);
         return quorumList.getMessageSize();
     }
 

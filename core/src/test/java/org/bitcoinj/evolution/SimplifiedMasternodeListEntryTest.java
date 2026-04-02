@@ -36,7 +36,7 @@ public class SimplifiedMasternodeListEntryTest {
     @Test
     public void readBytesV1Test() {
         byte[] smle = Utils.HEX.decode("318c32ec1598fa8f38dc76e28d15c00c20553c7020161a4c64742524a18465c39b2d789571a3b223a5365fbde69b3fe7143c4f9ebc6293afb84d340f0000000000000000000000000000ffff23a3e2204e1f08b4c1a8b9c1402ea84afe7c47f7e98d657df873b9747a0e4a497120ec62c81f314ad91a6f3384648e7e60f2734554f7f4c0fe75eec22907d6b043edb0df74ccc7b85a4500");
-        SimplifiedMasternodeListEntry entry = new SimplifiedMasternodeListEntry(UNITTEST, smle, 0, NetworkParameters.ProtocolVersion.BLS_LEGACY.getBitcoinProtocolVersion());
+        SimplifiedMasternodeListEntry entry = new SimplifiedMasternodeListEntry(UNITTEST, smle, 0, UNITTEST.getDefaultSerializer().withProtocolVersion(NetworkParameters.ProtocolVersion.BLS_LEGACY.getBitcoinProtocolVersion()));
         assertEquals(1, entry.version);
         assertEquals(0, entry.getType());
         assertEquals("c36584a1242574644c1a1620703c55200cc0158de276dc388ffa9815ec328c31", entry.proRegTxHash.toString());
@@ -52,7 +52,7 @@ public class SimplifiedMasternodeListEntryTest {
     @Test
     public void readBytesV2Test() {
         byte[] smle = Utils.HEX.decode("0200e7aef4f585df3def44b855219ae93d6e8cc49a8c96658c5cc0813c48f5384c33e2999069d702d61d852a74b1e07d6f58101e0352d84043e866ff7946bdf5987f00000000000000000000ffff7f0000012f3197fe8172fd3207d71125a053ff32266e11110c06c1184d5be0a8118d0131d6119b138ec4d0398e7eacc5e16a75f718ed796c3a4cab668936c1f6d0945a7b97d7c0fee7cf0101002caa114755a4648d422a5caa5c915597f8c733b8e146");
-        SimplifiedMasternodeListEntry entry = new SimplifiedMasternodeListEntry(UNITTEST, smle, 0, NetworkParameters.ProtocolVersion.CURRENT.getBitcoinProtocolVersion());
+        SimplifiedMasternodeListEntry entry = new SimplifiedMasternodeListEntry(UNITTEST, smle, 0, UNITTEST.getDefaultSerializer());
         assertEquals(2, entry.version);
         assertEquals(1, entry.getType());
         assertEquals("334c38f5483c81c05c8c65968c9ac48c6e3de99a2155b844ef3ddf85f5f4aee7", entry.proRegTxHash.toString());

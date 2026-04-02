@@ -44,8 +44,8 @@ public class MasternodeAddress extends NetAddress {
     /**
      * Construct a peer address from a serialized payload.
      */
-    public MasternodeAddress(NetworkParameters params, byte[] payload, int offset, int protocolVersion) throws ProtocolException {
-        super(params, payload, offset, protocolVersion);
+    public MasternodeAddress(NetworkParameters params, byte[] payload, int offset, MessageSerializer serializer) throws ProtocolException {
+        super(params, payload, offset, serializer);
     }
 
     /**
@@ -53,12 +53,11 @@ public class MasternodeAddress extends NetAddress {
      * @param params NetworkParameters object.
      * @param payload Bitcoin protocol formatted byte array containing message content.
      * @param offset The location of the first payload byte within the array.
-     * @param protocolVersion Bitcoin protocol version.
      * @param serializer the serializer to use for this message.
      * @throws ProtocolException
      */
-    public MasternodeAddress(NetworkParameters params, byte[] payload, int offset, int protocolVersion, Message parent, MessageSerializer serializer) throws ProtocolException {
-        super(params, payload, offset, protocolVersion, parent, serializer);
+    public MasternodeAddress(NetworkParameters params, byte[] payload, int offset, Message parent, MessageSerializer serializer) throws ProtocolException {
+        super(params, payload, offset, parent, serializer);
     }
 
 

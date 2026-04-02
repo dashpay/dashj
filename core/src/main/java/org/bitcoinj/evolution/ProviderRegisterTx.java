@@ -82,7 +82,7 @@ public class ProviderRegisterTx extends SpecialTxPayload {
         mode = readUint16();
         collateralOutpoint = new TransactionOutPoint(params, payload, cursor);
         cursor += collateralOutpoint.getMessageSize();
-        address = new MasternodeAddress(params, payload, cursor, params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.CURRENT));
+        address = new MasternodeAddress(params, payload, cursor, params.getDefaultSerializer().withProtocolVersion(NetworkParameters.ProtocolVersion.CURRENT.getBitcoinProtocolVersion()));
         cursor += address.getMessageSize();
 
         keyIDOwner = new KeyId(params, payload, cursor);

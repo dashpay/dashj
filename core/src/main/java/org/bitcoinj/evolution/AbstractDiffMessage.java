@@ -19,6 +19,7 @@ package org.bitcoinj.evolution;
 
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.Message;
+import org.bitcoinj.core.MessageSerializer;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Utils;
 import org.slf4j.Logger;
@@ -43,8 +44,8 @@ public abstract class AbstractDiffMessage extends Message {
         super(params);
     }
 
-    protected AbstractDiffMessage(NetworkParameters params, byte [] payload, int offset, int protocolVersion) {
-        super(params, payload, offset, protocolVersion);
+    protected AbstractDiffMessage(NetworkParameters params, byte [] payload, int offset, MessageSerializer serializer) {
+        super(params, payload, offset, serializer, UNKNOWN_LENGTH);
     }
 
     protected abstract String getShortName();

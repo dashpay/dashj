@@ -26,7 +26,7 @@ import java.io.OutputStream;
 public class ChainLockSignature extends Message {
 
     static final String CLSIG_REQUESTID_PREFIX = "clsig";
-
+    static final int MESSAGE_SIZE = 4 + 32 + BLSSignature.BLS_CURVE_SIG_SIZE;
     long height;
     Sha256Hash blockHash;
     BLSSignature signature;
@@ -42,7 +42,7 @@ public class ChainLockSignature extends Message {
     }
 
     public ChainLockSignature(NetworkParameters params, byte [] payload, boolean legacy) {
-        super(params, payload, 0, (legacy ? NetworkParameters.ProtocolVersion.BLS_LEGACY : NetworkParameters.ProtocolVersion.BLS_BASIC).getBitcoinProtocolVersion());
+        super(params, payload, 0, params.getDefaultSerializer().withProtocolVersion((legacy ? NetworkParameters.ProtocolVersion.BLS_LEGACY : NetworkParameters.ProtocolVersion.BLS_BASIC).getBitcoinProtocolVersion()), MESSAGE_SIZE);
         this.legacy = legacy;
     }
 

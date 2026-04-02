@@ -19,6 +19,7 @@ import com.google.common.annotations.VisibleForTesting;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.MasternodeSignature;
 import org.bitcoinj.core.Message;
+import org.bitcoinj.core.MessageSerializer;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.ProtocolException;
 import org.bitcoinj.core.Sha256Hash;
@@ -45,7 +46,7 @@ import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_ENTRY_MAX_SIZE;
 
 // dstx
 public class CoinJoinBroadcastTx extends Message {
-    private static final Logger log = LoggerFactory.getLogger(CoinJoinQueue.class);
+    private static final Logger log = LoggerFactory.getLogger(CoinJoinBroadcastTx.class);
 
     private Transaction tx;
     private Sha256Hash proTxHash;
@@ -56,8 +57,8 @@ public class CoinJoinBroadcastTx extends Message {
     // when corresponding tx is 0-confirmed or conflicted, nConfirmedHeight is -1
     int confirmedHeight = -1;
 
-    public CoinJoinBroadcastTx(NetworkParameters params, byte[] payload, int protocolVersion) {
-        super(params, payload, 0, protocolVersion);
+    public CoinJoinBroadcastTx(NetworkParameters params, byte[] payload, MessageSerializer serializer) {
+        super(params, payload, 0, serializer, UNKNOWN_LENGTH);
     }
 
     public CoinJoinBroadcastTx(

@@ -56,7 +56,7 @@ public class QuorumRotationInfoTest {
     public void core18RoundTripTest() throws IOException {
         BLSScheme.setLegacyDefault(true);
         payloadOne = loadQRInfo("qrinfo--1-24868.dat");
-        QuorumRotationInfo quorumRotationInfo = new QuorumRotationInfo(PARAMS, payloadOne, 70220);
+        QuorumRotationInfo quorumRotationInfo = new QuorumRotationInfo(PARAMS, payloadOne, PARAMS.getDefaultSerializer().withProtocolVersion(70220));
         assertArrayEquals(payloadOne, quorumRotationInfo.bitcoinSerialize());
 
         assertTrue(quorumRotationInfo.hasChanges());
@@ -69,7 +69,7 @@ public class QuorumRotationInfoTest {
     @Test
     public void qrinfo_70227() throws IOException {
         payloadOne = loadQRInfo("qrinfo-mainnet-0-1888473_70227.dat");
-        QuorumRotationInfo quorumRotationInfo = new QuorumRotationInfo(MAINNET, payloadOne, 70227);
+        QuorumRotationInfo quorumRotationInfo = new QuorumRotationInfo(MAINNET, payloadOne, PARAMS.getDefaultSerializer().withProtocolVersion(70227));
         assertArrayEquals(payloadOne, quorumRotationInfo.bitcoinSerialize());
 
         assertTrue(quorumRotationInfo.hasChanges());
@@ -84,7 +84,7 @@ public class QuorumRotationInfoTest {
     public void qrinfo_70228_beforeActivation() throws IOException {
         BLSScheme.setLegacyDefault(true); // the qrinfo will set the scheme to basic
         payloadOne = loadQRInfo("qrinfo-testnet-0-849809_70228-before19.2HF.dat");
-        QuorumRotationInfo quorumRotationInfo = new QuorumRotationInfo(PARAMS, payloadOne, 70228);
+        QuorumRotationInfo quorumRotationInfo = new QuorumRotationInfo(PARAMS, payloadOne, PARAMS.getDefaultSerializer().withProtocolVersion(70228));
         assertArrayEquals(payloadOne, quorumRotationInfo.bitcoinSerialize());
 
         assertTrue(quorumRotationInfo.hasChanges());
@@ -99,7 +99,7 @@ public class QuorumRotationInfoTest {
     public void qrinfo_70228_afterActivation() throws IOException {
         BLSScheme.setLegacyDefault(true); // the qrinfo will set the scheme to basic
         payloadOne = loadQRInfo("qrinfo-testnet-0-850806-70228-after19.2HF.dat");
-        QuorumRotationInfo quorumRotationInfo = new QuorumRotationInfo(PARAMS, payloadOne, 70228);
+        QuorumRotationInfo quorumRotationInfo = new QuorumRotationInfo(PARAMS, payloadOne, PARAMS.getDefaultSerializer().withProtocolVersion(70228));
         assertArrayEquals(payloadOne, quorumRotationInfo.bitcoinSerialize());
 
         assertTrue(quorumRotationInfo.hasChanges());
@@ -114,7 +114,7 @@ public class QuorumRotationInfoTest {
     public void qrinfo_70230_afterActivation() throws IOException {
         BLSScheme.setLegacyDefault(true); // the qrinfo will set the scheme to basic
         payloadOne = loadQRInfo("qrinfo-testnet-0-905770-70230-after20.HF.dat");
-        QuorumRotationInfo quorumRotationInfo = new QuorumRotationInfo(PARAMS, payloadOne, 70230);
+        QuorumRotationInfo quorumRotationInfo = new QuorumRotationInfo(PARAMS, payloadOne, PARAMS.getDefaultSerializer().withProtocolVersion(70230));
         assertArrayEquals(payloadOne, quorumRotationInfo.bitcoinSerialize());
 
         assertTrue(quorumRotationInfo.hasChanges());
@@ -129,7 +129,7 @@ public class QuorumRotationInfoTest {
     @Test
     public void qrinfo_70230() throws IOException {
         payloadOne = loadQRInfo("qrinfo-mainnet-0-2028764-70230.dat");
-        QuorumRotationInfo quorumRotationInfo = new QuorumRotationInfo(MAINNET, payloadOne, 702230);
+        QuorumRotationInfo quorumRotationInfo = new QuorumRotationInfo(MAINNET, payloadOne, PARAMS.getDefaultSerializer().withProtocolVersion(702230));
         assertArrayEquals(payloadOne, quorumRotationInfo.bitcoinSerialize());
 
         assertTrue(quorumRotationInfo.hasChanges());

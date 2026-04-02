@@ -56,8 +56,8 @@ public class SimplifiedQuorumList extends Message {
         isFirstQuorumCheck = true;
     }
 
-    public SimplifiedQuorumList(NetworkParameters params, byte [] payload, int offset, int protocolVersion) {
-        super(params, payload, offset, protocolVersion);
+    public SimplifiedQuorumList(NetworkParameters params, byte [] payload, int offset, MessageSerializer serializer) {
+        super(params, payload, offset, serializer, UNKNOWN_LENGTH);
     }
 
     public SimplifiedQuorumList(SimplifiedQuorumList other) {

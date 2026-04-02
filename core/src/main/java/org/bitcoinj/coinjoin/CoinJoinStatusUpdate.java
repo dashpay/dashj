@@ -16,6 +16,7 @@
 package org.bitcoinj.coinjoin;
 
 import org.bitcoinj.core.Message;
+import org.bitcoinj.core.MessageSerializer;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.ProtocolException;
 import org.bitcoinj.core.Utils;
@@ -30,8 +31,8 @@ public class CoinJoinStatusUpdate extends Message {
     private PoolStatusUpdate statusUpdate;
     private PoolMessage messageID;
 
-    public CoinJoinStatusUpdate(NetworkParameters params, byte[] payload, int protocolVersion) {
-        super(params, payload, 0, protocolVersion);
+    public CoinJoinStatusUpdate(NetworkParameters params, byte[] payload, MessageSerializer serializer) {
+        super(params, payload, 0, serializer, UNKNOWN_LENGTH);
     }
 
     public CoinJoinStatusUpdate(

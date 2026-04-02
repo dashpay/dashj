@@ -62,7 +62,7 @@ public class NetFullfilledRequestManager extends AbstractManager {
         int size = (int) readVarInt();
         mapFulfilledRequests = new HashMap<PeerAddress, HashMap<String, Long>>(size);
         for (int i = 0; i < size; ++i) {
-            PeerAddress address = new PeerAddress(params, payload, offset, 0);
+            PeerAddress address = new PeerAddress(params, payload, offset, this, serializer.withProtocolVersion(0));
             int size2 = (int) readVarInt();
             HashMap<String, Long> addressData = new HashMap<String, Long>(size2);
             for (int j = 0; j < size2; ++j) {

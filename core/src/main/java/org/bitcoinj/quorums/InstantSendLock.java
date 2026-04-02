@@ -61,8 +61,8 @@ public class InstantSendLock extends Message {
     }
 
     public InstantSendLock(NetworkParameters params, byte [] payload, int version) {
-        super(params, payload, 0, version == ISDLOCK_VERSION ?
-                params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.ISDLOCK) : 0);
+        super(params, payload, 0, params.getDefaultSerializer().withProtocolVersion(version == ISDLOCK_VERSION ?
+                NetworkParameters.ProtocolVersion.ISDLOCK.getBitcoinProtocolVersion() : 0), UNKNOWN_LENGTH);
     }
 
     @Override

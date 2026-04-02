@@ -9,7 +9,7 @@ import java.io.OutputStream;
 public class DeterministicMasternode extends Masternode {
 
     public DeterministicMasternode(NetworkParameters params, byte [] payload, int cursor) {
-        super(params, payload, cursor, params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.CURRENT));
+        super(params, payload, cursor, params.getDefaultSerializer());
     }
 
     public DeterministicMasternode(DeterministicMasternode other) {

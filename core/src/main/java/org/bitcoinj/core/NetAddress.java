@@ -38,8 +38,8 @@ public class NetAddress extends ChildMessage {
     /**
      * Construct a peer address from a serialized payload.
      */
-    public NetAddress(NetworkParameters params, byte[] payload, int offset, int protocolVersion) throws ProtocolException {
-        super(params, payload, offset, protocolVersion);
+    public NetAddress(NetworkParameters params, byte[] payload, int offset, MessageSerializer serializer) throws ProtocolException {
+        super(params, payload, offset, null, serializer, MESSAGE_SIZE);
     }
 
     /**
@@ -47,12 +47,11 @@ public class NetAddress extends ChildMessage {
      * @param params NetworkParameters object.
      * @param payload Bitcoin protocol formatted byte array containing message content.
      * @param offset The location of the first payload byte within the array.
-     * @param protocolVersion Bitcoin protocol version.
      * @param serializer the serializer to use for this message.
      * @throws ProtocolException
      */
-    public NetAddress(NetworkParameters params, byte[] payload, int offset, int protocolVersion, Message parent, MessageSerializer serializer) throws ProtocolException {
-        super(params, payload, offset, protocolVersion, parent, serializer, UNKNOWN_LENGTH);
+    public NetAddress(NetworkParameters params, byte[] payload, int offset, Message parent, MessageSerializer serializer) throws ProtocolException {
+        super(params, payload, offset, parent, serializer, UNKNOWN_LENGTH);
     }
 
 

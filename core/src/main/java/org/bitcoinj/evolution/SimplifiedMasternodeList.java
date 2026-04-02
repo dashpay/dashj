@@ -67,8 +67,8 @@ public class SimplifiedMasternodeList extends Message {
         setSerializer(serializer.withProtocolVersion(params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.CURRENT)));
     }
 
-    SimplifiedMasternodeList(NetworkParameters params, byte [] payload, int offset, int protocolVersion) {
-        super(params, payload, offset, protocolVersion);
+    SimplifiedMasternodeList(NetworkParameters params, byte [] payload, int offset, MessageSerializer serializer) {
+        super(params, payload, offset, serializer, UNKNOWN_LENGTH);
     }
 
     SimplifiedMasternodeList(SimplifiedMasternodeList other, short version) {
@@ -109,7 +109,7 @@ public class SimplifiedMasternodeList extends Message {
         for(int i = 0; i < size; ++i)
         {
             Sha256Hash hash = readHash();
-            SimplifiedMasternodeListEntry mn = new SimplifiedMasternodeListEntry(params, payload, cursor, protocolVersion);
+            SimplifiedMasternodeListEntry mn = new SimplifiedMasternodeListEntry(params, payload, cursor, serializer);
             cursor += mn.getMessageSize();
             mnMap.put(hash, mn);
         }

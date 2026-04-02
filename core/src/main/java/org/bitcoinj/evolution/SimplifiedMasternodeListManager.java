@@ -194,7 +194,7 @@ public class SimplifiedMasternodeListManager extends MasternodeListManager {
     @Override
     protected void parse() throws ProtocolException {
         int protocolVersion = serializer.getProtocolVersion();
-        quorumState = new QuorumState(context, MasternodeListSyncOptions.SYNC_MINIMUM, payload, cursor, protocolVersion);
+        quorumState = new QuorumState(context, MasternodeListSyncOptions.SYNC_MINIMUM, payload, cursor, serializer);
         quorumState.setStateManager(this);
         cursor += quorumState.getMessageSize();
         tipBlockHash = readHash();
@@ -210,7 +210,7 @@ public class SimplifiedMasternodeListManager extends MasternodeListManager {
             }
         }
         if (getFormatVersion() >= QUORUM_ROTATION_FORMAT_VERSION && (cursor < payload.length)) {
-            quorumRotationState = new QuorumRotationState(context, payload, cursor, protocolVersion);
+            quorumRotationState = new QuorumRotationState(context, payload, cursor, serializer);
             quorumRotationState.setStateManager(this);
             cursor += quorumRotationState.getMessageSize();
         }
@@ -218,7 +218,7 @@ public class SimplifiedMasternodeListManager extends MasternodeListManager {
         processQuorumList(quorumState.getQuorumListAtTip());
         processQuorumList(quorumRotationState.getQuorumListAtH());
         // now set protocol version to current and file format version to current for future saves
-        protocolVersion = NetworkParameters.ProtocolVersion.CURRENT.getBitcoinProtocolVersion();
+        setSerializer(serializer.withProtocolVersion(NetworkParameters.ProtocolVersion.CURRENT.getBitcoinProtocolVersion()));
         setFormatVersion(SMLE_VERSION_FORMAT_VERSION);
         length = cursor - offset;
     }

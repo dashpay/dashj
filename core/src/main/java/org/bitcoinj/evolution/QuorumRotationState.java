@@ -148,11 +148,11 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
 
     @Override
     QuorumRotationInfo loadDiffMessageFromBuffer(byte[] buffer, int protocolVersion) {
-        return new QuorumRotationInfo(params, buffer, protocolVersion);
+        return new QuorumRotationInfo(params, buffer, serializer.withProtocolVersion(protocolVersion));
     }
 
-    public QuorumRotationState(Context context, byte[] payload, int offset, int protocolVersion) {
-        super(context.getParams(), payload, offset, protocolVersion);
+    public QuorumRotationState(Context context, byte[] payload, int offset, MessageSerializer serializer) {
+        super(context.getParams(), payload, offset, serializer);
         this.context = context;
         finishInitialization();
     }
@@ -949,18 +949,17 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
 
     @Override
     protected void parse() throws ProtocolException {
-        int protocolVersion = serializer.getProtocolVersion();
-        mnListTip = new SimplifiedMasternodeList(params, payload, cursor, protocolVersion);
+        mnListTip = new SimplifiedMasternodeList(params, payload, cursor, serializer);
         cursor += mnListTip.getMessageSize();
-        mnListAtH = new SimplifiedMasternodeList(params, payload, cursor, protocolVersion);
+        mnListAtH = new SimplifiedMasternodeList(params, payload, cursor, serializer);
         cursor += mnListAtH.getMessageSize();
-        mnListAtHMinusC = new SimplifiedMasternodeList(params, payload, cursor, protocolVersion);
+        mnListAtHMinusC = new SimplifiedMasternodeList(params, payload, cursor, serializer);
         cursor += mnListAtHMinusC.getMessageSize();
-        mnListAtHMinus2C = new SimplifiedMasternodeList(params, payload, cursor, protocolVersion);
+        mnListAtHMinus2C = new SimplifiedMasternodeList(params, payload, cursor, serializer);
         cursor += mnListAtHMinus2C.getMessageSize();
-        mnListAtHMinus3C = new SimplifiedMasternodeList(params, payload, cursor, protocolVersion);
+        mnListAtHMinus3C = new SimplifiedMasternodeList(params, payload, cursor, serializer);
         cursor += mnListAtHMinus3C.getMessageSize();
-        mnListAtHMinus4C = new SimplifiedMasternodeList(params, payload, cursor, protocolVersion);
+        mnListAtHMinus4C = new SimplifiedMasternodeList(params, payload, cursor, serializer);
         cursor += mnListAtHMinus4C.getMessageSize();
 
         mnListsCache = new LinkedHashMap<>();
@@ -971,17 +970,17 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
         mnListsCache.put(mnListAtHMinus3C.getBlockHash(), mnListAtHMinus3C);
         mnListsCache.put(mnListAtHMinus4C.getBlockHash(), mnListAtHMinus4C);
 
-        quorumListTip = new SimplifiedQuorumList(params, payload, cursor, protocolVersion);
+        quorumListTip = new SimplifiedQuorumList(params, payload, cursor, serializer);
         cursor += quorumListTip.getMessageSize();
-        quorumListAtH = new SimplifiedQuorumList(params, payload, cursor, protocolVersion);
+        quorumListAtH = new SimplifiedQuorumList(params, payload, cursor, serializer);
         cursor += quorumListAtH.getMessageSize();
-        quorumListAtHMinusC = new SimplifiedQuorumList(params, payload, cursor, protocolVersion);
+        quorumListAtHMinusC = new SimplifiedQuorumList(params, payload, cursor, serializer);
         cursor += quorumListAtHMinusC.getMessageSize();
-        quorumListAtHMinus2C = new SimplifiedQuorumList(params, payload, cursor, protocolVersion);
+        quorumListAtHMinus2C = new SimplifiedQuorumList(params, payload, cursor, serializer);
         cursor += quorumListAtHMinus2C.getMessageSize();
-        quorumListAtHMinus3C = new SimplifiedQuorumList(params, payload, cursor, protocolVersion);
+        quorumListAtHMinus3C = new SimplifiedQuorumList(params, payload, cursor, serializer);
         cursor += quorumListAtHMinus3C.getMessageSize();
-        quorumListAtHMinus4C = new SimplifiedQuorumList(params, payload, cursor, protocolVersion);
+        quorumListAtHMinus4C = new SimplifiedQuorumList(params, payload, cursor, serializer);
         cursor += quorumListAtHMinus4C.getMessageSize();
 
         quorumsCache = new LinkedHashMap<>();
@@ -1010,7 +1009,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
         int size = (int)readVarInt(); // generally this should be 2, but could be 1
         activeQuorumLists = new HashMap<>(size);
         for (int i = 0; i < size; ++i) {
-            SimplifiedQuorumList activeQuorum = new SimplifiedQuorumList(params, payload, cursor, protocolVersion);
+            SimplifiedQuorumList activeQuorum = new SimplifiedQuorumList(params, payload, cursor, serializer);
             cursor += activeQuorum.getMessageSize();
             activeQuorumLists.put((int)activeQuorum.getHeight(), activeQuorum);
         }

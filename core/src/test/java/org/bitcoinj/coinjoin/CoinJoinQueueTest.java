@@ -51,7 +51,7 @@ public class CoinJoinQueueTest {
     public void queueTest() {
         byte[] payload = Utils.HEX.decode("0800000036c6298f595939395ec930f936452726f33a311a79b2abe290ae01aad020011652498465000000000060a4f1ebf98b3b2df98c6375d391c4aba667edbaccb31610a8ded1eaba92c87ce59d2dcbea67fd59d212edd87553fbbeac0041bc514782b3ae5184f6d194c3dbdd8f94b5ce5e0e358aed3557b18188d51cbbcda80fba2ff7dabb808029ba255431");
 
-        CoinJoinQueue queueFromHex = new CoinJoinQueue(PARAMS, payload, PARAMS.getProtocolVersionNum(NetworkParameters.ProtocolVersion.BLS_BASIC));
+        CoinJoinQueue queueFromHex = new CoinJoinQueue(PARAMS, payload, PARAMS.getDefaultSerializer().withProtocolVersion(NetworkParameters.ProtocolVersion.BLS_BASIC.getBitcoinProtocolVersion()));
         assertEquals(8, queueFromHex.getDenomination());
         assertEquals(Sha256Hash.wrap("160120d0aa01ae90e2abb2791a313af326274536f930c95e393959598f29c636"), queueFromHex.getProTxHash());
         assertEquals(1703168338, queueFromHex.getTime());
@@ -81,7 +81,7 @@ public class CoinJoinQueueTest {
     public void queueWithBasicMasternodePass() {
         byte[] payload = Utils.HEX.decode("08000000e6a70ae4131ee990a4c014421685e9a3f4ad1197f8e4f247eb4121905af74a3a17779865000000000160a9852a8fe5d7d4c1be091adbcc226d06b5446d0b3cf75384c945068eab7ede51cfc64666f0d2e6bee07b5b463b8016e209ea16c3a9faa915ddc1037aa59d5c74f403f8b0da263a97a18f81134be41f55b1b59f16f88c8e44c3801bd236f96444");
         byte[] masternodePublicKeyBytes = Utils.HEX.decode("a1a2ce03d33508fa6d0d0d106b405824a5a583ce109e1e5513c76d3c70aac13b49ed78980ac7fb0836d391d34c453a5d");
-        CoinJoinQueue queueFromHex = new CoinJoinQueue(PARAMS, payload, PARAMS.getProtocolVersionNum(NetworkParameters.ProtocolVersion.BLS_BASIC));
+        CoinJoinQueue queueFromHex = new CoinJoinQueue(PARAMS, payload, PARAMS.getDefaultSerializer().withProtocolVersion(NetworkParameters.ProtocolVersion.BLS_BASIC.getBitcoinProtocolVersion()));
         BLSPublicKey masternodePublicKey = new BLSPublicKey(masternodePublicKeyBytes, false);
 
         assertTrue(queueFromHex.checkSignature(masternodePublicKey));
@@ -98,7 +98,7 @@ public class CoinJoinQueueTest {
     public void queueWithLegacyMasternodeTest() {
         byte[] payload = Utils.HEX.decode("04000000d7c0742ff5feecdf9ba16028cdd20ce6d740e8134e726967b472e57c4e80e50a888698650000000001609477d10b679ac351aed7af38747b513847cb60b422aca6982f1ae9c1dc8a07e7a29c9d97b53cfdced846997f045079510924bbe9baf3a074d1ee495c36fbc968d1a632a9189297e5e9fd820343448ed3b559d39b039b13fb6499216fa95aa2bc");
         byte[] masternodePublicKeyBytes = Utils.HEX.decode("980d9cbfe63468e27b06bb20224f9f5a443a3a8d31fd4e7d52412121c5b7b2f6036089eae3dbbf36a1a7fa2fc1de654c");
-        CoinJoinQueue queueFromHex = new CoinJoinQueue(PARAMS, payload, PARAMS.getProtocolVersionNum(NetworkParameters.ProtocolVersion.BLS_BASIC));
+        CoinJoinQueue queueFromHex = new CoinJoinQueue(PARAMS, payload, PARAMS.getDefaultSerializer().withProtocolVersion(NetworkParameters.ProtocolVersion.BLS_BASIC.getBitcoinProtocolVersion()));
         BLSPublicKey masternodePublicKey = new BLSPublicKey(masternodePublicKeyBytes, true);
 
         assertTrue(queueFromHex.checkSignature(masternodePublicKey));

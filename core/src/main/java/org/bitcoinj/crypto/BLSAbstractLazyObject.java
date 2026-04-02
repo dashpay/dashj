@@ -41,7 +41,7 @@ public abstract class BLSAbstractLazyObject extends Message {
     }
 
     protected BLSAbstractLazyObject(NetworkParameters params, byte [] payload, int offset, boolean legacy) {
-        super(params, payload, offset, params.getProtocolVersionNum(legacy ? NetworkParameters.ProtocolVersion.BLS_LEGACY : NetworkParameters.ProtocolVersion.BLS_BASIC));
+        super(params, payload, offset, params.getDefaultSerializer().withProtocolVersion(legacy ? NetworkParameters.ProtocolVersion.BLS_LEGACY.getBitcoinProtocolVersion() : NetworkParameters.ProtocolVersion.BLS_BASIC.getBitcoinProtocolVersion()), UNKNOWN_LENGTH);
     }
 
     @Override

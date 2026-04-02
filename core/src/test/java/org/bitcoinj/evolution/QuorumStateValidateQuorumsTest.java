@@ -133,7 +133,7 @@ public class QuorumStateValidateQuorumsTest {
             system.setMasternodeListManager(manager);
             context.setDebugMode(true);
 
-            SimplifiedMasternodeListDiff mnlistdiff = new SimplifiedMasternodeListDiff(context.getParams(), buffer, protocolVersion);
+            SimplifiedMasternodeListDiff mnlistdiff = new SimplifiedMasternodeListDiff(context.getParams(), buffer, params.getDefaultSerializer().withProtocolVersion(protocolVersion));
 
             manager.processDiffMessage(null, mnlistdiff, false);
 

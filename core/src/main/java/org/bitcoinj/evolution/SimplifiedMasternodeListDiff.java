@@ -29,12 +29,12 @@ public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
     protected HashMap<BLSSignature, HashSet<Integer>> quorumsCLSigs;
 
 
-    public SimplifiedMasternodeListDiff(NetworkParameters params, byte [] payload, int protocolVersion) {
-        super(params, payload, 0, protocolVersion);
+    public SimplifiedMasternodeListDiff(NetworkParameters params, byte [] payload, MessageSerializer serializer) {
+        super(params, payload, 0, serializer);
     }
 
-    public SimplifiedMasternodeListDiff(NetworkParameters params, byte [] payload, int offset, int protocolVersion) {
-        super(params, payload, offset, protocolVersion);
+    public SimplifiedMasternodeListDiff(NetworkParameters params, byte [] payload, int offset, MessageSerializer serializer) {
+        super(params, payload, offset, serializer);
     }
 
     @Override
@@ -90,7 +90,7 @@ public class SimplifiedMasternodeListDiff extends AbstractDiffMessage {
         size = (int)readVarInt();
         mnList = new ArrayList<>(size);
         for (int i = 0; i < size; ++i) {
-            SimplifiedMasternodeListEntry mn = new SimplifiedMasternodeListEntry(params, payload, cursor, protocolVersion);
+            SimplifiedMasternodeListEntry mn = new SimplifiedMasternodeListEntry(params, payload, cursor, serializer);
             cursor += mn.getMessageSize();
             mnList.add(mn);
         }

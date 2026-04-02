@@ -24,6 +24,7 @@ import org.bitcoinj.core.Context;
 import org.bitcoinj.core.DualBlockChain;
 import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.core.Message;
+import org.bitcoinj.core.MessageSerializer;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Peer;
 import org.bitcoinj.core.PeerGroup;
@@ -134,8 +135,8 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
         initialize();
     }
 
-    protected AbstractQuorumState(NetworkParameters params, byte[] payload, int offset, int protocolVersion) {
-        super(params, payload, offset, protocolVersion);
+    protected AbstractQuorumState(NetworkParameters params, byte[] payload, int offset, MessageSerializer serializer) {
+        super(params, payload, offset, serializer, UNKNOWN_LENGTH);
         initialize();
     }
 

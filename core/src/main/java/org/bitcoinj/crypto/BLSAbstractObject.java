@@ -27,7 +27,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
 
-public abstract class BLSAbstractObject extends ChildMessage {
+public abstract class BLSAbstractObject extends Message {
     protected static final Logger log = LoggerFactory.getLogger(BLSAbstractObject.class);
     protected boolean legacy;
     protected Sha256Hash hash;
@@ -69,7 +69,7 @@ public abstract class BLSAbstractObject extends ChildMessage {
     }
 
     BLSAbstractObject(NetworkParameters params, byte [] payload, int offset, boolean legacy) {
-        super(params, payload, offset, params.getProtocolVersionNum(legacy ? NetworkParameters.ProtocolVersion.BLS_LEGACY : NetworkParameters.ProtocolVersion.BLS_BASIC));
+        super(params, payload, offset, params.getDefaultSerializer().withProtocolVersion(legacy ? NetworkParameters.ProtocolVersion.BLS_LEGACY.getBitcoinProtocolVersion() : NetworkParameters.ProtocolVersion.BLS_BASIC.getBitcoinProtocolVersion()), UNKNOWN_LENGTH);
         this.legacy = legacy;
         updateHash();
     }

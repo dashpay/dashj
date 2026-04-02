@@ -30,8 +30,8 @@ public class SimplifiedMasternodeListEntry extends Masternode {
         this.version = version;
     }
 
-    public SimplifiedMasternodeListEntry(NetworkParameters params, byte [] payload, int offset, int protocolVersion) {
-        super(params, payload, offset, protocolVersion);
+    public SimplifiedMasternodeListEntry(NetworkParameters params, byte [] payload, int offset, MessageSerializer serializer) {
+        super(params, payload, offset, serializer);
     }
 
     @Deprecated
@@ -94,7 +94,7 @@ public class SimplifiedMasternodeListEntry extends Masternode {
         }
         proRegTxHash = readHash();
         confirmedHash = readHash();
-        service = new MasternodeAddress(params, payload, cursor, 0);
+        service = new MasternodeAddress(params, payload, cursor, serializer);
         cursor += service.getMessageSize();
         pubKeyOperator = new BLSLazyPublicKey(params, payload, cursor, version == LEGACY_BLS_VERSION);
         cursor += pubKeyOperator.getMessageSize();

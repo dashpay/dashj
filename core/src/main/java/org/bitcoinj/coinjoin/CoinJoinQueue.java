@@ -18,6 +18,7 @@ package org.bitcoinj.coinjoin;
 import com.google.common.annotations.VisibleForTesting;
 import org.bitcoinj.core.MasternodeSignature;
 import org.bitcoinj.core.Message;
+import org.bitcoinj.core.MessageSerializer;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.ProtocolException;
 import org.bitcoinj.core.Sha256Hash;
@@ -50,8 +51,8 @@ public class CoinJoinQueue extends Message {
     // memory only
     private boolean tried;
 
-    public CoinJoinQueue(NetworkParameters params, byte[] payload, int protocolVersion) {
-        super(params, payload, 0, protocolVersion);
+    public CoinJoinQueue(NetworkParameters params, byte[] payload, MessageSerializer serializer) {
+        super(params, payload, 0, serializer, UNKNOWN_LENGTH);
     }
 
     public CoinJoinQueue(

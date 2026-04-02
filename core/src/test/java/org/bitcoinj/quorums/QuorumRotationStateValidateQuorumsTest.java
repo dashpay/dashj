@@ -175,7 +175,7 @@ public class QuorumRotationStateValidateQuorumsTest {
             SimplifiedMasternodeListManager manager = new SimplifiedMasternodeListManager(context);
             system.setMasternodeListManager(manager);
 
-            QuorumRotationInfo qrinfo = new QuorumRotationInfo(context.getParams(), buffer, protocolVersion);
+            QuorumRotationInfo qrinfo = new QuorumRotationInfo(context.getParams(), buffer, params.getDefaultSerializer().withProtocolVersion(protocolVersion));
 
             SettableFuture<Boolean> qrinfoComplete = SettableFuture.create();
             manager.processDiffMessage(null, qrinfo, false, qrinfoComplete);

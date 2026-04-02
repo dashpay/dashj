@@ -61,7 +61,7 @@ public class DeterministicMasternodeState extends ChildMessage {
         cursor += pubKeyOperator.getMessageSize();
         keyIDVoting = new KeyId(params, payload, cursor);
         cursor += keyIDVoting.getMessageSize();
-        address = new MasternodeAddress(params, payload, cursor, 0);
+        address = new MasternodeAddress(params, payload, cursor, serializer);
         cursor += address.getMessageSize();
         scriptPayout = new Script(readByteArray());
         scriptOperatorPayout = new Script(readByteArray());
