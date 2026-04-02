@@ -744,14 +744,15 @@ public class WalletTool implements Callable<Integer> {
         }
     }
 
-    private void send(List<String> outputs, Coin feePerVkb, String lockTimeStr, boolean allowUnconfirmed) throws VerificationException {
+    private void send(List<String> outputs, Coin feePerVkb, String lockTimeStr, boolean allowUnconfirmed, boolean isCoinJoin, boolean returnChange) throws VerificationException {
         // Convert the input strings to outputs.
         Transaction t = new Transaction(params);
         for (String spec : outputs) {
             try {
                 OutputSpec outputSpec = new OutputSpec(spec);
                 Coin value = outputSpec.value != null ? outputSpec.value :
-                        wallet.getBalance(allowUnconfirmed ? BalanceType.ESTIMATED : BalanceType.AVAILABLE);
+                        (isCoinJoin ? wallet.getBalance(BalanceType.COINJOIN) :
+                                (wallet.getBalance(allowUnconfirmed ? BalanceType.ESTIMATED : BalanceType.AVAILABLE)));
                 if (outputSpec.isAddress())
                     t.addOutput(value, outputSpec.addr);
                 else
@@ -778,7 +779,8 @@ public class WalletTool implements Callable<Integer> {
             req.emptyWallet = true;
         }
         if (feePerVkb != null)
-            req.setFeePerVkb(feePerVkb);
+            req.feePerKb = feePerVkb;
+        req.returnChange = returnChange;
         if (allowUnconfirmed) {
             req.allowUnconfirmed();
         }
