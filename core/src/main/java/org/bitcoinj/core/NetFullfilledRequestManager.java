@@ -32,28 +32,7 @@ public class NetFullfilledRequestManager extends AbstractManager {
     }
 
     public int calculateMessageSizeInBytes() {
-        lock.lock();
-        int messageSize = 0;
-        try {
-            int size = readVarInt().intValue();
-            messageSize += VarInt.sizeOf(size);
-            mapFulfilledRequests = new HashMap<PeerAddress, HashMap<String, Long>>(size);
-            for (int i = 0; i < size; ++i) {
-                messageSize += PeerAddress.MESSAGE_SIZE;
-                int size2 = readVarInt().intValue();
-                messageSize += VarInt.sizeOf(size);
-                for (int j = 0; j < size2; ++j) {
-                    cursor = messageSize;
-                    String message = readStr();
-                    messageSize += message.length() + 8;
-
-                }
-            }
-            cursor = offset;
-            return messageSize;
-        } finally {
-            lock.unlock();
-        }
+        return 0;
     }
 
     @Override

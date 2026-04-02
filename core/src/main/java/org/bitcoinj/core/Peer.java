@@ -566,7 +566,7 @@ public class Peer extends PeerSocketHandler {
         } else if (m instanceof SendHeaders2Message) {
             // We ignore this message, because we don't announce new blocks.
             log.info("{}: Peer requested compressed header announcements (sendheaders2)", this);
-        } else if (m instanceof SendAddressV2Message) {
+        } else if (m instanceof SendAddrV2Message) {
             // We ignore this message, because we don't reply to sendaddrv2 message.
         } else {
             log.warn("{}: Received unhandled message: {}", this, m);

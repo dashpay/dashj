@@ -27,6 +27,7 @@ import org.bitcoinj.core.Message;
 import org.bitcoinj.core.Peer;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.Utils;
+import org.bitcoinj.core.SendAddrV2Message;
 import org.bitcoinj.core.VersionAck;
 import org.bitcoinj.core.VersionMessage;
 import org.bitcoinj.core.listeners.PreMessageReceivedEventListener;
@@ -189,6 +190,7 @@ public class TestWithMasternodeGroup extends TestWithPeerGroup {
 
     private void stepThroughInit(VersionMessage versionMessage, InboundMessageQueuer writeTarget) throws InterruptedException {
         checkState(writeTarget.nextMessageBlocking() instanceof VersionMessage);
+        checkState(writeTarget.nextMessageBlocking() instanceof SendAddrV2Message);
         checkState(writeTarget.nextMessageBlocking() instanceof VersionAck);
         if (versionMessage.isBloomFilteringSupported()) {
             checkState(writeTarget.nextMessageBlocking() instanceof SendCoinJoinQueue);
