@@ -21,7 +21,6 @@ import org.bitcoinj.core.Block;
 import org.bitcoinj.quorums.LLMQParameters;
 
 import java.math.BigInteger;
-import java.util.HashMap;
 
 import static com.google.common.base.Preconditions.checkState;
 

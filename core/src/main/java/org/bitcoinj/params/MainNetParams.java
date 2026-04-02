@@ -17,17 +17,12 @@
 
 package org.bitcoinj.params;
 
-import java.net.URI;
-
 import org.bitcoinj.core.Block;
-import org.bitcoinj.core.ECKey;
 import org.bitcoinj.core.Sha256Hash;
 import org.bitcoinj.core.StoredBlock;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.core.VerificationException;
-import org.bitcoinj.net.discovery.HttpDiscovery;
 import java.math.BigInteger;
-import java.util.HashMap;
 import org.bitcoinj.quorums.LLMQParameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

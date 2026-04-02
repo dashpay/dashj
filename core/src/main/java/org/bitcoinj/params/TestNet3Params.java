@@ -17,9 +17,8 @@
 
 package org.bitcoinj.params;
 
-import static org.bitcoinj.core.Utils.HEX;
-
-import org.bitcoinj.core.*;
+import org.bitcoinj.core.Sha256Hash;
+import org.bitcoinj.core.Utils;
 import org.bitcoinj.quorums.LLMQParameters;
 
 import static com.google.common.base.Preconditions.checkState;
