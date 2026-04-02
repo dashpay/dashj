@@ -47,6 +47,7 @@ import org.bitcoinj.evolution.SimplifiedMasternodeListEntry;
 import org.bitcoinj.script.ScriptBuilder;
 import org.bitcoinj.testing.InboundMessageQueuer;
 import org.bitcoinj.testing.MockTransactionBroadcaster;
+import org.bitcoinj.testing.TestWithNetworkConnections;
 import org.bitcoinj.utils.BriefLogFormatter;
 import org.bitcoinj.utils.Threading;
 import org.bitcoinj.wallet.DerivationPathFactory;
@@ -122,7 +123,7 @@ public class CoinJoinSessionTest extends TestWithMasternodeGroup {
                 UNITTEST,
                 Sha256Hash.ZERO_HASH,
                 Sha256Hash.ZERO_HASH,
-                new MasternodeAddress("127.0.0.1", 2003),
+                new MasternodeAddress("127.0.0.1", TestWithNetworkConnections.TCP_PORT_BASE + 3),
                 KeyId.fromBytes(new ECKey().getPubKeyHash()),
                 new BLSLazyPublicKey(operatorSecretKey.GetPublicKey()),
                 true

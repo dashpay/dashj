@@ -37,6 +37,7 @@ import org.bitcoinj.net.BlockingClientManager;
 import org.bitcoinj.net.ClientConnectionManager;
 import org.bitcoinj.net.NioClientManager;
 import org.bitcoinj.testing.InboundMessageQueuer;
+import org.bitcoinj.testing.TestWithNetworkConnections;
 import org.bitcoinj.testing.TestWithPeerGroup;
 import org.bitcoinj.utils.ContextPropagatingThreadFactory;
 import org.junit.After;
@@ -131,7 +132,7 @@ public class TestWithMasternodeGroup extends TestWithPeerGroup {
                     pendingSessions.add(session);
                     masternodeMap.put(proTxHash, session);
                     addressMap.put(session.getMixingMasternodeInfo().getService(), session);
-                    lastMasternode = connectMasternode(mn.getService().getPort() - 2000);
+                    lastMasternode = connectMasternode(mn.getService().getPort() - TestWithNetworkConnections.TCP_PORT_BASE);
                     return true;
                 } catch (Exception x) {
                     throw new RuntimeException(x);
@@ -166,7 +167,7 @@ public class TestWithMasternodeGroup extends TestWithPeerGroup {
 
     protected InboundMessageQueuer connectMasternodeWithoutVersionExchange(int id) throws Exception {
         Preconditions.checkArgument(id < PEER_SERVERS);
-        InetSocketAddress remoteAddress = new InetSocketAddress(InetAddress.getLoopbackAddress(), 2000 + id);
+        InetSocketAddress remoteAddress = new InetSocketAddress(InetAddress.getLoopbackAddress(), TCP_PORT_BASE + id);
         Peer peer = masternodeGroup.connectTo(remoteAddress).getConnectionOpenFuture().get();
         //peer.addPreMessageReceivedEventListener(preMessageReceivedEventListener);
         InboundMessageQueuer writeTarget = newPeerWriteTargetQueue.take();
