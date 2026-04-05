@@ -824,19 +824,22 @@ public class InstantSendManager implements RecoveredSignatureListener {
         // re-queue it for processing so the verify path (processInstantSendLock) applies
         // IX_LOCKED. This keeps IX_LOCKED assignment inside the single authoritative path.
         if (!isDisconnect && islockHash != null && !islockHash.isZero()) {
-            InstantSendLock islock = db.getInstantSendLockByHash(islockHash);
-            if (islock != null && tx.getConfidence().getIXType() != TransactionConfidence.IXType.IX_LOCKED) {
-                lock.lock();
-                try {
-                    if (!pendingInstantSendLocks.containsKey(islockHash)) {
-                        pendingInstantSendLocks.put(islockHash, new Pair<>((long) -1, islock));
+            InstantSendLock islock = null;
+            lock.lock();
+            try {
+                islock = db.getInstantSendLockByHash(islockHash);
+                if (islock != null
+                                && tx.getConfidence().getIXType() != TransactionConfidence.IXType.IX_LOCKED
+                                && !pendingInstantSendLocks.containsKey(islockHash)) {
+                        pendingInstantSendLocks.put(islockHash, new Pair<>(-1L, islock));
+                    } else {
+                        islock = null;
                     }
-                } finally {
-                    lock.unlock();
-                }
-                if (runWithoutThread) {
-                    processPendingInstantSendLocks();
-                }
+            } finally {
+                lock.unlock();
+            }
+            if (islock != null && runWithoutThread) {
+                processPendingInstantSendLocks();
             }
         }
     }
