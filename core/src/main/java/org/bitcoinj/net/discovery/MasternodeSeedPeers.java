@@ -38,8 +38,8 @@ public class MasternodeSeedPeers implements PeerDiscovery {
     private int pnseedIndex;
 
     // if there are more than 20 masternodes, then don't use HP masternodes in peer discovery
-    private static String[] mergeArrays(String[] masternodeArray, String[] hpMasternodeArray) {
-        if (masternodeArray.length > ENOUGH_MASTERNODES || hpMasternodeArray.length == 0) {
+    private static String[] mergeArrays(String[] masternodeArray, String[] hpMasternodeArray, boolean forceMerge) {
+        if (!forceMerge && (masternodeArray.length > ENOUGH_MASTERNODES || hpMasternodeArray.length == 0)) {
             return masternodeArray;
         } else {
             String[] result = Arrays.copyOf(masternodeArray, masternodeArray.length + hpMasternodeArray.length);
@@ -53,7 +53,17 @@ public class MasternodeSeedPeers implements PeerDiscovery {
      * @param params Network parameters to be used for port information.
      */
     public MasternodeSeedPeers(NetworkParameters params) {
-        this(mergeArrays(params.getDefaultMasternodeList(), params.getDefaultHPMasternodeList()), params);
+        this(mergeArrays(params.getDefaultMasternodeList(), params.getDefaultHPMasternodeList(), false), params);
+    }
+
+    /**
+     * Supports finding peers by IP addresses
+     *
+     * @param params Network parameters to be used for port information.
+     * @param forceMerge forces merging of all masternode lists
+     */
+    public MasternodeSeedPeers(NetworkParameters params, boolean forceMerge) {
+        this(mergeArrays(params.getDefaultMasternodeList(), params.getDefaultHPMasternodeList(), forceMerge), params);
     }
 
     /**
