@@ -68,7 +68,11 @@ public class PortOpen {
                 index++;
                 notAvailable += available ? 0 : 1;
             }
-            System.out.println((notAvailable * 100 / index) + "% of seeds are not available");
+            if (index != 0) {
+                System.out.println((notAvailable * 100 / index) + "% of seeds are not available");
+            } else {
+                System.out.println("no seeds are specified");
+            }
         } catch (PeerDiscoveryException x) {
             System.out.println("Error: " + x.getMessage());
         }
@@ -85,7 +89,11 @@ public class PortOpen {
                 index++;
                 notAvailable += available ? 0 : 1;
             }
-            System.out.println((notAvailable * 100 / index) + "% of masternodes(regular, hp) are not available");
+            if (index != 0) {
+                System.out.println((notAvailable * 100 / index) + "% of masternodes(regular, hp) are not available");
+            } else {
+                System.out.println("no masternodes are specified");
+            }
         } catch (PeerDiscoveryException x) {
             System.out.println("Error: " + x.getMessage());
         }
