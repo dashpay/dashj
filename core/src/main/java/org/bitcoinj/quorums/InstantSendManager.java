@@ -549,6 +549,8 @@ public class InstantSendManager implements RecoveredSignatureListener {
             // no need to verify an ISLOCK if we already have verified the recovered sig that belongs to it
             if (quorumSigningManager.hasRecoveredSig(llmqType, id, islock.txid)) {
                 log.info("islock: signature has already been verified: {}", islock.txid);
+                // Still apply IX_LOCKED to wallet in case the tx arrived after the lock was verified
+                processInstantSendLock(p.getValue().getFirst(), hash, islock);
                 continue;
             }
 
@@ -822,19 +824,22 @@ public class InstantSendManager implements RecoveredSignatureListener {
         // re-queue it for processing so the verify path (processInstantSendLock) applies
         // IX_LOCKED. This keeps IX_LOCKED assignment inside the single authoritative path.
         if (!isDisconnect && islockHash != null && !islockHash.isZero()) {
-            InstantSendLock islock = db.getInstantSendLockByHash(islockHash);
-            if (islock != null && tx.getConfidence().getIXType() != TransactionConfidence.IXType.IX_LOCKED) {
-                lock.lock();
-                try {
-                    if (!pendingInstantSendLocks.containsKey(islockHash)) {
-                        pendingInstantSendLocks.put(islockHash, new Pair<>((long) -1, islock));
+            InstantSendLock islock = null;
+            lock.lock();
+            try {
+                islock = db.getInstantSendLockByHash(islockHash);
+                if (islock != null
+                                && tx.getConfidence().getIXType() != TransactionConfidence.IXType.IX_LOCKED
+                                && !pendingInstantSendLocks.containsKey(islockHash)) {
+                        pendingInstantSendLocks.put(islockHash, new Pair<>(-1L, islock));
+                    } else {
+                        islock = null;
                     }
-                } finally {
-                    lock.unlock();
-                }
-                if (runWithoutThread) {
-                    processPendingInstantSendLocks();
-                }
+            } finally {
+                lock.unlock();
+            }
+            if (islock != null && runWithoutThread) {
+                processPendingInstantSendLocks();
             }
         }
     }
@@ -1038,6 +1043,22 @@ public class InstantSendManager implements RecoveredSignatureListener {
     public void addWallet(Wallet wallet) {
         wallet.addCoinsSentEventListener(coinsSentEventListener);
         wallets.add(wallet);
+        // Backfill any ISLocks that were verified before this wallet was attached
+        for (Transaction tx : wallet.getTransactions(false)) {
+            if (tx.getConfidence().getIXType() == TransactionConfidence.IXType.IX_LOCKED) {
+                continue;
+            }
+            Sha256Hash islockHash = db.getInstantSendLockHashByTxid(tx.getTxId());
+            if (islockHash != null && !islockHash.isZero()) {
+                InstantSendLock islock = db.getInstantSendLockByHash(islockHash);
+                if (islock != null) {
+                    TransactionConfidence confidence = tx.getConfidence();
+                    confidence.setInstantSendLock(islock);
+                    confidence.setIXType(TransactionConfidence.IXType.IX_LOCKED);
+                    confidence.queueListeners(TransactionConfidence.Listener.ChangeReason.IX_TYPE);
+                }
+            }
+        }
     }
 
     public void removeWallet(Wallet wallet) {

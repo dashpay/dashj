@@ -15,6 +15,7 @@
 package org.bitcoinj.examples;
 
 import org.bitcoinj.core.NetworkParameters;
+import org.bitcoinj.net.discovery.MasternodeSeedPeers;
 import org.bitcoinj.net.discovery.PeerDiscoveryException;
 import org.bitcoinj.net.discovery.SeedPeers;
 import org.bitcoinj.params.MainNetParams;
@@ -60,13 +61,39 @@ public class PortOpen {
             int index = 0;
             int notAvailable = 0;
             for (InetSocketAddress address : seedPeers.getPeers(0, 10, TimeUnit.SECONDS)) {
+                System.out.print("seed ");
                 System.out.print(address.getAddress());
                 boolean available = serverListening(address.getAddress().getHostAddress(), params.getPort());
                 System.out.println(" is " + (available ? "available" : "not available"));
                 index++;
                 notAvailable += available ? 0 : 1;
             }
-            System.out.println((notAvailable * 100 / index) + "% are not available");
+            if (index != 0) {
+                System.out.println((notAvailable * 100 / index) + "% of seeds are not available");
+            } else {
+                System.out.println("no seeds are specified");
+            }
+        } catch (PeerDiscoveryException x) {
+            System.out.println("Error: " + x.getMessage());
+        }
+
+        MasternodeSeedPeers masternodeSeedPeers = new MasternodeSeedPeers(params, true);
+        try {
+            int index = 0;
+            int notAvailable = 0;
+            for (InetSocketAddress address : masternodeSeedPeers.getPeers(0, 10, TimeUnit.SECONDS)) {
+                System.out.print("masternode ");
+                System.out.print(address.getAddress());
+                boolean available = serverListening(address.getAddress().getHostAddress(), params.getPort());
+                System.out.println(" is " + (available ? "available" : "not available"));
+                index++;
+                notAvailable += available ? 0 : 1;
+            }
+            if (index != 0) {
+                System.out.println((notAvailable * 100 / index) + "% of masternodes(regular, hp) are not available");
+            } else {
+                System.out.println("no masternodes are specified");
+            }
         } catch (PeerDiscoveryException x) {
             System.out.println("Error: " + x.getMessage());
         }

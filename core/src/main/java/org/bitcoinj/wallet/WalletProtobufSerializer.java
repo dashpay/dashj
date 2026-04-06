@@ -1053,6 +1053,8 @@ public class WalletProtobufSerializer {
                     } catch (ExecutionException e) {
                         Throwable cause = e.getCause();
                         if (cause instanceof UnreadableWalletException) throw (UnreadableWalletException) cause;
+                        if (cause instanceof RuntimeException && cause.getCause() instanceof UnreadableWalletException)
+                            throw (UnreadableWalletException) cause.getCause();
                         throw new UnreadableWalletException("Failed to parse key chain group", e);
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
@@ -1066,6 +1068,8 @@ public class WalletProtobufSerializer {
                         } catch (ExecutionException e) {
                             Throwable cause = e.getCause();
                             if (cause instanceof UnreadableWalletException) throw (UnreadableWalletException) cause;
+                            if (cause instanceof RuntimeException && cause.getCause() instanceof UnreadableWalletException)
+                                throw (UnreadableWalletException) cause.getCause();
                             throw new UnreadableWalletException("Failed to parse receiving friend keys", e);
                         } catch (InterruptedException e) {
                             Thread.currentThread().interrupt();
@@ -1079,6 +1083,8 @@ public class WalletProtobufSerializer {
                         } catch (ExecutionException e) {
                             Throwable cause = e.getCause();
                             if (cause instanceof UnreadableWalletException) throw (UnreadableWalletException) cause;
+                            if (cause instanceof RuntimeException && cause.getCause() instanceof UnreadableWalletException)
+                                throw (UnreadableWalletException) cause.getCause();
                             throw new UnreadableWalletException("Failed to parse sending friend keys", e);
                         } catch (InterruptedException e) {
                             Thread.currentThread().interrupt();
@@ -1191,7 +1197,7 @@ public class WalletProtobufSerializer {
 
                     long totalTime = System.currentTimeMillis() - methodStart;
                     log.info("readWallet (parallel={}, threads={}) timing: {}ms total, keys={}ms, friendRecv={}ms, friendSend={}ms, tx={}ms[{}tx], ext={}ms, connect={}ms, addWallet={}ms",
-                            complexityScore, numThreads, totalTime, keysTime[0], friendRecvTime[0], friendSendTime[0],
+                            parallelLoad, numThreads, totalTime, keysTime[0], friendRecvTime[0], friendSendTime[0],
                             txTime[0], walletProto.getTransactionCount(), extTime, connectTime, addWalletTime[0]);
                     return wallet;
                 } finally {
