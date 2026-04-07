@@ -1075,7 +1075,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
 
     public SimplifiedQuorumList getQuorumListAtH() {
         SimplifiedQuorumList topList = getTopActiveQuorumList();
-        log.warn("obtaining this quorum list: {} from {} quorum lists", topList, activeQuorumLists.size());
+        log.debug("obtaining this quorum list: {} from {} quorum lists", topList, activeQuorumLists.size());
         return topList;
     }
 
@@ -1106,7 +1106,7 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
         if (topList.getHeight() == -1) {
             topList = getTopActiveQuorumList();
         }
-        log.warn("obtaining quorum list {}: {} from {} quorum lists", block.getHeight(), topList, activeQuorumLists.size());
+        log.debug("obtaining quorum list {}: {} from {} quorum lists", block.getHeight(), topList, activeQuorumLists.size());
         return topList;
     }
 

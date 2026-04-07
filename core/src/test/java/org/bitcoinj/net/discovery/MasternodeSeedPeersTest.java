@@ -72,9 +72,9 @@ public class MasternodeSeedPeersTest {
     public void testnetDefaultLists() {
         TestNet3Params params = TestNet3Params.get();
         MasternodeSeedPeers seedPeers = new MasternodeSeedPeers(params);
-        assertEquals(80, params.getDefaultMasternodeList().length);
-        assertEquals(33, params.getDefaultHPMasternodeList().length);
-        assertEquals(80, seedPeers.getSeedAddrs().length);
+        assertEquals(53, params.getDefaultMasternodeList().length);
+        assertEquals(29, params.getDefaultHPMasternodeList().length);
+        assertEquals(53, seedPeers.getSeedAddrs().length);
     }
 
     @Test

@@ -34,6 +34,7 @@ public class LLMQBackgroundThread extends Thread {
         this.chainLocksHandler = chainLocksHandler;
         this.signingManager = signingManager;
         this.masternodeListManager = masternodeListManager;
+        this.setName("LLMQBackgroundThread");
     }
 
     int debugTimer = 0;
@@ -73,11 +74,16 @@ public class LLMQBackgroundThread extends Thread {
                 }
 
             }
-        } catch (BlockStoreException x) {
-            log.info("stopping LLMQBackgroundThread via BlockStoreException");
+        } catch (RuntimeException x) {
+            if (x.getCause() instanceof BlockStoreException) {
+                log.info("stopping LLMQBackgroundThread via BlockStoreException");
+            } else {
+                log.error("stopping LLMQBackgroundThread via RuntimeException", x);
+            }
         } catch (InterruptedException x) {
             log.info("stopping LLMQBackgroundThread via InterruptedException");
             //let the thread stop
+            Thread.currentThread().interrupt();
         } finally {
             signingManager.removeRecoveredSignatureListener(instantSendManager);
             signingManager.removeRecoveredSignatureListener(chainLocksHandler);
