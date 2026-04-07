@@ -524,14 +524,18 @@ public class SimplifiedMasternodeListManager extends MasternodeListManager {
             if (isQuorumRotationEnabled(llmqType)) {
                 LLMQParameters llmqParameters = params.getLlmqs().get(llmqType);
                 StoredBlock block = blockChain.getBlock(blockHash);
-                StoredBlock lastQuorumBlock = blockChain.getBlockAncestor(block,
-                        block.getHeight() - block.getHeight() % llmqParameters.getDkgInterval() - SigningManager.SIGN_HEIGHT_OFFSET);
-                if (lastQuorumBlock == null) {
-                    log.info("last quorum block is null");
+                if (block != null) {
+                    int height = block.getHeight() - block.getHeight() % llmqParameters.getDkgInterval() - SigningManager.SIGN_HEIGHT_OFFSET;
+                    StoredBlock lastQuorumBlock = blockChain.getBlockAncestor(block, height);
+                    if (lastQuorumBlock == null) {
+                        log.info("last quorum block is null for {}", height);
+                        return null;
+                    }
+                    return quorumRotationState.getQuorumListForBlock(lastQuorumBlock);
+                } else {
+                    log.info("last block is null for {}", blockHash);
                     return null;
                 }
-
-                return quorumRotationState.getQuorumListForBlock(lastQuorumBlock);
             } else {
                 return getQuorumListCache(llmqType).get(blockHash);
             }

@@ -82,6 +82,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static com.google.common.base.Preconditions.checkState;
+import static org.bitcoinj.coinjoin.CoinJoinConstants.COINJOIN_EXTRA;
 import static org.bitcoinj.utils.Threading.SAME_THREAD;
 
 public class CoinJoinManager {
@@ -551,7 +552,9 @@ public class CoinJoinManager {
             }
             if (!getdata.getItems().isEmpty()) {
                 // This will cause us to receive a bunch of block or tx messages.
-                log.info("coinjoin: DSQUEUE: requesting {} dsq messages", getdata.getItems().size());
+                log.info(COINJOIN_EXTRA, "coinjoin: DSQUEUE: requesting {} dsq messages", getdata.getItems().size());
+                getdata.getItems().forEach(
+                        inventoryItem -> log.info(COINJOIN_EXTRA, "getdata: {}", inventoryItem.hash));
                 peer.sendMessage(getdata);
             }
         } else if (m instanceof CoinJoinQueue) {
