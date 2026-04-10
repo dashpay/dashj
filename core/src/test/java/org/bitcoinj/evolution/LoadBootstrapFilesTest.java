@@ -16,6 +16,7 @@
 
 package org.bitcoinj.evolution;
 
+import com.google.common.util.concurrent.SettableFuture;
 import org.bitcoinj.core.BlockChain;
 import org.bitcoinj.core.Context;
 import org.bitcoinj.core.NetworkParameters;
@@ -23,6 +24,7 @@ import org.bitcoinj.core.PeerGroup;
 import org.bitcoinj.manager.DashSystem;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.TestNet3Params;
+import org.bitcoinj.quorums.QuorumRotationInfo;
 import org.bitcoinj.quorums.QuorumRotationInfoTest;
 import org.bitcoinj.store.BlockStoreException;
 import org.bitcoinj.store.MemoryBlockStore;
@@ -30,6 +32,9 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import javax.annotation.Nullable;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.Collection;
@@ -37,6 +42,7 @@ import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 /**
@@ -58,16 +64,22 @@ public class LoadBootstrapFilesTest {
     private final int fileFormatVersion;
     private final int mnlistdiffHeight;
     private final int qrinfoHeight;
+    private final String qrInfoAtTipFileName;
+    private final NetworkParameters.ProtocolVersion protocolVersionAtTip;
 
     public LoadBootstrapFilesTest(NetworkParameters params,
                                   String mnlistdiffFilename, String qrInfoFilename,
-                                  int protocolVersion, int mnlistdiffHeight, int qrinfoHeight) {
+                                  int protocolVersion, int mnlistdiffHeight, int qrinfoHeight,
+                                  @Nullable String qrInfoAtTipFileName,
+                                  @Nullable NetworkParameters.ProtocolVersion protocolVersionAtTip) {
         this.params = params;
         this.mnlistdiffFilename = mnlistdiffFilename;
         this.qrinfoFilename = qrInfoFilename;
         this.fileFormatVersion = protocolVersion;
         this.mnlistdiffHeight = mnlistdiffHeight;
         this.qrinfoHeight = qrinfoHeight;
+        this.qrInfoAtTipFileName = qrInfoAtTipFileName;
+        this.protocolVersionAtTip = protocolVersionAtTip;
     }
 
     @Parameterized.Parameters(name = "QuorumStateTest {index} (version={3}, qrinfo={1}, manager={2})")
@@ -79,7 +91,9 @@ public class LoadBootstrapFilesTest {
                         null,
                         SimplifiedMasternodeListManager.LLMQ_FORMAT_VERSION,
                         1088640,
-                        -1
+                        -1,
+                        null,
+                        null
                 },
                 {
                         MAINPARAMS,
@@ -87,7 +101,9 @@ public class LoadBootstrapFilesTest {
                         "qrinfo-mainnet-0-1888473_70227.dat",
                         SimplifiedMasternodeListManager.BLS_SCHEME_FORMAT_VERSION,
                         1888465,
-                        1888408
+                        1888408,
+                        null,
+                        null
                 },
                 {
                         MAINPARAMS,
@@ -95,7 +111,19 @@ public class LoadBootstrapFilesTest {
                         "qrinfo-mainnet-0-2028764-70230.dat",
                         SimplifiedMasternodeListManager.SMLE_VERSION_FORMAT_VERSION,
                         2028691,
-                        2028664
+                        2028664,
+                        null,
+                        null
+                },
+                {
+                        MAINPARAMS,
+                        "mnlistdiff-mainnet-0-2449941-70236.dat",
+                        "qrinfo-mainnet-0-2449949-70236.dat",
+                        SimplifiedMasternodeListManager.SMLE_VERSION_FORMAT_VERSION,
+                        2449941,
+                        2449720,
+                        "qrinfo-mainnet-2449720-2450114-70236.dat",
+                        NetworkParameters.ProtocolVersion.EFFICIENT_QRINFO
                 }
         });
     }
@@ -133,6 +161,46 @@ public class LoadBootstrapFilesTest {
                 assertEquals(qrinfoHeight, manager.quorumRotationState.getMasternodeList().getHeight());
         } catch (InterruptedException | ExecutionException x) {
             fail("unable to load bootstrap file");
+        }
+    }
+
+    @Test
+    public void loadAndTestBootstrapThenSyncToTip() throws BlockStoreException, IOException {
+        URL mnlistdiffFile = Objects.requireNonNull(getClass().getResource(mnlistdiffFilename));
+        URL qrinfoFile = (qrinfoFilename != null) ? Objects.requireNonNull(QuorumRotationInfoTest.class.getResource(qrinfoFilename)) : null;
+
+        initContext();
+
+        SimplifiedMasternodeListManager manager = new SimplifiedMasternodeListManager(context);
+        system.setMasternodeListManager(manager);
+        manager.setBootstrap(mnlistdiffFile.getPath(), (qrinfoFile != null) ? qrinfoFile.getPath() : null, fileFormatVersion);
+
+        manager.resetMNList(true, true);
+
+        try {
+            manager.waitForBootstrapLoaded();
+            assertEquals(mnlistdiffHeight, manager.getMasternodeList().getHeight());
+            if (qrinfoFilename != null)
+                assertEquals(qrinfoHeight, manager.quorumRotationState.getMasternodeList().getHeight());
+        } catch (InterruptedException | ExecutionException x) {
+            fail("unable to load bootstrap file");
+        }
+
+        //
+        URL qrinfoAtTipFile = (qrInfoAtTipFileName != null) ? Objects.requireNonNull(QuorumRotationInfoTest.class.getResource(qrInfoAtTipFileName)) : null;
+        if (qrinfoAtTipFile != null) {
+            try (FileInputStream stream = new FileInputStream(qrinfoAtTipFile.getFile())) {
+                int size = stream.available();
+                byte [] buffer = new byte[size];
+                if (stream.read(buffer) > 0) {
+                    QuorumRotationInfo qrinfo = new QuorumRotationInfo(params, buffer, params.getDefaultSerializer().withProtocolVersion(protocolVersionAtTip.getBitcoinProtocolVersion()));
+                    SettableFuture<Boolean> future = SettableFuture.create();
+                    manager.processDiffMessage(null, qrinfo, false, future);
+                    assertTrue(future.get());
+                }
+            } catch (ExecutionException | InterruptedException e) {
+                fail(e.getMessage());
+            }
         }
     }
 }

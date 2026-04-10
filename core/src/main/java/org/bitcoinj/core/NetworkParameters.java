@@ -628,10 +628,12 @@ public abstract class NetworkParameters {
         CORE_21(70232),
         DSQ_INV_VERSION(70234),
         INCREASE_MAX_HEADERS2_VERSION(70235),
-        // EFFICIENT_QRINFO_VERSION(70236),
-        // ISDLOCK_CYCLEHASH_UPDATE_VERSION(70237),
-        // PLATFORM_BAN_VERSION(70238),
-        CURRENT(70235); //testnet is still 70228
+        EFFICIENT_QRINFO(70236),
+        ISDLOCK_CYCLEHASH_UPDATE(70237),
+        PLATFORM_BAN(70238),
+        QFCOMMIT_STALE_REPROP_BAN(70239),
+        PLATFORMBAN_V2_SHORT(70240),
+        CURRENT(70240); //testnet is still 70228
 
         private final int bitcoinProtocol;
 

@@ -212,29 +212,45 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
             SimplifiedMasternodeList newMNListAtHMinus2C = baseMNList.applyDiff(quorumRotationInfo.getMnListDiffAtHMinus2C());
             mnListsCache.put(newMNListAtHMinus2C.getBlockHash(), newMNListAtHMinus2C);
 
-            // TODO: do we actually need to keep track of the blockchain tip mnlist?
-            // SimplifiedMasternodeList newMNListTip = mnListTip.applyDiff(quorumRotationInfo.getMnListDiffTip());
-            SimplifiedMasternodeList newMNListAtH = mnListAtH.applyDiff(quorumRotationInfo.getMnListDiffAtH());
             baseMNList = mnListsCache.get(quorumRotationInfo.getMnListDiffAtHMinusC().getPrevBlockHash());
             if (baseMNList == null)
                 throw new MasternodeListDiffException("does not connect to previous lists", true, false, false, false);
-            StoredBlock prevBlockHMinusC = blockChain.getBlock(quorumRotationInfo.getMnListDiffAtHMinusC().getPrevBlockHash());
+            SimplifiedMasternodeList newMNListAtHMinusC = baseMNList.applyDiff(quorumRotationInfo.getMnListDiffAtHMinusC());
+            mnListsCache.put(newMNListAtHMinusC.getBlockHash(), newMNListAtHMinusC);
 
+
+            // TODO: do we actually need to keep track of the blockchain tip mnlist?
+            // SimplifiedMasternodeList newMNListTip = mnListTip.applyDiff(quorumRotationInfo.getMnListDiffTip());
+            SimplifiedMasternodeList newMNListAtH;
+//            if (serializer.getProtocolVersion() >= NetworkParameters.ProtocolVersion.EFFICIENT_QRINFO_VERSION.getBitcoinProtocolVersion()) {
+//                baseMNList = mnListsCache.get(quorumRotationInfo.getMnListDiffAtH().getPrevBlockHash());
+//                if (baseMNList == null)
+//                    throw new MasternodeListDiffException("does not connect to previous lists", true, false, false, false);
+//                newMNListAtH = baseMNList.applyDiff(quorumRotationInfo.getMnListDiffAtH());
+//            } else {
+//                newMNListAtH = mnListAtH.applyDiff(quorumRotationInfo.getMnListDiffAtH());
+//            }
+//            baseMNList = mnListsCache.get(quorumRotationInfo.getMnListDiffAtH().getPrevBlockHash());
+
+            baseMNList = mnListsCache.get(quorumRotationInfo.getMnListDiffAtH().getPrevBlockHash());
+            if (baseMNList == null)
+                throw new MasternodeListDiffException("does not connect to previous lists", true, false, false, false);
+            newMNListAtH = baseMNList.applyDiff(quorumRotationInfo.getMnListDiffAtH());
+
+            //if (baseMNList == null)
+            //    throw new MasternodeListDiffException("does not connect to previous lists", true, false, false, false);
+
+            StoredBlock prevBlockH = blockChain.getBlock(quorumRotationInfo.getMnListDiffAtHMinusC().getPrevBlockHash());
             if (baseMNList == null) {
-                log.info("mnList missing for " + quorumRotationInfo.getMnListDiffAtHMinusC().getPrevBlockHash() + " " + (prevBlockHMinusC != null ? prevBlockHMinusC.getHeight() : -1));
+                log.info("mnList missing for " + quorumRotationInfo.getMnListDiffAtHMinusC().getPrevBlockHash() + " " + (prevBlockH != null ? prevBlockH.getHeight() : -1));
                 for (Sha256Hash hash : mnListsCache.keySet()) {
                     StoredBlock block = blockChain.getBlock(hash);
                     log.info("--> {}: {}: {}", hash, block == null ? -1 : block.getHeight(), mnListsCache.get(hash).getBlockHash());
                 }
             }
-            checkNotNull(baseMNList, "mnList missing for " + quorumRotationInfo.getMnListDiffAtHMinusC().getPrevBlockHash() + " " + (prevBlockHMinusC != null ? prevBlockHMinusC.getHeight() : -1));
-
-            SimplifiedMasternodeList newMNListAtHMinusC = baseMNList.applyDiff(quorumRotationInfo.getMnListDiffAtHMinusC());
-            mnListsCache.put(newMNListAtHMinusC.getBlockHash(), newMNListAtHMinusC);
+            checkNotNull(baseMNList, "mnList missing for " + quorumRotationInfo.getMnListDiffAtHMinusC().getPrevBlockHash() + " " + (prevBlockH != null ? prevBlockH.getHeight() : -1));
 
             // need to handle the case where there is only 1 masternode list, or 2 -- not enough to do all verification
-
-
             if (masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.MNLISTDIFF_MNLIST)) {
                 // TODO: do we actually need to keep track of the blockchain tip mnlist?
                 // newMNListTip.verify(quorumRotationInfo.getMnListDiffTip().coinBaseTx, quorumRotationInfo.getMnListDiffTip(), mnListTip);
@@ -307,21 +323,27 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
 
             if (quorumRotationInfo.hasExtraShare()) {
                 baseQuorumList = quorumsCache.get(quorumRotationInfo.getMnListDiffAtHMinus4C().getPrevBlockHash());
-                if (baseQuorumList != null)
-                    newQuorumListAtHMinus4C = baseQuorumList.applyDiff(quorumRotationInfo.getMnListDiffAtHMinus4C(), isLoadingBootStrap, blockChain, masternodeListManager, chainLocksHandler,true, false);
+                if (baseQuorumList != null) {
+                    newQuorumListAtHMinus4C = baseQuorumList.applyDiff(quorumRotationInfo.getMnListDiffAtHMinus4C(), isLoadingBootStrap, blockChain, masternodeListManager, chainLocksHandler, true, false);
+                    quorumsCache.put(quorumRotationInfo.getMnListDiffAtHMinus4C().getBlockHash(), newQuorumListAtHMinus4C);
+                }
             }
 
             baseQuorumList = quorumsCache.get(quorumRotationInfo.getMnListDiffAtHMinus3C().getPrevBlockHash());
             SimplifiedQuorumList newQuorumListAtHMinus3C = baseQuorumList.applyDiff(quorumRotationInfo.getMnListDiffAtHMinus3C(), isLoadingBootStrap, blockChain, masternodeListManager, chainLocksHandler,true, false);
+            quorumsCache.put(quorumRotationInfo.getMnListDiffAtHMinus3C().getBlockHash(), newQuorumListAtHMinus3C);
 
             baseQuorumList = quorumsCache.get(quorumRotationInfo.getMnListDiffAtHMinus2C().getPrevBlockHash());
             SimplifiedQuorumList newQuorumListAtHMinus2C = baseQuorumList.applyDiff(quorumRotationInfo.getMnListDiffAtHMinus2C(), isLoadingBootStrap, blockChain, masternodeListManager,chainLocksHandler,true, false);
+            quorumsCache.put(quorumRotationInfo.getMnListDiffAtHMinus2C().getBlockHash(), newQuorumListAtHMinus2C);
 
             baseQuorumList = quorumsCache.get(quorumRotationInfo.getMnListDiffAtHMinusC().getPrevBlockHash());
             SimplifiedQuorumList newQuorumListAtHMinusC = baseQuorumList.applyDiff(quorumRotationInfo.getMnListDiffAtHMinusC(), isLoadingBootStrap, blockChain, masternodeListManager,chainLocksHandler,true, false);
+            quorumsCache.put(quorumRotationInfo.getMnListDiffAtHMinusC().getBlockHash(), newQuorumListAtHMinusC);
 
             baseQuorumList = quorumsCache.get(quorumRotationInfo.getMnListDiffAtH().getPrevBlockHash());
             SimplifiedQuorumList newQuorumListAtH = baseQuorumList.applyDiff(quorumRotationInfo.getMnListDiffAtH(), isLoadingBootStrap, blockChain, masternodeListManager,chainLocksHandler,true, false);
+            quorumsCache.put(quorumRotationInfo.getMnListDiffAtH().getBlockHash(), newQuorumListAtH);
 
             if (masternodeSync.hasVerifyFlag(MasternodeSync.VERIFY_FLAGS.MNLISTDIFF_QUORUM)) {
                 // verify the merkle root of the quorums at H
@@ -564,8 +586,9 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
         final StoredBlock blockHMinusC = blockChain.getBlockAncestor(quorumBaseBlock, quorumBaseBlock.getHeight() - cycleLength);
         final StoredBlock pBlockHMinus2C = blockChain.getBlockAncestor(quorumBaseBlock, quorumBaseBlock.getHeight() - 2 * cycleLength);
         final StoredBlock pBlockHMinus3C = blockChain.getBlockAncestor(quorumBaseBlock, quorumBaseBlock.getHeight() - 3 * cycleLength);
-
         log.info("computeQuorumMembersByQuarterRotation llmqType[{}] nHeight[{}]", llmqType, quorumBaseBlock.getHeight());
+        log.info("computeQuorumMembersByQuarterRotation\n -C height: {}; {}\n-2C height: {}; {}\n-3C height: {}; {}\"\"",
+                quorumBaseBlock.getHeight() - cycleLength, blockHMinusC, quorumBaseBlock.getHeight() - 2 * cycleLength, pBlockHMinus2C, quorumBaseBlock.getHeight() - 3 * cycleLength, pBlockHMinus3C);
 
         PreviousQuorumQuarters previousQuarters = getPreviousQuorumQuarterMembers(llmqParameters, blockHMinusC, pBlockHMinus2C, pBlockHMinus3C, quorumBaseBlock.getHeight());
 
