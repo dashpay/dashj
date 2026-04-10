@@ -111,7 +111,6 @@ public class DevNetParams extends AbstractBitcoinNetParams {
         powKGWHeight = 4001;
         powAllowMinimumDifficulty = true;
         powNoRetargeting = false;
-        this.supportsV18 = supportsV18;
 
         instantSendConfirmationsRequired = 2;
         instantSendKeepLock = 6;

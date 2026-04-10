@@ -654,9 +654,6 @@ public abstract class NetworkParameters {
     protected int superblockStartBlock;
     protected int superblockCycle; // in blocks
 
-    @Deprecated
-    protected boolean supportsV18 = true;
-
     /**
      * Getter for property 'nGovernanceMinQuorum'.
      *
@@ -685,15 +682,6 @@ public abstract class NetworkParameters {
 
     public int getSuperblockStartBlock() {
         return superblockStartBlock;
-    }
-
-    @Deprecated
-    public boolean isSupportingV18() {
-        return supportsV18;
-    }
-    @Deprecated
-    public void setSupportsV18(boolean supportsV18) {
-        this.supportsV18 = supportsV18;
     }
 
     protected int instantSendConfirmationsRequired;
