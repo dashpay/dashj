@@ -2044,7 +2044,7 @@ public class PeerGroup implements TransactionBroadcaster, GovernanceVoteBroadcas
                 final Peer newDownloadPeer = selectDownloadPeer(peers);
                 if (newDownloadPeer != null) {
                     setDownloadPeer(newDownloadPeer);
-                    if (downloadListener != null) {
+                    if (downloadListener != null && vRunning) {
                         startBlockChainDownloadFromPeer(newDownloadPeer);
                     }
                 }
