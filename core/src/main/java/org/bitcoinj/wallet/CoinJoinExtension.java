@@ -546,9 +546,20 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
     }
 
     public void refreshUnusedKeys() {
+        // Pre-compute used pubkey hashes outside the lock to avoid O(keys × txes × outputs)
+        // work while holding unusedKeysLock, which was causing severe lock contention.
+        Set<ByteString> usedPubKeyHashes = new HashSet<>();
+        for (Transaction tx : wallet.getTransactions(true)) {
+            for (TransactionOutput output : tx.getOutputs()) {
+                if (ScriptPattern.isP2PKH(output.getScriptPubKey())) {
+                    usedPubKeyHashes.add(ByteString.copyFrom(
+                            ScriptPattern.extractHashFromP2PKH(output.getScriptPubKey())));
+                }
+            }
+        }
+
         List<IDeterministicKey> issuedKeys;
-        Set<Transaction> txes = wallet.getTransactions(true);
-        
+
         unusedKeysLock.lock();
         try {
             keyChainGroupLock.lock();
@@ -559,28 +570,14 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
                 keyChainGroupLock.unlock();
             }
 
-            issuedKeys.forEach(key -> {
+            for (IDeterministicKey key : issuedKeys) {
                 unusedKeys.put(KeyId.fromBytes(key.getPubKeyHash()), (DeterministicKey) key);
-                keyUsage.put(key, false);
-            });
-
-            Stream<IDeterministicKey> usedKeys = issuedKeys.stream().filter(key -> {
-                        boolean found = txes.stream().anyMatch(tx ->
-                                tx.getOutputs().stream().anyMatch(output -> {
-                                    if (ScriptPattern.isP2PKH(output.getScriptPubKey())) {
-                                        byte[] publicKeyHash = ScriptPattern.extractHashFromP2PKH(output.getScriptPubKey());
-                                        return Arrays.equals(publicKeyHash, key.getPubKeyHash());
-                                    } else return false;
-                                })
-                        );
-                        if (found) {
-                            keyUsage.put(key, true);
-                        }
-                        return found;
-                    }
-            );
-
-            usedKeys.forEach(key -> unusedKeys.remove(KeyId.fromBytes(key.getPubKeyHash())));
+                boolean used = usedPubKeyHashes.contains(ByteString.copyFrom(key.getPubKeyHash()));
+                keyUsage.put(key, used);
+                if (used) {
+                    unusedKeys.remove(KeyId.fromBytes(key.getPubKeyHash()));
+                }
+            }
 
             unusedKeys.forEach((keyId, key) -> log.info(COINJOIN_EXTRA, "unused key: {}", key));
             keyUsage.forEach((key, used) -> {
