@@ -1715,9 +1715,9 @@ public class GovernanceManager extends AbstractManager {
 
     @Override
     public void close() {
-        if (peerGroup != null) {
-            peerGroup.removeGetDataEventListener(getDataEventListener);
-            peerGroup.removePreMessageReceivedEventListener(preMessageReceivedEventListener);
-        }
+        // All peerGroup.remove*EventListener calls skipped: handlePeerDeath() removes per-peer listeners
+        // when peers disconnect. Calling these methods acquires the PeerGroup lock via getConnectedPeers(),
+        // risking shutdown deadlock.
+        peerGroup = null;
     }
 }

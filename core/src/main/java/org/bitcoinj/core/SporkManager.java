@@ -72,6 +72,7 @@ public class SporkManager {
     @GuardedBy("lock") private final HashMap<SporkId, Long> mapSporksCachedValues;
     @GuardedBy("lock") private final HashSet<KeyId> setSporkPubKeyIds = new HashSet<>();
 
+    private PeerGroup peerGroup;
     private AbstractBlockChain blockChain;
     private MasternodeSync masternodeSync;
     private final Context context;
@@ -91,6 +92,7 @@ public class SporkManager {
     public void setBlockChain(AbstractBlockChain blockChain, @Nullable PeerGroup peerGroup, MasternodeSync masternodeSync) {
         this.blockChain = blockChain;
         this.masternodeSync = masternodeSync;
+        this.peerGroup = peerGroup;
         if (peerGroup != null) {
             peerGroup.addConnectedEventListener(peerConnectedEventListener);
             peerGroup.addPreMessageReceivedEventListener(SAME_THREAD, preMessageReceivedEventListener);
@@ -102,17 +104,24 @@ public class SporkManager {
         mapSporksByHash.clear();
     }
 
-    public void close(PeerGroup peerGroup) {
-        if (peerGroup != null) {
-            peerGroup.removeConnectedEventListener(peerConnectedEventListener);
-            peerGroup.removePreMessageReceivedEventListener(preMessageReceivedEventListener);
-        }
+    public void close() {
+        // No per-peer listener removal needed here:
+        // - preMessageReceivedEventListener is removed from each peer by PeerGroup.handlePeerDeath()
+        // - peerConnectedEventListener left on a disconnecting peer is harmless (it will never fire)
+        // Calling removeConnectedEventListener/removePreMessageReceivedEventListener would iterate
+        // getConnectedPeers() under the PeerGroup lock, which can deadlock during shutdown when
+        // another PeerGroup thread holds that lock while blocked on SPVBlockStore I/O.
+        peerGroup = null;
+        blockChain = null;
+        masternodeSync = null;
     }
 
     void processSpork(Peer from, SporkMessage spork) {
 //        if (context.isLiteMode() && !context.allowInstantXinLiteMode()) {
 //            return; //disable all darksend/masternode related functionality
 //        }
+
+        if (blockChain == null) return; // closed during shutdown
 
         Sha256Hash hash = spork.getHash();
         String logMessage = String.format("SPORK -- hash: %s id: %d (%s) value: %10d bestHeight: %d peer=%s:%d",

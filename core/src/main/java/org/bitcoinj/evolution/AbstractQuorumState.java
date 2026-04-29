@@ -554,12 +554,10 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
             blockChain.removeNewBestBlockListener(newBestBlockListener);
             blockChain.removeReorganizeListener(reorganizeListener);
         }
-         if (peerGroup != null) {
-            peerGroup.removeConnectedEventListener(peerConnectedEventListener);
-            peerGroup.removeChainDownloadStartedEventListener(chainDownloadStartedEventListener);
-            peerGroup.removeHeadersDownloadStartedEventListener(headersDownloadStartedEventListener);
-            peerGroup.removeDisconnectedEventListener(peerDisconnectedEventListener);
-        }
+        // All peerGroup.remove*EventListener calls skipped: handlePeerDeath() removes per-peer listeners
+        // (ChainDownloadStarted, Disconnected) when peers disconnect, and Connected/HeadersDownloadStarted
+        // listeners left on dying peers are benign (those events never fire on disconnecting peers).
+        // Calling these methods acquires the PeerGroup lock via getConnectedPeers(), risking shutdown deadlock.
     }
 
     public final NewBestBlockListener newBestBlockListener = new NewBestBlockListener() {
@@ -597,6 +595,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
     public final PeerConnectedEventListener peerConnectedEventListener = new PeerConnectedEventListener() {
         @Override
         public void onPeerConnected(Peer peer, int peerCount) {
+            if (peerGroup == null) return; // closed during shutdown
             downloadPeer = peerGroup.getDownloadPeer();
             log.info("peer connected and setting download peer to {} with onPeerConnected", downloadPeer);
         }
@@ -605,6 +604,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
     final PeerDisconnectedEventListener peerDisconnectedEventListener = new PeerDisconnectedEventListener() {
         @Override
         public void onPeerDisconnected(Peer peer, int peerCount) {
+            if (peerGroup == null) return; // closed during shutdown
             if (downloadPeer == peer) {
                 downloadPeer = peerGroup.getDownloadPeer();
                 log.info("setting download peer to {} with onPeerDisconnected, previously was {}", downloadPeer, peer);
@@ -897,5 +897,7 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
             retryFuture.cancel(true);
             retryFuture = null;
         }
+        peerGroup = null;
+        blockChain = null;
     }
 }

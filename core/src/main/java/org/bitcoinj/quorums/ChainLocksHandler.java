@@ -130,9 +130,8 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
     public void close() {
         blockChain = null;
         headerChain = null;
-        if (peerGroup != null) {
-            peerGroup.removePreMessageReceivedEventListener(preMessageReceivedEventListener);
-        }
+        // removePreMessageReceivedEventListener skipped: handlePeerDeath() removes it per-peer on disconnect.
+        // Calling it here acquires the PeerGroup lock via getConnectedPeers(), risking shutdown deadlock.
         peerGroup = null;
         super.close();
     }
@@ -203,8 +202,9 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
         processNewChainLock(peer, clsig, hash);
     }
 
-    void processNewChainLock(Peer from, ChainLockSignature clsig, Sha256Hash hash)
-    {
+    void processNewChainLock(Peer from, ChainLockSignature clsig, Sha256Hash hash) {
+        if (blockChain == null) return; // closed during shutdown
+
         lock.lock();
         try {
             if (seenChainLocks.put(hash, Utils.currentTimeMillis()) != null) {
