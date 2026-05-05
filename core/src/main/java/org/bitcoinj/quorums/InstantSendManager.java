@@ -127,8 +127,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
         }
         if (peerGroup != null) {
             peerGroup.removeOnTransactionBroadcastListener(this.transactionBroadcastListener);
-            // removePreMessageReceivedEventListener skipped: handlePeerDeath() removes it per-peer on disconnect.
-            // Calling it here acquires the PeerGroup lock via getConnectedPeers(), risking shutdown deadlock.
+            peerGroup.removePreMessageReceivedEventListener(preMessageReceivedEventListener);
         }
         if (chainLocksHandler != null) {
             chainLocksHandler.removeChainLockListener(this.chainLockListener);

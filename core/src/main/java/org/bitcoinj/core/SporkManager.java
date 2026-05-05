@@ -105,12 +105,10 @@ public class SporkManager {
     }
 
     public void close() {
-        // No per-peer listener removal needed here:
-        // - preMessageReceivedEventListener is removed from each peer by PeerGroup.handlePeerDeath()
-        // - peerConnectedEventListener left on a disconnecting peer is harmless (it will never fire)
-        // Calling removeConnectedEventListener/removePreMessageReceivedEventListener would iterate
-        // getConnectedPeers() under the PeerGroup lock, which can deadlock during shutdown when
-        // another PeerGroup thread holds that lock while blocked on SPVBlockStore I/O.
+        if (peerGroup != null) {
+            peerGroup.removeConnectedEventListener(peerConnectedEventListener);
+            peerGroup.removePreMessageReceivedEventListener(preMessageReceivedEventListener);
+        }
         peerGroup = null;
         blockChain = null;
         masternodeSync = null;

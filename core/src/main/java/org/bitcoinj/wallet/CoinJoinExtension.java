@@ -788,7 +788,7 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
                         }
                         totalInputs.addAndGet(1);
                     } else {
-                        if (rounds >= 0) {
+                        if (roundsMixed >= 0) {
                             totalInputs.addAndGet(1);
                             double percentMixedForInput = ((double) roundsMixed) / requiredRounds;
                             totalMixed.addAndGet(percentMixedForInput);

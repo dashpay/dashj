@@ -554,10 +554,12 @@ public abstract class AbstractQuorumState<Request extends AbstractQuorumRequest,
             blockChain.removeNewBestBlockListener(newBestBlockListener);
             blockChain.removeReorganizeListener(reorganizeListener);
         }
-        // All peerGroup.remove*EventListener calls skipped: handlePeerDeath() removes per-peer listeners
-        // (ChainDownloadStarted, Disconnected) when peers disconnect, and Connected/HeadersDownloadStarted
-        // listeners left on dying peers are benign (those events never fire on disconnecting peers).
-        // Calling these methods acquires the PeerGroup lock via getConnectedPeers(), risking shutdown deadlock.
+        if (peerGroup != null) {
+            peerGroup.removeConnectedEventListener(peerConnectedEventListener);
+            peerGroup.removeChainDownloadStartedEventListener(chainDownloadStartedEventListener);
+            peerGroup.removeHeadersDownloadStartedEventListener(headersDownloadStartedEventListener);
+            peerGroup.removeDisconnectedEventListener(peerDisconnectedEventListener);
+        }
     }
 
     public final NewBestBlockListener newBestBlockListener = new NewBestBlockListener() {

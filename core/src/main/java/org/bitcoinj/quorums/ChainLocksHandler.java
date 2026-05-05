@@ -130,8 +130,9 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
     public void close() {
         blockChain = null;
         headerChain = null;
-        // removePreMessageReceivedEventListener skipped: handlePeerDeath() removes it per-peer on disconnect.
-        // Calling it here acquires the PeerGroup lock via getConnectedPeers(), risking shutdown deadlock.
+        if (peerGroup != null) {
+            peerGroup.removePreMessageReceivedEventListener(preMessageReceivedEventListener);
+        }
         peerGroup = null;
         super.close();
     }

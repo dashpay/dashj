@@ -123,9 +123,9 @@ public class MasternodeSync {
     }
 
     public void close() {
-        // No per-peer listener removal needed: handlePeerDeath() cleans up preMessageReceivedEventListener
-        // from each peer when it disconnects. Calling removePreMessageReceivedEventListener() here would
-        // acquire the PeerGroup lock via getConnectedPeers(), which can deadlock during shutdown.
+        if (peerGroup != null) {
+            peerGroup.removePreMessageReceivedEventListener(preMessageReceivedEventListener);
+        }
         peerGroup = null;
         blockChain = null;
     }

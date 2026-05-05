@@ -132,6 +132,7 @@ public class DualBlockChain {
     }
 
     public void setPeerGroup(PeerGroup peerGroup, MasternodeSync masternodeSync) {
+        close();
         if (peerGroup != null) {
             this.peerGroup = peerGroup;
             downloadProgressTracker = new MyDownloadProgressTracker(masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING));
@@ -148,9 +149,14 @@ public class DualBlockChain {
     }
 
     public void close() {
-        if (peerGroup != null) {
-            // no need to check remove event listeners from peergroup
-            peerGroup = null;
+        if (peerGroup != null && downloadProgressTracker != null) {
+            peerGroup.removeHeadersDownloadedEventListener(downloadProgressTracker);
+            peerGroup.removeHeadersDownloadStartedEventListener(downloadProgressTracker);
+            peerGroup.removeBlocksDownloadedEventListener(downloadProgressTracker);
+            peerGroup.removeChainDownloadStartedEventListener(downloadProgressTracker);
+            peerGroup.removeMasternodeListDownloadedListener(downloadProgressTracker);
         }
+        peerGroup = null;
+        downloadProgressTracker = null;
     }
 }

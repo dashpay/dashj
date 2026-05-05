@@ -443,19 +443,19 @@ public class SimplifiedMasternodeListManager extends MasternodeListManager {
             quorumState.close();
             quorumRotationState.close();
 
-            // removePreMessageReceivedEventListener skipped: handlePeerDeath() removes it per-peer on disconnect.
-            // Calling it here acquires the PeerGroup lock via getConnectedPeers(), risking shutdown deadlock.
+            if (peerGroup != null) {
+                peerGroup.removePreMessageReceivedEventListener(preMessageReceivedEventListener);
+            }
             threadPool.shutdown();
             // Don't wait at all - let it die naturally to avoid blocking
             if (!threadPool.isTerminated()) {
                 log.info("ThreadPool shutdown initiated, not waiting");
                 threadPool.shutdownNow(); // Send interrupt signal but don't wait
             }
+            saveNow(); // Always save, regardless of thread pool state
             peerGroup = null;
             blockChain = null;
-            saveNow(); // Always save, regardless of thread pool state
             super.close();
-
         }
     }
 
