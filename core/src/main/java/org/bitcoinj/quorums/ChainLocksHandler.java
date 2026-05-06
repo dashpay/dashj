@@ -208,6 +208,7 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
 
         lock.lock();
         try {
+            if (blockChain == null) return;   // re-check under lock
             if (seenChainLocks.put(hash, Utils.currentTimeMillis()) != null) {
                 return;
             }
