@@ -290,9 +290,12 @@ public class CoinJoinManager {
             blockChain.removeNewBestBlockListener(newBestBlockListener);
             blockChain.removeTransactionReceivedListener(transactionReceivedInBlockListener);
         }
-        // removePreMessageReceivedEventListener skipped on both peerGroup and masternodeGroup:
-        // handlePeerDeath() removes it per-peer on disconnect. Calling it here acquires the
-        // PeerGroup lock via getConnectedPeers(), risking shutdown deadlock.
+        if (peerGroup != null) {
+            peerGroup.removePreMessageReceivedEventListener(preMessageReceivedEventListener);
+        }
+        if (masternodeGroup != null) {
+            masternodeGroup.removePreMessageReceivedEventListener(preMessageReceivedEventListener);
+        }
 
         // Shut down the executor before nulling fields — queued tasks may still reference them.
         ExecutorService execToStop = null;
