@@ -550,12 +550,12 @@ public class CoinJoinManager {
                 if(!alreadyHave(item)) {
                     getdata.addItem(item);
                 } else {
-                    log.info("coinjoin: DSQUEUE: already has {}", item.hash);
+                    log.debug("coinjoin: DSQUEUE: already has {}", item.hash);
                 }
             }
             if (!getdata.getItems().isEmpty()) {
                 // This will cause us to receive a bunch of block or tx messages.
-                log.info(COINJOIN_EXTRA, "coinjoin: DSQUEUE: requesting {} dsq messages", getdata.getItems().size());
+                log.debug(COINJOIN_EXTRA, "coinjoin: DSQUEUE: requesting {} dsq messages", getdata.getItems().size());
                 getdata.getItems().forEach(
                         inventoryItem -> log.info(COINJOIN_EXTRA, "getdata: {}", inventoryItem.hash));
                 peer.sendMessage(getdata);
