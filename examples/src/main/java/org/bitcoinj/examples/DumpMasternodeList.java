@@ -81,10 +81,9 @@ public class DumpMasternodeList {
                 if (m instanceof SimplifiedMasternodeListDiff) {
                     System.out.println("Received mnlistdiff...");
                     File dumpFile = new File(params.getNetworkName() + "-mnlist.dat");
-                    OutputStream stream = new FileOutputStream(dumpFile);
-                    stream.write(m.bitcoinSerialize());
-                    stream.close();
-                    mnlistdiffReceivedFuture.set(true);
+                    try (OutputStream stream = new FileOutputStream(dumpFile)) {
+                        stream.write(m.bitcoinSerialize());
+                    }
                     SimplifiedMasternodeListDiff diff = (SimplifiedMasternodeListDiff)m;
                     AtomicInteger countLegacy = new AtomicInteger();
                     AtomicInteger countEnabled = new AtomicInteger();
@@ -102,14 +101,17 @@ public class DumpMasternodeList {
                     System.out.printf("Total: %d, Legacy: %d\n", countEnabled.get(), countLegacy.get());
                     System.out.println("HP Masternode List");
                     evoNodes.forEach(entry -> System.out.println("\"" + entry.getService().getAddr().getHostAddress() + "\","));
+                    mnlistdiffReceivedFuture.set(true);
                     return null;
                 }
             } catch (FileNotFoundException e) {
                 System.out.println("cannot find the file to write to");
+                mnlistdiffReceivedFuture.setException(e);
                 throw new RuntimeException(e);
             } catch (IOException e) {
                 System.out.println("IO Error");
                 e.printStackTrace();
+                mnlistdiffReceivedFuture.setException(e);
                 throw new RuntimeException(e);
             }
 
