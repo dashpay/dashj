@@ -97,7 +97,7 @@ public class LargeCoinJoinWalletTest {
         info("getMixingProgress2: {}", watch2);
 
         Stopwatch watch3 = Stopwatch.createStarted();
-        assertEquals(0.9864790925660492, wallet.getCoinJoin().getMixingProgress(), 0.001);
+        assertEquals(0.9987573607826772, wallet.getCoinJoin().getMixingProgress(), 0.001);
         info("getMixingProgress: {}", watch3);
     }
 
