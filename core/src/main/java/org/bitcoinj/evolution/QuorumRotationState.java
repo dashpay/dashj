@@ -445,13 +445,20 @@ public class QuorumRotationState extends AbstractQuorumState<GetQuorumRotationIn
         if (blockChain != null && !params.isDIP0024Active(blockChain.getBestChainHeight()))
             return true;
 
-        if(mnListAtH.getHeight() == -1)
+        if (mnListAtH.getHeight() == -1)
             return false;
 
-        if (peerGroup == null)
+        if (blockChain == null)
             return false;
 
-        int mostCommonHeight = peerGroup.getMostCommonHeight();
+        if (!blockChain.isInitialHeaderSyncComplete()) {
+            return false;
+        }
+
+        // Use local chain height instead of peerGroup.getMostCommonHeight() to avoid
+        // acquiring the PeerGroup lock, which can deadlock during shutdown or when the
+        // PeerGroup thread holds it while blocked on SPVBlockStore I/O.
+        int mostCommonHeight = blockChain.getBestChainHeight();
 
         // determine when the last QR height was
         LLMQParameters llmqParameters = params.getLlmqs().get(llmqType);

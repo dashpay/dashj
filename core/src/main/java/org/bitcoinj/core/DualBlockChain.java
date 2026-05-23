@@ -16,7 +16,9 @@
 
 package org.bitcoinj.core;
 
+import org.bitcoinj.core.listeners.DownloadProgressTracker;
 import org.bitcoinj.store.BlockStoreException;
+import org.bitcoinj.utils.Threading;
 
 import javax.annotation.Nullable;
 
@@ -104,5 +106,57 @@ public class DualBlockChain {
 
     public StoredBlock getChainHead() {
         return getLongestChain().chainHead;
+    }
+
+    PeerGroup peerGroup;
+    MyDownloadProgressTracker downloadProgressTracker;
+
+    private static class MyDownloadProgressTracker extends DownloadProgressTracker {
+        volatile boolean headerDownloadCompleted = false;
+        volatile boolean blockDownloadCompleted = false;
+        MyDownloadProgressTracker(boolean preprocessingBeforeBlocks) {
+            super(preprocessingBeforeBlocks);
+        }
+
+        @Override
+        public void doneHeaderDownload() {
+            super.doneHeaderDownload();
+            headerDownloadCompleted = true;
+        }
+
+        @Override
+        protected void doneDownload() {
+            super.doneDownload();
+            blockDownloadCompleted = true;
+        }
+    }
+
+    public void setPeerGroup(PeerGroup peerGroup, MasternodeSync masternodeSync) {
+        close();
+        if (peerGroup != null) {
+            this.peerGroup = peerGroup;
+            downloadProgressTracker = new MyDownloadProgressTracker(masternodeSync.hasSyncFlag(MasternodeSync.SYNC_FLAGS.SYNC_BLOCKS_AFTER_PREPROCESSING));
+            peerGroup.addHeadersDownloadedEventListener(Threading.USER_THREAD, downloadProgressTracker);
+            peerGroup.addHeadersDownloadStartedEventListener(Threading.USER_THREAD, downloadProgressTracker);
+            peerGroup.addBlocksDownloadedEventListener(Threading.USER_THREAD, downloadProgressTracker);
+            peerGroup.addChainDownloadStartedEventListener(Threading.USER_THREAD, downloadProgressTracker);
+            peerGroup.addMasternodeListDownloadListener(Threading.USER_THREAD, downloadProgressTracker);
+        }
+    }
+
+    public boolean isInitialHeaderSyncComplete() {
+        return downloadProgressTracker != null && (downloadProgressTracker.headerDownloadCompleted || downloadProgressTracker.blockDownloadCompleted);
+    }
+
+    public void close() {
+        if (peerGroup != null && downloadProgressTracker != null) {
+            peerGroup.removeHeadersDownloadedEventListener(downloadProgressTracker);
+            peerGroup.removeHeadersDownloadStartedEventListener(downloadProgressTracker);
+            peerGroup.removeBlocksDownloadedEventListener(downloadProgressTracker);
+            peerGroup.removeChainDownloadStartedEventListener(downloadProgressTracker);
+            peerGroup.removeMasternodeListDownloadedListener(downloadProgressTracker);
+        }
+        peerGroup = null;
+        downloadProgressTracker = null;
     }
 }

@@ -19,6 +19,7 @@ package org.bitcoinj.wallet;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.util.concurrent.AtomicDouble;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.CodedOutputStream;
 import net.jcip.annotations.GuardedBy;
@@ -54,6 +55,7 @@ import java.io.ByteArrayOutputStream;
 import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -546,9 +548,20 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
     }
 
     public void refreshUnusedKeys() {
+        // Pre-compute used pubkey hashes outside the lock to avoid O(keys × txes × outputs)
+        // work while holding unusedKeysLock, which was causing severe lock contention.
+        Set<ByteString> usedPubKeyHashes = new HashSet<>();
+        for (Transaction tx : wallet.getTransactions(true)) {
+            for (TransactionOutput output : tx.getOutputs()) {
+                if (ScriptPattern.isP2PKH(output.getScriptPubKey())) {
+                    usedPubKeyHashes.add(ByteString.copyFrom(
+                            ScriptPattern.extractHashFromP2PKH(output.getScriptPubKey())));
+                }
+            }
+        }
+
         List<IDeterministicKey> issuedKeys;
-        Set<Transaction> txes = wallet.getTransactions(true);
-        
+
         unusedKeysLock.lock();
         try {
             keyChainGroupLock.lock();
@@ -559,28 +572,14 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
                 keyChainGroupLock.unlock();
             }
 
-            issuedKeys.forEach(key -> {
+            for (IDeterministicKey key : issuedKeys) {
                 unusedKeys.put(KeyId.fromBytes(key.getPubKeyHash()), (DeterministicKey) key);
-                keyUsage.put(key, false);
-            });
-
-            Stream<IDeterministicKey> usedKeys = issuedKeys.stream().filter(key -> {
-                        boolean found = txes.stream().anyMatch(tx ->
-                                tx.getOutputs().stream().anyMatch(output -> {
-                                    if (ScriptPattern.isP2PKH(output.getScriptPubKey())) {
-                                        byte[] publicKeyHash = ScriptPattern.extractHashFromP2PKH(output.getScriptPubKey());
-                                        return Arrays.equals(publicKeyHash, key.getPubKeyHash());
-                                    } else return false;
-                                })
-                        );
-                        if (found) {
-                            keyUsage.put(key, true);
-                        }
-                        return found;
-                    }
-            );
-
-            usedKeys.forEach(key -> unusedKeys.remove(KeyId.fromBytes(key.getPubKeyHash())));
+                boolean used = usedPubKeyHashes.contains(ByteString.copyFrom(key.getPubKeyHash()));
+                keyUsage.put(key, used);
+                if (used) {
+                    unusedKeys.remove(KeyId.fromBytes(key.getPubKeyHash()));
+                }
+            }
 
             unusedKeys.forEach((keyId, key) -> log.info(COINJOIN_EXTRA, "unused key: {}", key));
             keyUsage.forEach((key, used) -> {
@@ -733,7 +732,9 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
         }
     }
 
-    public double getMixingProgress() {
+    // this is the old algorithm
+    @Deprecated
+    public double getMixingProgress2() {
         double requiredRounds = rounds + 0.875; // 1 x 50% + 1 x 50%^2 + 1 x 50%^3
         AtomicInteger totalInputs = new AtomicInteger();
         AtomicInteger totalRounds = new AtomicInteger();
@@ -763,7 +764,52 @@ public class CoinJoinExtension extends AbstractKeyChainGroupExtension {
             });
         });
         double progress = totalInputs.get() != 0 ? totalRounds.get() / (requiredRounds * totalInputs.get()) : 0.0;
-        log.info("getMixingProgress: {} = {} / ({} * {})", progress, totalRounds.get(), requiredRounds, totalInputs.get());
+        log.info("getMixingProgress2: {} = {} / ({} * {})", progress, totalRounds.get(), requiredRounds, totalInputs.get());
+        return Math.max(0.0, Math.min(progress, 1.0));
+    }
+
+    public double getMixingProgress() {
+        double requiredRounds = rounds + 0.875; // 1 x 50% + 1 x 50%^2 + 1 x 50%^3
+        AtomicInteger totalInputs = new AtomicInteger();
+        AtomicDouble totalMixed = new AtomicDouble();
+        getOutputs().forEach((denom, outputs) -> {
+            outputs.forEach(output -> {
+                // do not count mixing collateral for fees
+                if (denom >= 0) {
+                    // getOutputs has a bug where non-denominated items are marked as denominated
+                    TransactionOutPoint outPoint = new TransactionOutPoint(output.getParams(), output.getIndex(), output.getParentTransactionHash());
+                    int roundsMixed = ((WalletEx) wallet).getRealOutpointCoinJoinRounds(outPoint);
+
+                    if (roundsMixed >= rounds) {
+                        if (wallet.isFullyMixed(output)) {
+                            totalMixed.addAndGet(1.00);
+                        } else {
+                            totalMixed.addAndGet(((double)roundsMixed) / (roundsMixed + 1));
+                        }
+                        totalInputs.addAndGet(1);
+                    } else {
+                        if (roundsMixed >= 0) {
+                            totalInputs.addAndGet(1);
+                            double percentMixedForInput = ((double) roundsMixed) / requiredRounds;
+                            totalMixed.addAndGet(percentMixedForInput);
+                        }
+                    }
+                } else if (denom == -2) {
+                    // estimate what the denominations would be: use greedy algorithm
+                    AtomicInteger unmixedInputs = new AtomicInteger(0);
+                    AtomicReference<Coin> outputValue = new AtomicReference<>(output.getValue().subtract(CoinJoin.getCollateralAmount()));
+                    CoinJoinClientOptions.getDenominations().forEach(coin -> {
+                        while (outputValue.get().subtract(coin).isGreaterThan(Coin.ZERO)) {
+                            unmixedInputs.getAndIncrement();
+                            outputValue.set(outputValue.get().subtract(coin));
+                        }
+                    });
+                    totalInputs.set(totalInputs.get() + unmixedInputs.get());
+                }
+            });
+        });
+        double progress = totalInputs.get() != 0 ? totalMixed.get() / totalInputs.get() : 0.0;
+        log.info("getMixingProgress: {} = {} / {}", progress, totalMixed.get(), totalInputs.get());
         return Math.max(0.0, Math.min(progress, 1.0));
     }
 

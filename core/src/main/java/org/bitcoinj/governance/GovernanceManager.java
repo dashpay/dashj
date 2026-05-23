@@ -1719,5 +1719,6 @@ public class GovernanceManager extends AbstractManager {
             peerGroup.removeGetDataEventListener(getDataEventListener);
             peerGroup.removePreMessageReceivedEventListener(preMessageReceivedEventListener);
         }
+        peerGroup = null;
     }
 }

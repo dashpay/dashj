@@ -126,6 +126,8 @@ public class MasternodeSync {
         if (peerGroup != null) {
             peerGroup.removePreMessageReceivedEventListener(preMessageReceivedEventListener);
         }
+        peerGroup = null;
+        blockChain = null;
     }
 
     public MasternodeSync(Context context, boolean isLiteMode, boolean allowInstantSendInLiteMode) {

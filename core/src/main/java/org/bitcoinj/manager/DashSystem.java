@@ -58,6 +58,7 @@ public class DashSystem {
     public AbstractBlockChain blockChain;
     @Nullable
     public AbstractBlockChain headerChain;
+    DualBlockChain dualBlockChain;
     public SporkManager sporkManager;
     public MasternodePayments masternodePayments;
     public MasternodeSync masternodeSync;
@@ -251,10 +252,13 @@ public class DashSystem {
         }
     }
 
+    /**
+     * close down DashSystem and free resources, typically called after the PeerGroup is shutdown
+     */
     public void close() {
         if (initializedObjects) {
             log.info("Closing network spork configuration manager");
-            sporkManager.close(peerGroup);
+            sporkManager.close();
             log.info("Closing masternode synchronization state");
             masternodeSync.close();
             log.info("Closing masternode list manager (includes thread pool shutdown)");
@@ -285,6 +289,8 @@ public class DashSystem {
                 log.info("Closing header chain");
                 headerChain.close();
             }
+            log.info("closing dual blockchain");
+            dualBlockChain.close();
             log.info("Clearing peer group reference");
             peerGroup = null;
         }
@@ -295,13 +301,14 @@ public class DashSystem {
             this.peerGroup = peerGroup;
             this.blockChain = blockChain;
             this.headerChain = headerChain;
-            DualBlockChain dualBlockChain = new DualBlockChain(headerChain, blockChain);
+            dualBlockChain = new DualBlockChain(headerChain, blockChain);
             hashStore = new HashStore(blockChain.getBlockStore());
             blockChain.addNewBestBlockListener(newBestBlockListener);
             handleActivations(blockChain.getChainHead());
             if (initializedObjects) {
                 sporkManager.setBlockChain(blockChain, peerGroup, masternodeSync);
                 masternodeSync.setBlockChain(blockChain, peerGroup, netFullfilledRequestManager, governanceManager);
+                dualBlockChain.setPeerGroup(peerGroup, masternodeSync);
                 masternodeListManager.setBlockChain(
                         dualBlockChain,
                         peerGroup,

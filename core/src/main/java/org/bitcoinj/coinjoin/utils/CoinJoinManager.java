@@ -296,7 +296,8 @@ public class CoinJoinManager {
         if (masternodeGroup != null) {
             masternodeGroup.removePreMessageReceivedEventListener(preMessageReceivedEventListener);
         }
-        // Ensure executor is shut down
+
+        // Shut down the executor before nulling fields — queued tasks may still reference them.
         ExecutorService execToStop = null;
         lock.lock();
         try {
@@ -310,6 +311,8 @@ public class CoinJoinManager {
         if (execToStop != null) {
             execToStop.shutdown();
         }
+        blockChain = null;
+        peerGroup = null;
     }
 
     public boolean isMasternodeOrDisconnectRequested(MasternodeAddress address) {
@@ -547,12 +550,12 @@ public class CoinJoinManager {
                 if(!alreadyHave(item)) {
                     getdata.addItem(item);
                 } else {
-                    log.info("coinjoin: DSQUEUE: already has {}", item.hash);
+                    log.debug("coinjoin: DSQUEUE: already has {}", item.hash);
                 }
             }
             if (!getdata.getItems().isEmpty()) {
                 // This will cause us to receive a bunch of block or tx messages.
-                log.info(COINJOIN_EXTRA, "coinjoin: DSQUEUE: requesting {} dsq messages", getdata.getItems().size());
+                log.debug(COINJOIN_EXTRA, "coinjoin: DSQUEUE: requesting {} dsq messages", getdata.getItems().size());
                 getdata.getItems().forEach(
                         inventoryItem -> log.info(COINJOIN_EXTRA, "getdata: {}", inventoryItem.hash));
                 peer.sendMessage(getdata);

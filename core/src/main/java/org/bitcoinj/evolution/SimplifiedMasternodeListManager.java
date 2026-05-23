@@ -453,8 +453,9 @@ public class SimplifiedMasternodeListManager extends MasternodeListManager {
                 threadPool.shutdownNow(); // Send interrupt signal but don't wait
             }
             saveNow(); // Always save, regardless of thread pool state
+            peerGroup = null;
+            blockChain = null;
             super.close();
-
         }
     }
 

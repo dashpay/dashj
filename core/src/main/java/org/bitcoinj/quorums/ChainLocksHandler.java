@@ -203,10 +203,12 @@ public class ChainLocksHandler extends AbstractManager implements RecoveredSigna
         processNewChainLock(peer, clsig, hash);
     }
 
-    void processNewChainLock(Peer from, ChainLockSignature clsig, Sha256Hash hash)
-    {
+    void processNewChainLock(Peer from, ChainLockSignature clsig, Sha256Hash hash) {
+        if (blockChain == null) return; // closed during shutdown
+
         lock.lock();
         try {
+            if (blockChain == null) return;   // re-check under lock
             if (seenChainLocks.put(hash, Utils.currentTimeMillis()) != null) {
                 return;
             }

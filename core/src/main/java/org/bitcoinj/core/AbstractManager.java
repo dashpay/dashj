@@ -308,6 +308,9 @@ public abstract class AbstractManager extends Message {
         autosaveToFile(new File(filename), DELAY_TIME, TimeUnit.MILLISECONDS, null);
     }
 
+    /**
+     * Typically called when DashSystem is shutting down.
+     */
     public void close() {
         if (vFileManager != null) {
             shutdownAutosaveAndWait();
