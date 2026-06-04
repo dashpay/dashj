@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -63,6 +64,32 @@ public class InstantSendManager implements RecoveredSignatureListener {
 
     // Incoming and not verified yet
     HashMap<Sha256Hash, Pair<Long, InstantSendLock>> pendingInstantSendLocks;
+
+    // Cycle hash lookup cache. Every deterministic islock carries the cycleHash of the
+    // first block of its DKG cycle, so the same few hashes are looked up over and over.
+    // Without this cache each islock falls through to BlockStore.get(); SPVBlockStore's
+    // miss path linearly scans the entire memory-mapped ring buffer under the store
+    // lock -- on Android each buffer read is a JNI call, and the lookup runs on the
+    // network thread, where it has been observed starving other threads of the store
+    // lock (e.g. wedging PeerGroup.stop() indefinitely).
+    private static final int CYCLE_HASH_CACHE_SIZE = 100;
+    private final LinkedHashMap<Sha256Hash, StoredBlock> cycleHashCache =
+            new LinkedHashMap<Sha256Hash, StoredBlock>(16, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<Sha256Hash, StoredBlock> entry) {
+                    return size() > CYCLE_HASH_CACHE_SIZE;
+                }
+            };
+    // Cycle hashes known to be missing from the block store. A missing cycle block may
+    // arrive later, so an entry is invalidated when the block with that hash connects
+    // (see newBestBlockListener).
+    private final LinkedHashMap<Sha256Hash, Boolean> cycleHashNotFoundCache =
+            new LinkedHashMap<Sha256Hash, Boolean>(16, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<Sha256Hash, Boolean> entry) {
+                    return size() > CYCLE_HASH_CACHE_SIZE;
+                }
+            };
 
     public InstantSendManager(Context context, InstantSendDatabase db, SigningManager signingManager, boolean runWithoutThread) {
         this.context = context;
@@ -125,6 +152,11 @@ public class InstantSendManager implements RecoveredSignatureListener {
             blockChain.removeNewBestBlockListener(this.newBestBlockListener);
             blockChain = null;
         }
+        // the block store may be different after a restart or reset
+        synchronized (cycleHashCache) {
+            cycleHashCache.clear();
+            cycleHashNotFoundCache.clear();
+        }
         if (peerGroup != null) {
             peerGroup.removeOnTransactionBroadcastListener(this.transactionBroadcastListener);
             peerGroup.removePreMessageReceivedEventListener(preMessageReceivedEventListener);
@@ -159,6 +191,34 @@ public class InstantSendManager implements RecoveredSignatureListener {
         }
     }
 
+    /**
+     * Looks up the block identified by an islock's cycleHash, caching both hits and
+     * misses to avoid repeated {@link BlockStore#get(Sha256Hash)} ring-buffer scans on
+     * hot threads. A cached miss is re-checked once the block with that hash connects.
+     */
+    @Nullable
+    private StoredBlock getCycleBlock(Sha256Hash cycleHash) throws BlockStoreException {
+        synchronized (cycleHashCache) {
+            StoredBlock cached = cycleHashCache.get(cycleHash);
+            if (cached != null) {
+                return cached;
+            }
+            if (cycleHashNotFoundCache.containsKey(cycleHash)) {
+                return null;
+            }
+        }
+        StoredBlock block = blockChain.getBlockStore().get(cycleHash);
+        synchronized (cycleHashCache) {
+            if (block != null) {
+                cycleHashCache.put(cycleHash, block);
+                cycleHashNotFoundCache.remove(cycleHash);
+            } else {
+                cycleHashNotFoundCache.put(cycleHash, Boolean.TRUE);
+            }
+        }
+        return block;
+    }
+
     public void processInstantSendLock(Peer peer, InstantSendLock isLock) {
         if(!isInstantSendEnabled())
             return;
@@ -170,7 +230,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
 
         if (isLock.isDeterministic()) {
             try {
-                StoredBlock blockIndex = blockChain.getBlockStore().get(isLock.cycleHash);
+                StoredBlock blockIndex = getCycleBlock(isLock.cycleHash);
                 if (blockIndex == null) {
                     // Maybe we don't have the block yet or maybe some peer spams invalid values for cycleHash
                     // TODO: DashCore increases ban score by 1
@@ -561,7 +621,7 @@ public class InstantSendManager implements RecoveredSignatureListener {
 
                 final StoredBlock blockIndex;
                 try {
-                    blockIndex = blockChain.getBlockStore().get(islock.cycleHash);
+                    blockIndex = getCycleBlock(islock.cycleHash);
                 } catch (BlockStoreException e) {
                     throw new RuntimeException(e);
                 } catch (NullPointerException e) {
@@ -852,6 +912,10 @@ public class InstantSendManager implements RecoveredSignatureListener {
     NewBestBlockListener newBestBlockListener = new NewBestBlockListener() {
         @Override
         public void notifyNewBestBlock(StoredBlock block) throws VerificationException {
+            // this block may be a cycle block that an earlier islock lookup missed
+            synchronized (cycleHashCache) {
+                cycleHashNotFoundCache.remove(block.getHeader().getHash());
+            }
 
             if (sporkManager.isSporkActive(SporkId.SPORK_19_CHAINLOCKS_ENABLED)) {
                 // Nothing to do here. We should keep all islocks and let chainlocks handle them.
