@@ -199,7 +199,10 @@ public class CoinJoinManager {
         Context.propagate(context);
         schedule = scheduledExecutorService.scheduleWithFixedDelay(
                 maintenanceRunnable, 1, 1, TimeUnit.SECONDS);
-        messageProcessingExecutor = Executors.newFixedThreadPool(5,
+        // Single thread: all CoinJoin messages are processed here (off the NioClientManager
+        // I/O thread). One thread preserves the per-session receipt order (dssu -> dsf -> dsc)
+        // that the I/O thread used to provide; a multi-thread pool would reorder them.
+        messageProcessingExecutor = Executors.newSingleThreadExecutor(
                 new ContextPropagatingThreadFactory(MESSAGE_PROCESSOR));
     }
 
@@ -560,8 +563,12 @@ public class CoinJoinManager {
                         inventoryItem -> log.info(COINJOIN_EXTRA, "getdata: {}", inventoryItem.hash));
                 peer.sendMessage(getdata);
             }
-        } else if (m instanceof CoinJoinQueue) {
-            // Offload DSQueue message processing to thread pool to avoid blocking network I/O thread
+        } else if (isCoinJoinMessage(m)) {
+            // Offload ALL CoinJoin message processing off the network I/O (NioClientManager)
+            // thread. processMessage() -> processDSQueue()/forwardToClientManagers() acquire the
+            // CoinJoinClientManager "deqsessions" lock, which doAutomaticDenominating can hold for
+            // seconds while blocked on the wallet lock. Doing this inline froze the single I/O
+            // thread, causing peer timeouts and preventing tx broadcast.
             ExecutorService exec = messageProcessingExecutor;
             if (exec != null) {
                 try {
@@ -570,11 +577,7 @@ public class CoinJoinManager {
                     // swallow because this is being stopped
                 }
             }
-            // Return null as dsq messages are only processed above
             return null;
-        } else if (isCoinJoinMessage(m)) {
-            // Process other CoinJoin messages synchronously
-            return processMessage(peer, m);
         }
         return m;
     };
