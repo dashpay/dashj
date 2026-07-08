@@ -168,6 +168,11 @@ public abstract class PeerSocketHandler extends AbstractTimeoutHandler implement
                 if (foundBlockingCall) {
                     log.error("CRITICAL: Thread '{}' is stuck in native I/O operation (peekByteArray/SPVBlockStore)", threadName);
                 }
+            } else {
+                log.warn("Stack trace for thread '{}' (State: {}):", threadName, thread.getState());
+                for (StackTraceElement element : stackTrace) {
+                    log.warn("  at {}", element);
+                }
             }
         });
 
