@@ -298,6 +298,14 @@ public class CoinJoinClientManager implements WalletCoinsReceivedEventListener {
         boolean fResult = true;
         boolean needStartAsync = false;
 
+        // The "deqsessions" lock only guards the deqSessions collection; per-session state is
+        // guarded by each session's own lock. Create a session if needed and snapshot the list
+        // under the lock, then run session.doAutomaticDenominating() OUTSIDE it. That call reaches
+        // into the wallet (getBalanceInfo/getAnonymizableBalance) and can block on the wallet
+        // lock; holding "deqsessions" across it head-of-line-blocked every other user of this
+        // lock (incoming message processing, checkTimeout, doMaintenance), which in turn froze
+        // peer I/O and delayed tx broadcast.
+        List<CoinJoinClientSession> sessions;
         lock.lock();
         try {
             if (deqSessions.size() < CoinJoinClientOptions.getSessions()) {
@@ -314,34 +322,35 @@ public class CoinJoinClientManager implements WalletCoinsReceivedEventListener {
                 }
                 deqSessions.addLast(newSession);
             }
-            for (CoinJoinClientSession session: deqSessions) {
-                if (!checkAutomaticBackup()) return false;
-
-                // we may not need this
-                if (!dryRun && waitForAnotherBlock()) {
-                    if (Utils.currentTimeMillis() - lastTimeReportTooRecent > 15000 ) {
-                        strAutoDenomResult = "Last successful action was too recent.";
-                        log.info("DoAutomaticDenominating: {}", strAutoDenomResult);
-                        lastTimeReportTooRecent = Utils.currentTimeMillis();
-                    }
-                    return false;
-                }
-
-                boolean sessionResult = session.doAutomaticDenominating(finishCurrentSessions, dryRun);
-                if (sessionResult && session.getState() == PoolState.POOL_STATE_QUEUE) {
-                    needStartAsync = true;
-                }
-                fResult &= sessionResult;
-            }
-
+            sessions = new ArrayList<>(deqSessions);
         } finally {
             lock.unlock();
         }
-        
+
+        for (CoinJoinClientSession session : sessions) {
+            if (!checkAutomaticBackup()) return false;
+
+            // we may not need this
+            if (!dryRun && waitForAnotherBlock()) {
+                if (Utils.currentTimeMillis() - lastTimeReportTooRecent > 15000 ) {
+                    strAutoDenomResult = "Last successful action was too recent.";
+                    log.info("DoAutomaticDenominating: {}", strAutoDenomResult);
+                    lastTimeReportTooRecent = Utils.currentTimeMillis();
+                }
+                return false;
+            }
+
+            boolean sessionResult = session.doAutomaticDenominating(finishCurrentSessions, dryRun);
+            if (sessionResult && session.getState() == PoolState.POOL_STATE_QUEUE) {
+                needStartAsync = true;
+            }
+            fResult &= sessionResult;
+        }
+
         if (needStartAsync) {
             coinJoinManager.startAsync();
         }
-        
+
         return fResult;
     }
 
