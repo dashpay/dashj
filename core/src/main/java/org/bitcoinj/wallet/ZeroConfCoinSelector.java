@@ -14,9 +14,9 @@
 
 package org.bitcoinj.wallet;
 
+import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.Transaction;
 import org.bitcoinj.core.TransactionConfidence;
-import org.bitcoinj.params.RegTestParams;
 
 public class ZeroConfCoinSelector extends DefaultCoinSelector {
 
@@ -45,6 +45,9 @@ public class ZeroConfCoinSelector extends DefaultCoinSelector {
         return type.equals(TransactionConfidence.ConfidenceType.BUILDING) || type.equals(TransactionConfidence.ConfidenceType.PENDING) &&
                 // In regtest mode we expect to have only one peer, so we won't see transactions propagate.
                 // TODO: The value 1 below dates from a time when transactions we broadcast *to* were counted, set to 0
-                (confidence.numBroadcastPeers() > 1 || tx.getParams() == RegTestParams.get());
+                // Compare against the network id rather than RegTestParams.get(): the latter lazily constructs
+                // RegTestParams (recomputing and asserting the regtest genesis X11 hash), which can throw when first
+                // triggered on a contended background thread (e.g. CoinJoin) even on mainnet/testnet wallets.
+                (confidence.numBroadcastPeers() > 1 || NetworkParameters.ID_REGTEST.equals(tx.getParams().getId()));
     }
 }
