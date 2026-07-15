@@ -38,8 +38,11 @@ import java.net.InetSocketAddress;
 import java.nio.BufferUnderflowException;
 import java.nio.ByteBuffer;
 import java.nio.channels.NotYetConnectedException;
+import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 
 import static com.google.common.base.Preconditions.*;
@@ -143,50 +146,61 @@ public abstract class PeerSocketHandler extends AbstractTimeoutHandler implement
         close();
     }
 
+    // Full all-threads stack dumps are expensive and can flood the log when timeouts cluster
+    // (e.g. repeated masternode connection failures during CoinJoin), so allow at most one
+    // per interval across all connections. Network thread dumps and freeze detection still
+    // run on every timeout.
+    private static final long FULL_THREAD_DUMP_INTERVAL_MS = TimeUnit.MINUTES.toMillis(10);
+    private static final AtomicLong lastFullThreadDumpTime = new AtomicLong(0);
+
+    private static boolean shouldLogFullThreadDump() {
+        long now = System.currentTimeMillis();
+        long last = lastFullThreadDumpTime.get();
+        return now - last >= FULL_THREAD_DUMP_INTERVAL_MS && lastFullThreadDumpTime.compareAndSet(last, now);
+    }
+
     /**
      * Checks all thread stacks to detect if any thread is stuck in native I/O operations
      * (peekByteArray or SPVBlockStore operations that freeze on Android).
      * @return true if a blockstore timeout is detected
      */
     private boolean checkForBlockStoreTimeout() {
-        Thread.getAllStackTraces().forEach((thread, stackTrace) -> {
+        boolean fullDump = shouldLogFullThreadDump();
+        boolean blockStoreTimeout = false;
+
+        for (Map.Entry<Thread, StackTraceElement[]> entry : Thread.getAllStackTraces().entrySet()) {
+            Thread thread = entry.getKey();
+            StackTraceElement[] stackTrace = entry.getValue();
             String threadName = thread.getName();
-            if (threadName.contains("PeerGroup Thread") || threadName.contains("NioClientManager")) {
-                log.warn("Stack trace for thread '{}' (State: {}):", threadName, thread.getState());
+            boolean networkThread = threadName.contains("PeerGroup Thread") || threadName.contains("NioClientManager");
 
-                boolean foundBlockingCall = false;
-                for (StackTraceElement element : stackTrace) {
-                    log.warn("  at {}", element);
-
-                    // Check if this thread is stuck in native peekByteArray or SPVBlockStore operations
-                    String elementStr = element.toString();
-                    if (elementStr.contains("peekByteArray")) {
-                        foundBlockingCall = true;
-                    }
+            // Check if this thread is stuck in native peekByteArray or SPVBlockStore operations
+            boolean foundBlockingCall = false;
+            for (StackTraceElement element : stackTrace) {
+                if (element.toString().contains("peekByteArray")) {
+                    foundBlockingCall = true;
+                    break;
                 }
+            }
 
-                if (foundBlockingCall) {
-                    log.error("CRITICAL: Thread '{}' is stuck in native I/O operation (peekByteArray/SPVBlockStore)", threadName);
-                }
-            } else {
+            // always dump a stuck thread's stack; other threads only on the rate-limited full dump
+            if (networkThread || foundBlockingCall || fullDump) {
                 log.warn("Stack trace for thread '{}' (State: {}):", threadName, thread.getState());
                 for (StackTraceElement element : stackTrace) {
                     log.warn("  at {}", element);
                 }
             }
-        });
 
-        // Check all threads for blocking SPVBlockStore calls
-        for (Thread thread : Thread.getAllStackTraces().keySet()) {
-            for (StackTraceElement element : thread.getStackTrace()) {
-                String elementStr = element.toString();
-                if (elementStr.contains("peekByteArray")) {
-                    log.error("CRITICAL: Detected SPVBlockStore timeout - native I/O freeze detected in thread: {}", thread.getName());
-                    return true;
+            if (foundBlockingCall) {
+                blockStoreTimeout = true;
+                if (networkThread) {
+                    log.error("CRITICAL: Thread '{}' is stuck in native I/O operation (peekByteArray/SPVBlockStore)", threadName);
+                } else {
+                    log.error("CRITICAL: Detected SPVBlockStore timeout - native I/O freeze detected in thread: {}", threadName);
                 }
             }
         }
-        return false;
+        return blockStoreTimeout;
     }
 
     /**
