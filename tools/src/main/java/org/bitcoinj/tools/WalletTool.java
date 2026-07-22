@@ -24,7 +24,9 @@ import org.bitcoinj.coinjoin.CoinJoinClientOptions;
 import org.bitcoinj.coinjoin.CoinJoinSendRequest;
 import org.bitcoinj.coinjoin.Denomination;
 import org.bitcoinj.coinjoin.UnmixedZeroConfCoinSelector;
+import org.bitcoinj.coinjoin.progress.MixingProgressTracker;
 import org.bitcoinj.coinjoin.utils.CoinJoinReporter;
+import org.bitcoinj.coinjoin.utils.CoinJoinTransactionType;
 import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.crypto.*;
 import org.bitcoinj.manager.DashSystem;
@@ -1682,12 +1684,31 @@ public class WalletTool {
         System.out.println("Mixing Configuration:");
         System.out.println(CoinJoinClientOptions.getString());
 
+        // print mixing progress to the console on each mixing tx and each new block
+        MixingProgressTracker progressTracker = new MixingProgressTracker() {
+            @Override
+            public void onTransactionProcessed(Transaction tx, CoinJoinTransactionType type, int sessionId) {
+                super.onTransactionProcessed(tx, type, sessionId);
+                if (type == CoinJoinTransactionType.Mixing) {
+                    printMixingProgress("mixing tx " + tx.getTxId());
+                }
+            }
+
+            @Override
+            public void notifyNewBestBlock(StoredBlock block) throws VerificationException {
+                super.notifyNewBestBlock(block);
+                printMixingProgress("block " + block.getHeight());
+            }
+        };
+
         system.coinJoinManager.coinJoinClientManagers.put(wallet.getDescription(), new CoinJoinClientManager(wallet, system.masternodeSync, system.coinJoinManager, system.masternodeListManager, system.masternodeMetaDataManager));
         system.coinJoinManager.addSessionStartedListener(Threading.SAME_THREAD, reporter);
         system.coinJoinManager.addSessionCompleteListener(Threading.SAME_THREAD, reporter);
         system.coinJoinManager.addMixingCompleteListener(Threading.SAME_THREAD, reporter);
         system.coinJoinManager.addTransationListener (Threading.SAME_THREAD, reporter);
         system.blockChain.addNewBestBlockListener(Threading.SAME_THREAD, reporter);
+        system.coinJoinManager.addTransationListener(Threading.SAME_THREAD, progressTracker);
+        system.blockChain.addNewBestBlockListener(Threading.SAME_THREAD, progressTracker);
 
         system.coinJoinManager.start();
         // mix coins
@@ -1721,10 +1742,20 @@ public class WalletTool {
             system.coinJoinManager.removeMixingCompleteListener(reporter);
             system.coinJoinManager.removeSessionStartedListener(reporter);
             system.coinJoinManager.removeTransactionListener(reporter);
+            system.coinJoinManager.removeTransactionListener(progressTracker);
+            system.blockChain.removeNewBestBlockListener(progressTracker);
             system.coinJoinManager.stop();
         } catch (ExecutionException | InterruptedException x) {
             throw new RuntimeException(x);
         }
+    }
+
+    private static void printMixingProgress(String trigger) {
+        Coin denominated = wallet.getBalance(BalanceType.DENOMINATED);
+        Coin mixed = wallet.getBalance(BalanceType.COINJOIN);
+        double percent = denominated.isZero() ? 0.0 : 100.0 * mixed.value / denominated.value;
+        System.out.printf(Locale.US, "Mixing progress: %.2f%% (mixed %s of %s) [%s]%n",
+                percent, mixed.toFriendlyString(), denominated.toFriendlyString(), trigger);
     }
 
     static synchronized void onChange(final CountDownLatch latch) {
