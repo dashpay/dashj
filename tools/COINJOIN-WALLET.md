@@ -16,7 +16,11 @@ choose, so the repository stays clean and separate wallets stay separate.
 
 ## Requirements
 
-- JDK 11 (the build itself targets Java 8)
+- JDK 11 (the build itself targets Java 8). On macOS with Homebrew:
+
+  ```bash
+  brew install --cask temurin@11
+  ```
 - The BLS native library (`libdashjbls`) built in `contrib/dashj-bls`. There
   is no Java fallback for it — WalletTool cannot start without it. If it is
   missing, the script initializes the git submodule and builds it
@@ -39,6 +43,18 @@ choose, so the repository stays clean and separate wallets stay separate.
   mkdir -p build && cd build
   cmake .. && cmake --build .
   ```
+
+## Getting the code
+
+```bash
+git clone https://github.com/dashpay/dashj.git
+cd dashj
+git checkout easy-coinjoin-mixer
+git submodule update --init --recursive
+```
+
+The last command checks out `contrib/dashj-bls`, which is needed to build the
+BLS native library.
 
 ## Usage
 
