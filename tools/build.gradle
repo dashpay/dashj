@@ -17,6 +17,21 @@ compileJava.options.encoding = 'UTF-8'
 compileTestJava.options.encoding = 'UTF-8'
 javadoc.options.encoding = 'UTF-8'
 
+task wallet_tool(type: JavaExec) {
+    description = 'Run the WalletTool command line tool.'
+    main = 'org.bitcoinj.tools.WalletTool'
+    systemProperty "java.library.path",
+            "${rootProject.projectDir}/contrib/dashj-bls/bls/target/cmake:${rootProject.projectDir}/contrib/x11/build"
+    if (project.hasProperty('appArgs') && appArgs.length() > 0)
+        args = Arrays.asList(appArgs.split("\\s+"))
+    // Run in this directory so the block chain, masternode list and report
+    // files are written there instead of the repository root.
+    if (project.hasProperty('workDir') && workDir.length() > 0)
+        workingDir = file(workDir)
+    standardInput = System.in
+    classpath = sourceSets.main.runtimeClasspath
+}
+
 task build_checkpoints(type: JavaExec) {
     description = 'Create checkpoint files to use with CheckpointManager.'
     main = 'org.bitcoinj.tools.BuildCheckpoints'
