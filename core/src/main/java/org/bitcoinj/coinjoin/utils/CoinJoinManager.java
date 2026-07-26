@@ -323,16 +323,24 @@ public class CoinJoinManager {
     }
 
     public boolean addPendingMasternode(CoinJoinClientSession session) {
-        return masternodeGroup.addPendingMasternode(session);
+        MasternodeGroup group = masternodeGroup;
+        return group != null && group.addPendingMasternode(session);
     }
 
     public boolean forPeer(MasternodeAddress address, MasternodeGroup.ForPeer forPeer, boolean warn) {
-        return masternodeGroup.forPeer(address, forPeer, warn);
+        MasternodeGroup group = masternodeGroup;
+        return group != null && group.forPeer(address, forPeer, warn);
     }
     
     public void startAsync() {
         lock.lock();
         try {
+            // masternodeGroup is nulled by stopAsync() and peerGroup by close(); a mixing
+            // coroutine may still call this while the wallet service is shutting down.
+            if (masternodeGroup == null || peerGroup == null) {
+                log.info("coinjoin: startAsync called after shutdown; ignoring");
+                return;
+            }
             if (!masternodeGroup.isRunning()) {
                 log.info("coinjoin: broadcasting senddsq(true) to all peers");
                 peerGroup.shouldSendDsq(true);
@@ -354,7 +362,8 @@ public class CoinJoinManager {
     }
 
     public boolean disconnectMasternode(Masternode service) {
-        return masternodeGroup.disconnectMasternode(service);
+        MasternodeGroup group = masternodeGroup;
+        return group != null && group.disconnectMasternode(service);
     }
 
     @VisibleForTesting
