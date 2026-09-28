@@ -240,6 +240,11 @@ public class CoinJoinClientSession extends CoinJoinBaseSession {
         } catch (InsufficientMoneyException e) {
             log.error("coinjoin: failed to combine outputs: {}", e.getMessage());
             return false;
+        } catch (IllegalStateException e) {
+            // the wallet loses its transaction broadcaster when it is removed from the
+            // PeerGroup during shutdown while a mixing session may still be running
+            log.error("coinjoin: failed to combine outputs: {}", e.getMessage());
+            return false;
         }
     }
 

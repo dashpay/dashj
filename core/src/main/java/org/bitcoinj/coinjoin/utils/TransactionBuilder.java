@@ -187,6 +187,11 @@ public class TransactionBuilder implements AutoCloseable {
         } catch (InsufficientMoneyException x) {
             strResult.append(x);
             return false;
+        } catch (IllegalStateException x) {
+            // the wallet loses its transaction broadcaster when it is removed from the
+            // PeerGroup during shutdown while a mixing session may still be running
+            strResult.append(x);
+            return false;
         }
         keepKeys = true;
 
