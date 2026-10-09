@@ -60,7 +60,16 @@ public class Secp256k1ECDHAgreement
         return (key.getParameters().getCurve().getFieldSize() + 7) / 8;
     }
 
-    public BigInteger calculateAgreement(
+    /**
+     * Compute the libsecp256k1 ECDH shared secret: {@code SHA256((y & 1 | 0x02) || x)} of the shared point.
+     *
+     * <p>This is the standard value produced by {@code secp256k1_ecdh} (and by iOS and the Rust SDK). It is
+     * always exactly 32 bytes and must be used as-is, for example as an AES-256 key.</p>
+     *
+     * @param pubKey the other party's public key
+     * @return the 32 byte shared secret
+     */
+    public byte[] calculateSharedSecret(
             CipherParameters pubKey)
     {
         ECPublicKeyParameters pub = (ECPublicKeyParameters)pubKey;
@@ -95,12 +104,30 @@ public class Secp256k1ECDHAgreement
         // this method differs from calculateAgreement in ECDHBasicAgreement which returns
         // P.getAffineXCoord().toBigInteger().  Since this class follows the secp256k1_ecdh
         // key derivation method, we will need to compute the hash of the point by
-        // SHA256((y[31]&0x2|0x1) + x) which is the hash of the version and x
+        // SHA256((y[31]&0x1|0x2) + x) which is the hash of the version and x
         byte [] x32 = P.getAffineXCoord().getEncoded();
         byte [] y32 = P.getAffineYCoord().getEncoded();
         byte [] x32withVersion = new byte [x32.length + 1];
         x32withVersion[0] = (byte)((y32[y32.length - 1] & 0x01) | 0x02);
         System.arraycopy(x32, 0, x32withVersion, 1, 32);
-        return new BigInteger(Sha256Hash.hash(x32withVersion));
+        return Sha256Hash.hash(x32withVersion);
+    }
+
+    /**
+     * {@link BasicAgreement} form of {@link #calculateSharedSecret(CipherParameters)}.
+     *
+     * <p>Returns the 32 byte hash as a <b>signed</b> BigInteger, which is what this method has always returned.
+     * The signed value cannot be turned back into the 32 hash bytes reliably: when the hash starts with
+     * {@code 0xFF} followed by a byte {@code >= 0x80}, {@code BigIntegers.asUnsignedByteArray(32, value)} drops
+     * the leading {@code 0xFF}(s) and pads with {@code 0x00} instead. Use {@link #calculateSharedSecret} to get
+     * the key bytes.</p>
+     *
+     * @deprecated use {@link #calculateSharedSecret(CipherParameters)}
+     */
+    @Deprecated
+    public BigInteger calculateAgreement(
+            CipherParameters pubKey)
+    {
+        return new BigInteger(calculateSharedSecret(pubKey));
     }
 }
