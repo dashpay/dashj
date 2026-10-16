@@ -28,7 +28,8 @@ import java.math.BigInteger;
 public class CoinbaseTx extends SpecialTxPayload {
     public static final int CB_V19_VERSION = 2;
     public static final int CB_V20_VERSION = 3;
-    public static final int CURRENT_VERSION = CB_V19_VERSION;
+    public static final int CB_V24_VERSION = 4;
+    public static final int CURRENT_VERSION = CB_V24_VERSION;
 
     private long height;
     private Sha256Hash merkleRootMasternodeList;
@@ -38,6 +39,8 @@ public class CoinbaseTx extends SpecialTxPayload {
     private int bestCLHeightDiff;
     private BLSSignature bestCLSignature;
     private Coin creditPoolBalance;
+    // Version 4
+    private Sha256Hash merkleRootAssetUnlocks;
 
     public CoinbaseTx(NetworkParameters params, Transaction tx) {
         super(params, tx);
@@ -56,6 +59,15 @@ public class CoinbaseTx extends SpecialTxPayload {
         length = 4 + 32 + 32 + new VarInt(bestCLHeightDiff).getSizeInBytes() + bestCLSignature.getMessageSize() + 8;
     }
 
+    public CoinbaseTx(NetworkParameters params, int version, long height, Sha256Hash merkleRootMasternodeList,
+                      Sha256Hash merkleRootQuorums, int bestCLHeightDiff, BLSSignature bestCLSignature,
+                      Coin creditPoolBalance, Sha256Hash merkleRootAssetUnlocks) {
+        this(params, version, height, merkleRootMasternodeList, merkleRootQuorums, bestCLHeightDiff, bestCLSignature,
+                creditPoolBalance);
+        this.merkleRootAssetUnlocks = merkleRootAssetUnlocks;
+        length += 32;
+    }
+
     @Override
     protected void parse() throws ProtocolException {
         super.parse();
@@ -68,6 +80,9 @@ public class CoinbaseTx extends SpecialTxPayload {
                 bestCLSignature = new BLSSignature(params, payload, cursor);
                 cursor += bestCLSignature.getMessageSize();
                 creditPoolBalance = Coin.valueOf(readInt64());
+                if (version >= CB_V24_VERSION) {
+                    merkleRootAssetUnlocks = readHash();
+                }
             }
         }
         length = cursor - offset;
@@ -84,6 +99,9 @@ public class CoinbaseTx extends SpecialTxPayload {
                 stream.write(new VarInt(bestCLHeightDiff).encode());
                 bestCLSignature.bitcoinSerialize(stream);
                 Utils.uint64ToByteStreamLE(BigInteger.valueOf(creditPoolBalance.value), stream);
+                if (version >= CB_V24_VERSION) {
+                    stream.write(merkleRootAssetUnlocks.getReversedBytes());
+                }
             }
         }
     }
@@ -118,6 +136,9 @@ public class CoinbaseTx extends SpecialTxPayload {
                 result.put("bestCLHeightDiff", bestCLHeightDiff);
                 result.put("bestCLSignature", bestCLSignature.toString());
                 result.put("creditPoolBalance", Double.parseDouble(creditPoolBalance.toPlainString()));
+                if (version >= CB_V24_VERSION) {
+                    result.put("merkleRootAssetUnlocks", merkleRootAssetUnlocks.toString());
+                }
             }
         }
         return result;
@@ -143,5 +164,10 @@ public class CoinbaseTx extends SpecialTxPayload {
 
     public Coin getCreditPoolBalance() {
         return creditPoolBalance;
+    }
+
+    /** the merkle root of the asset unlock instance hashes in the block, version 4+ only */
+    public Sha256Hash getMerkleRootAssetUnlocks() {
+        return merkleRootAssetUnlocks;
     }
 }

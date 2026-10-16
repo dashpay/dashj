@@ -109,7 +109,10 @@ public class Transaction extends ChildMessage {
         TRANSACTION_QUORUM_COMMITMENT(6),
         TRANSACTION_ASSET_LOCK(8),
         TRANSACTION_ASSET_UNLOCK(9),
-        TRANSACTION_TYPE_MAX(10),
+        // Decentralized Masternode Shares (Dash Core v24); the payloads are not decoded
+        TRANSACTION_PROVIDER_DISSOLVE(10),
+        TRANSACTION_PROVIDER_UPDATE_SHARE(11),
+        TRANSACTION_PROVIDER_UPDATE_SHARED_REGISTRAR(12),
         TRANSACTION_UNKNOWN(1024);
 
         final int value;
@@ -154,6 +157,13 @@ public class Transaction extends ChildMessage {
 
     public static final int CURRENT_VERSION = MIN_STANDARD_VERSION;
     public static final int MAX_STANDARD_VERSION = SPECIAL_VERSION;
+
+    /** requestedHeight, quorumHash and quorumSig at the end of an asset unlock payload */
+    public static final int ASSET_UNLOCK_QUORUM_INFO_SIZE = 4 + 32 + 96;
+    /** version, index, fee and the quorum info */
+    public static final int ASSET_UNLOCK_PAYLOAD_SIZE = 1 + 8 + 4 + ASSET_UNLOCK_QUORUM_INFO_SIZE;
+    /** asset unlocks of this version or higher have a txid that excludes the quorum info */
+    public static final int ASSET_UNLOCK_STABLE_TXID_VERSION = 2;
 
     /** Threshold for lockTime: below this value it is interpreted as block number, otherwise as timestamp. **/
     public static final int LOCKTIME_THRESHOLD = 500000000; // Tue Nov  5 00:53:20 1985 UTC
@@ -315,7 +325,8 @@ public class Transaction extends ChildMessage {
     public Transaction(NetworkParameters params, byte[] payload, int offset, @Nullable Message parent,
             MessageSerializer setSerializer, int length, @Nullable byte[] hashFromHeader) throws ProtocolException {
         super(params, payload, offset, parent, setSerializer, length);
-        if (hashFromHeader != null) {
+        // the header hash covers the full serialization, which is not the txid of a v2+ asset unlock
+        if (hashFromHeader != null && !isAssetUnlockWithStableTxid()) {
             cachedTxId = Sha256Hash.wrapReversed(hashFromHeader);
         }
     }
@@ -347,15 +358,45 @@ public class Transaction extends ChildMessage {
      */
     public Sha256Hash getTxId() {
         if (cachedTxId == null) {
-            ByteArrayOutputStream stream = new UnsafeByteArrayOutputStream(length < 32 ? 32 : length + 32);
-            try {
-                bitcoinSerializeToStream(stream);
-            } catch (IOException e) {
-                throw new RuntimeException(e); // cannot happen
+            byte[] bytes = serializeForHash();
+            if (isAssetUnlockWithStableTxid()) {
+                // The txid of a v2+ asset unlock excludes the quorum signing info, which Platform changes when
+                // it re-signs an expired withdrawal, so that every instance of one withdrawal has the same txid.
+                // The payload is serialized last, so the signing info is at the end.
+                Arrays.fill(bytes, bytes.length - ASSET_UNLOCK_QUORUM_INFO_SIZE, bytes.length, (byte) 0);
             }
-            cachedTxId = Sha256Hash.wrapReversed(Sha256Hash.hashTwice(stream.toByteArray()));
-    }
+            cachedTxId = Sha256Hash.wrapReversed(Sha256Hash.hashTwice(bytes));
+        }
         return cachedTxId;
+    }
+
+    /**
+     * Returns the hash of the full serialization. This is the same as {@link #getTxId()}, except for an
+     * asset unlock of version 2 or higher where it also covers the quorum signing info. It identifies a single
+     * signed instance of a withdrawal and is what the coinbase commits to and the asset unlock inv announces.
+     */
+    public Sha256Hash getInstanceHash() {
+        if (!isAssetUnlockWithStableTxid()) {
+            return getTxId();
+        }
+        return Sha256Hash.wrapReversed(Sha256Hash.hashTwice(serializeForHash()));
+    }
+
+    private byte[] serializeForHash() {
+        ByteArrayOutputStream stream = new UnsafeByteArrayOutputStream(length < 32 ? 32 : length + 32);
+        try {
+            bitcoinSerializeToStream(stream);
+        } catch (IOException e) {
+            throw new RuntimeException(e); // cannot happen
+        }
+        return stream.toByteArray();
+    }
+
+    /** Dash Core's IsAssetUnlockWithStableTxid */
+    public boolean isAssetUnlockWithStableTxid() {
+        return getVersionShort() >= SPECIAL_VERSION && getType() == Type.TRANSACTION_ASSET_UNLOCK &&
+                extraPayload != null && extraPayload.length == ASSET_UNLOCK_PAYLOAD_SIZE &&
+                (extraPayload[0] & 0xff) >= ASSET_UNLOCK_STABLE_TXID_VERSION;
     }
 
     /**

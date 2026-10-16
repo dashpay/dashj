@@ -9,11 +9,15 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Collections;
+import java.util.List;
 
 public class ProviderUpdateRegistarTx extends SpecialTxPayload {
     public static final int CURRENT_VERSION = 1;
     public static final int LEGACY_BLS_VERSION = 1;
     public static final int BASIC_BLS_VERSION = 2;
+    /** the payout is a list of {@link MasternodePayoutShare} */
+    public static final int EXT_ADDR_VERSION = 3;
     public static final int MESSAGE_SIZE = 228;
     public static final int MESSAGE_SIZE_WITHOUT_SIGNATURE = MESSAGE_SIZE - 65;
 
@@ -22,7 +26,10 @@ public class ProviderUpdateRegistarTx extends SpecialTxPayload {
     int mode;
     BLSPublicKey pubkeyOperator;
     KeyId keyIDVoting;
+    // before version 3
     Script scriptPayout;
+    // version 3+, not initialized here, because parse() runs from the superclass constructor before field initializers
+    List<MasternodePayoutShare> payouts;
     Sha256Hash inputsHash;  //replay protection
     MasternodeSignature signature;
 
@@ -68,7 +75,12 @@ public class ProviderUpdateRegistarTx extends SpecialTxPayload {
         cursor += pubkeyOperator.getMessageSize();
         keyIDVoting = new KeyId(params, payload, cursor);
         cursor += keyIDVoting.getMessageSize();
-        scriptPayout = new Script(readByteArray());
+        if (version >= EXT_ADDR_VERSION) {
+            payouts = readPayouts();
+            scriptPayout = payouts.isEmpty() ? new Script(new byte[0]) : payouts.get(0).getScriptPayout();
+        } else {
+            scriptPayout = new Script(readByteArray());
+        }
         inputsHash = readHash();
         signature = new MasternodeSignature(params, payload, cursor);
         cursor += signature.getMessageSize();
@@ -82,7 +94,11 @@ public class ProviderUpdateRegistarTx extends SpecialTxPayload {
         Utils.uint16ToByteStreamLE(mode, stream);
         pubkeyOperator.bitcoinSerialize(stream, version == LEGACY_BLS_VERSION);
         keyIDVoting.bitcoinSerialize(stream);
-        Utils.bytesToByteStream(scriptPayout.getProgram(), stream);
+        if (version >= EXT_ADDR_VERSION) {
+            writePayouts(payouts, stream);
+        } else {
+            Utils.bytesToByteStream(scriptPayout.getProgram(), stream);
+        }
         stream.write(inputsHash.getReversedBytes());
     }
     @Override
@@ -169,6 +185,19 @@ public class ProviderUpdateRegistarTx extends SpecialTxPayload {
 
     public KeyId getKeyIDVoting() {
         return keyIDVoting;
+    }
+
+    /** the owner payout script; for version 3+ the first of {@link #getPayouts()} */
+    public Script getScriptPayout() {
+        return scriptPayout;
+    }
+
+    /** the owner payouts of a version 3+ update, otherwise a list holding the single scriptPayout */
+    public List<MasternodePayoutShare> getPayouts() {
+        if (version >= EXT_ADDR_VERSION) {
+            return payouts;
+        }
+        return Collections.singletonList(new MasternodePayoutShare(scriptPayout, MasternodePayoutShare.MAX_REWARD));
     }
 
     public BLSPublicKey getPubkeyOperator() {

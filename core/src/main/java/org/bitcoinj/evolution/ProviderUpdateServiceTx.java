@@ -32,13 +32,18 @@ public class ProviderUpdateServiceTx extends SpecialTxPayload {
     public static final int CURRENT_VERSION = 2;
     public static final int LEGACY_BLS_VERSION = 1;
     public static final int BASIC_BLS_VERSION = 2;
+    /** the address is an {@link ExtNetInfo} that also holds the platform ports */
+    public static final int EXT_ADDR_VERSION = 3;
     public static final int MESSAGE_SIZE = 181;
     public static final int MESSAGE_SIZE_WITHOUT_SIGNATURE = MESSAGE_SIZE - 96;
 
 
     MasternodeType type;
     Sha256Hash proTxHash;
+    // the primary Core P2P address; for version 3+ it is derived from netInfo
     MasternodeAddress address;
+    // version 3+
+    ExtNetInfo netInfo;
     Script scriptOperatorPayout;
     Sha256Hash inputsHash;  //replay protection
     KeyId platformNodeID;
@@ -85,19 +90,32 @@ public class ProviderUpdateServiceTx extends SpecialTxPayload {
     @Override
     protected void parse() throws ProtocolException {
         super.parse();  //read version
-        if (version == BASIC_BLS_VERSION) {
+        if (version >= BASIC_BLS_VERSION) {
             type = MasternodeType.getMasternodeType(readUint16());
+        } else {
+            type = MasternodeType.REGULAR;
         }
         proTxHash = readHash();
-        address = new MasternodeAddress(params, payload, cursor, params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.CURRENT));
-        cursor += address.getMessageSize();
+        if (version >= EXT_ADDR_VERSION) {
+            netInfo = new ExtNetInfo(params, payload, cursor);
+            cursor += netInfo.getMessageSize();
+            address = primaryOrEmpty(netInfo);
+        } else {
+            address = new MasternodeAddress(params, payload, cursor, params.getProtocolVersionNum(NetworkParameters.ProtocolVersion.CURRENT));
+            cursor += address.getMessageSize();
+        }
         scriptOperatorPayout = new Script(readByteArray());
         inputsHash = readHash();
-        if (version == BASIC_BLS_VERSION && type == MasternodeType.HIGHPERFORMANCE) {
+        if (version >= BASIC_BLS_VERSION && type == MasternodeType.HIGHPERFORMANCE) {
             platformNodeID = new KeyId(params, payload, cursor);
             cursor += platformNodeID.getMessageSize();
-            platformP2PPort = readUint16();
-            platformHTTPPort = readUint16();
+            if (version >= EXT_ADDR_VERSION) {
+                platformP2PPort = netInfo.getPlatformP2PPort();
+                platformHTTPPort = netInfo.getPlatformHTTPPort();
+            } else {
+                platformP2PPort = readUint16();
+                platformHTTPPort = readUint16();
+            }
         }
         signature = new BLSSignature(params, payload, cursor, version == LEGACY_BLS_VERSION);
         cursor += signature.getMessageSize();
@@ -107,20 +125,26 @@ public class ProviderUpdateServiceTx extends SpecialTxPayload {
 
     protected void bitcoinSerializeWithoutSignature(OutputStream stream) throws IOException{
         super.bitcoinSerializeToStream(stream);
-        if (version == BASIC_BLS_VERSION) {
+        if (version >= BASIC_BLS_VERSION) {
             Utils.uint16ToByteStreamLE(type.index, stream);
         }
         stream.write(proTxHash.getReversedBytes());
-        address.bitcoinSerialize(stream);
+        if (version >= EXT_ADDR_VERSION) {
+            netInfo.bitcoinSerialize(stream);
+        } else {
+            address.bitcoinSerialize(stream);
+        }
         if(scriptOperatorPayout != null)
             Utils.bytesToByteStream(scriptOperatorPayout.getProgram(), stream);
         else stream.write(new byte[0]);
         stream.write(inputsHash.getReversedBytes());
 
-        if (version == BASIC_BLS_VERSION && type == MasternodeType.HIGHPERFORMANCE) {
+        if (version >= BASIC_BLS_VERSION && type == MasternodeType.HIGHPERFORMANCE) {
             platformNodeID.bitcoinSerialize(stream);
-            Utils.uint16ToByteStreamLE(platformP2PPort,stream);
-            Utils.uint16ToByteStreamLE(platformHTTPPort,stream);
+            if (version < EXT_ADDR_VERSION) {
+                Utils.uint16ToByteStreamLE(platformP2PPort, stream);
+                Utils.uint16ToByteStreamLE(platformHTTPPort, stream);
+            }
         }
     }
     @Override
@@ -213,11 +237,37 @@ public class ProviderUpdateServiceTx extends SpecialTxPayload {
         return proTxHash;
     }
 
+    /** the primary Core P2P address, which for version 3+ is the first {@link NetInfoPurpose#CORE_P2P} entry */
     public MasternodeAddress getAddress() {
         return address;
     }
 
+    /** all the addresses of a version 3+ update, otherwise null */
+    public ExtNetInfo getNetInfo() {
+        return netInfo;
+    }
+
     public Script getScriptOperatorPayout() {
         return scriptOperatorPayout;
+    }
+
+    public Sha256Hash getInputsHash() {
+        return inputsHash;
+    }
+
+    public MasternodeType getMasternodeType() {
+        return type;
+    }
+
+    public KeyId getPlatformNodeID() {
+        return platformNodeID;
+    }
+
+    public int getPlatformP2PPort() {
+        return platformP2PPort;
+    }
+
+    public int getPlatformHTTPPort() {
+        return platformHTTPPort;
     }
 }

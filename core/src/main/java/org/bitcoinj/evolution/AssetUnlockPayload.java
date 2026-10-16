@@ -33,7 +33,8 @@ import static org.bitcoinj.core.Transaction.Type.TRANSACTION_ASSET_UNLOCK;
 
 public class AssetUnlockPayload extends SpecialTxPayload {
 
-    public static final int CURRENT_VERSION = 1;
+    // version 2 (Dash Core v24) has a txid that excludes the quorum info, see Transaction.getTxId()
+    public static final int CURRENT_VERSION = 2;
     public static final Transaction.Type SPECIALTX_TYPE = TRANSACTION_ASSET_UNLOCK;
 
     private long index;
