@@ -62,8 +62,7 @@ cd tools
 ./coinjoin-wallet.sh /path/to/my-wallet-folder
 ```
 
-The folder is created if it does not exist. **The path must not contain
-spaces.**
+The folder is created if it does not exist.
 
 To inspect an existing wallet without syncing or mixing, pass `dump` as the
 second argument — it prints the wallet dump (transactions, balances, mixing

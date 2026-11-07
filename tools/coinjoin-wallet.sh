@@ -46,13 +46,6 @@ if [ -n "$ACTION" ] && [ "$ACTION" != "dump" ]; then
     exit 1
 fi
 
-case "$1" in
-    *" "*)
-        echo "Error: the data directory path must not contain spaces." >&2
-        exit 1
-        ;;
-esac
-
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
