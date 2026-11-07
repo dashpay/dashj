@@ -72,6 +72,21 @@ wallet_tool() {
 BLS_LIB_DIR="$ROOT_DIR/contrib/dashj-bls/bls/target/cmake"
 X11_LIB_DIR="$ROOT_DIR/contrib/x11/build"
 
+# dashj-bls must be patched before it builds (catch2 fixes and a missing
+# <stdexcept> include that newer GCC rejects); see its README. Skip it if the
+# patch is already applied.
+apply_bls_patch() {
+    local bls_dir="$ROOT_DIR/contrib/dashj-bls"
+    if (cd "$bls_dir" && git apply --reverse --check catch_changes.patch) >/dev/null 2>&1; then
+        return
+    fi
+    echo "==> Applying catch_changes.patch to contrib/dashj-bls..."
+    if ! (cd "$bls_dir" && git apply catch_changes.patch); then
+        echo "Error: could not apply $bls_dir/catch_changes.patch." >&2
+        exit 1
+    fi
+}
+
 check_native_libs() {
     if ls "$BLS_LIB_DIR"/libdashjbls.* >/dev/null 2>&1; then
         return
@@ -84,14 +99,15 @@ check_native_libs() {
     if ! command -v mvn >/dev/null 2>&1; then
         echo "Error: Maven (mvn) is required to build the BLS native library." >&2
         echo "Install Maven and CMake, then re-run, or build it manually:" >&2
-        echo "    cd $ROOT_DIR/contrib/dashj-bls && mvn package -DskipTests" >&2
+        echo "    cd $ROOT_DIR/contrib/dashj-bls && git apply catch_changes.patch && mvn package -DskipTests" >&2
         exit 1
     fi
+    apply_bls_patch
     (cd "$ROOT_DIR/contrib/dashj-bls" && mvn -q package -DskipTests)
     if ! ls "$BLS_LIB_DIR"/libdashjbls.* >/dev/null 2>&1; then
         echo "Error: the build finished but $BLS_LIB_DIR/libdashjbls.* is still missing." >&2
         echo "Check that CMake and a C++ toolchain are installed, then build manually:" >&2
-        echo "    cd $ROOT_DIR/contrib/dashj-bls && mvn package -DskipTests" >&2
+        echo "    cd $ROOT_DIR/contrib/dashj-bls && git apply catch_changes.patch && mvn package -DskipTests" >&2
         exit 1
     fi
     echo "==> BLS native library built successfully."

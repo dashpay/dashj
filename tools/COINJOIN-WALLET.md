@@ -23,13 +23,14 @@ choose, so the repository stays clean and separate wallets stay separate.
   ```
 - The BLS native library (`libdashjbls`) built in `contrib/dashj-bls`. There
   is no Java fallback for it — WalletTool cannot start without it. If it is
-  missing, the script initializes the git submodule and builds it
-  automatically, which requires Maven, CMake and a C++ toolchain. To build it
-  by hand instead:
+  missing, the script initializes the git submodule, applies its
+  `catch_changes.patch` and builds it automatically, which requires Maven,
+  CMake and a C++ toolchain. To build it by hand instead:
 
   ```bash
   git submodule update --init --recursive
   cd contrib/dashj-bls
+  git apply catch_changes.patch
   mvn package -DskipTests
   ```
 
