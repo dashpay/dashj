@@ -49,7 +49,6 @@ choose, so the repository stays clean and separate wallets stay separate.
 ```bash
 git clone https://github.com/dashpay/dashj.git
 cd dashj
-git checkout easy-coinjoin-mixer
 git submodule update --init --recursive
 ```
 
