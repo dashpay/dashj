@@ -125,8 +125,15 @@ check_x11_lib() {
 }
 
 save_mnemonic() {
-    MNEMONIC="$(wallet_tool "dump --net=$NET --wallet=$WALLET --dump-privkeys" \
-        | grep -m1 '^Seed as words:' | sed 's/^Seed as words:[[:space:]]*//')"
+    local dump
+    dump="$(wallet_tool "dump --net=$NET --wallet=$WALLET --dump-privkeys")"
+    MNEMONIC="$(printf '%s\n' "$dump" | sed -n 's/^Seed as words:[[:space:]]*//p' | head -n1)"
+    if [ -z "$MNEMONIC" ]; then
+        echo "Error: could not read the recovery phrase from the wallet dump." >&2
+        echo "If the wallet is encrypted, decrypt it first; otherwise check:" >&2
+        echo "    $0 \"$DATA_DIR\" dump" >&2
+        exit 1
+    fi
     (umask 077 && echo "$MNEMONIC" > "$MNEMONIC_FILE")
     echo "Recovery phrase saved to $MNEMONIC_FILE"
 }
