@@ -10,7 +10,7 @@ apply plugin: 'eclipse'
 apply plugin: 'jacoco'
 // apply plugin:  'com.github.spotbugs'
 
-version = '22.0.5'
+version = '24.0.0'
 archivesBaseName = 'dashj-core'
 eclipse.project.name = 'dashj-core'
 
@@ -66,7 +66,8 @@ test {
     exclude 'org/bitcoinj/protocols/channels/ChannelConnectionTest*'
     exclude 'org/bitcoinj/core/LevelDBFullPrunedBlockChainTest*'
     exclude 'org/bitcoinj/store/LevelDBBlockStoreTest*'
-    maxHeapSize = "2g"  // Increase heap for large wallet tests
+    maxHeapSize = project.findProperty('testMaxHeap') ?: "2g"  // Increase heap for large wallet tests
+    systemProperties System.getProperties().findAll { it.key.toString().startsWith('largeWallet.') }
     testLogging {
         events "failed"
         exceptionFormat "full"
