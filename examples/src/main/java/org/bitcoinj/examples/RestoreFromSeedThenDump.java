@@ -15,9 +15,11 @@
 package org.bitcoinj.examples;
 
 import org.bitcoinj.core.BlockChain;
+import org.bitcoinj.core.CheckpointManager;
 import org.bitcoinj.core.NetworkParameters;
 import org.bitcoinj.core.PeerGroup;
 import org.bitcoinj.core.listeners.DownloadProgressTracker;
+import org.bitcoinj.crypto.MnemonicCode;
 import org.bitcoinj.net.discovery.MasternodeSeedPeers;
 import org.bitcoinj.params.MainNetParams;
 import org.bitcoinj.params.TestNet3Params;
@@ -33,6 +35,10 @@ import org.bitcoinj.wallet.WalletEx;
 import org.bitcoinj.wallet.authentication.AuthenticationGroupExtension;
 
 import java.io.File;
+import java.io.InputStream;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeParseException;
 
 /**
  * The following example shows you how to restore a HD wallet from a previously generated deterministic seed.
@@ -40,16 +46,15 @@ import java.io.File;
  */
 public class RestoreFromSeedThenDump {
 
+    // Default seed creation time used when no --date argument is supplied.
+    private static final long DEFAULT_CREATION_TIME = MnemonicCode.BIP39_STANDARDISATION_TIME_SECS;//1409478661L;
+
     public static void main(String[] args) throws Exception {
         if (args.length < 1) {
-            System.out.println("RestoreFromSeedThenDump network \"seed phrase\"");
+            System.out.println("RestoreFromSeedThenDump network \"seed phrase\" [--date=YYYY-MM-DD] [--debuglog]");
             System.out.println("  missing the network");
         }
-        if (args.length == 3 && args[2].equals("--debuglog")) {
-            BriefLogFormatter.initVerbose();
-        } else {
-            BriefLogFormatter.initWithSilentBitcoinJ();
-        }
+
         String network = args[0];
         NetworkParameters params;
 
@@ -67,13 +72,34 @@ public class RestoreFromSeedThenDump {
             System.out.println("  missing the seed phrase");
         }
         String seedCode = args[1];
+        boolean debugLog = false;
+        long creationtime = params.getId().equals(NetworkParameters.ID_MAINNET) ? DEFAULT_CREATION_TIME :
+                (params.getGenesisBlock().getTimeSeconds()) + (60 * 60 * 24 * 7 + 1);
+        for (int i = 2; i < args.length; i++) {
+            String arg = args[i];
+            if (arg.equals("--debuglog")) {
+                debugLog = true;
+            } else if (arg.startsWith("--date=")) {
+                String dateValue = arg.substring("--date=".length());
+                try {
+                    creationtime = LocalDate.parse(dateValue).atStartOfDay(ZoneOffset.UTC).toEpochSecond();
+                } catch (DateTimeParseException e) {
+                    System.out.println("  invalid --date value \"" + dateValue + "\", expected format YYYY-MM-DD");
+                    return;
+                }
+            }
+        }
+        if (debugLog) {
+            BriefLogFormatter.initVerbose();
+        } else {
+            BriefLogFormatter.initWithSilentBitcoinJ();
+        }
 
         // Bitcoinj supports hierarchical deterministic wallets (or "HD Wallets"): https://github.com/bitcoin/bips/blob/master/bip-0032.mediawiki
         // HD wallets allow you to restore your wallet simply from a root seed. This seed can be represented using a short mnemonic sentence as described in BIP 39: https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki
 
         // Here we restore our wallet from a seed with no passphrase. Also have a look at the BackupToMnemonicSeed.java example that shows how to backup a wallet by creating a mnemonic sentence.
         String passphrase = "";
-        long creationtime = 1547463771L;//1409478661L;
 
         DeterministicSeed seed = new DeterministicSeed(seedCode, null, passphrase, creationtime);
         DerivationPathFactory factory = DerivationPathFactory.get(params);
@@ -109,6 +135,17 @@ public class RestoreFromSeedThenDump {
 
         // Setting up the BlochChain, the BlocksStore and connecting to the network.
         SPVBlockStore chainStore = new SPVBlockStore(params, chainFile);
+
+        // Seed the (empty) block store with the last checkpoint before the seed creation time. Without this
+        // the SPV chain is built from genesis, so the sync appears to "start" years before the creation date
+        // even though the wallet only needs blocks from creationtime onwards.
+        InputStream checkpoints = CheckpointManager.openStream(params);
+        if (checkpoints != null) {
+            CheckpointManager.checkpoint(params, checkpoints, chainStore, creationtime);
+        } else {
+            System.out.println("no checkpoints found for " + params.getId() + ", syncing from genesis");
+        }
+
         BlockChain chain = new BlockChain(params, chainStore);
         PeerGroup peerGroup = new PeerGroup(params, chain);
         peerGroup.addPeerDiscovery(new MasternodeSeedPeers(params));
@@ -131,7 +168,7 @@ public class RestoreFromSeedThenDump {
         bListener.await();
 
         // Print a debug message with the details about the wallet. The correct balance should now be displayed.
-        System.out.println(wallet);
+        System.out.println(wallet.toString(false, false, null, true, true, null, true));
         wallet.saveToFile(new File("restored-wallet.wallet"));
 
         // shutting down again

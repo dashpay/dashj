@@ -203,7 +203,9 @@ public class SimplifiedQuorumList extends Message {
             if (llmqParameters.type != params.getLlmqDIP0024InstantSend()) {
                 int dkgInterval = llmqParameters.dkgInterval;
                 if (block.getHeight() % dkgInterval != 0)
-                    throw new ProtocolException("Quorum block height does not match interval for " + entry.quorumHash);
+                    throw new ProtocolException("Quorum block height " + block.getHeight() + " does not match interval " +
+                            dkgInterval + " for " + llmqParameters.type + " (quorumIndex " + entry.quorumIndex + ") " +
+                            entry.quorumHash);
             }
             boolean isVerified = checkCommitment(entry, block, masternodeListManager, chain, validateOldQuorums);
             isFirstQuorumCheck = false;
