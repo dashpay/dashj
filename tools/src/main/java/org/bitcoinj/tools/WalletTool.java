@@ -23,6 +23,7 @@ import org.bitcoinj.coinjoin.CoinJoinClientManager;
 import org.bitcoinj.coinjoin.CoinJoinClientOptions;
 import org.bitcoinj.coinjoin.CoinJoinSendRequest;
 import org.bitcoinj.coinjoin.Denomination;
+import org.bitcoinj.coinjoin.DenominatedCoinSelector;
 import org.bitcoinj.coinjoin.UnmixedZeroConfCoinSelector;
 import org.bitcoinj.coinjoin.listeners.CoinJoinTransactionListener;
 import org.bitcoinj.coinjoin.utils.CoinJoinReporter;
@@ -1747,9 +1748,19 @@ public class WalletTool {
     }
 
     private static void printMixingProgress(String trigger) {
-        // same balances as CoinJoinReporter so the console and the report agree
-        Coin denominated = wallet.getBalance(BalanceType.DENOMINATED_SPENDABLE);
-        Coin mixed = wallet.getBalance(BalanceType.COINJOIN_SPENDABLE);
+        // Count the total and the mixed amount over the same set of outputs. The
+        // DENOMINATED and COINJOIN balance types select outputs differently (for
+        // example pending outputs seen by one peer), so their ratio can exceed 100%.
+        List<TransactionOutput> candidates = wallet.calculateAllSpendCandidates(false, true);
+        Coin denominated = Coin.ZERO;
+        Coin mixed = Coin.ZERO;
+        for (TransactionOutput output : DenominatedCoinSelector.get().select(NetworkParameters.MAX_MONEY, candidates).gathered) {
+            if (!output.isDenominated())
+                continue;
+            denominated = denominated.add(output.getValue());
+            if (output.isCoinJoin(wallet) && wallet.isFullyMixed(output))
+                mixed = mixed.add(output.getValue());
+        }
         double percent = denominated.isZero() ? 0.0 : 100.0 * mixed.value / denominated.value;
         System.out.printf(Locale.US, "Mixing progress: %.2f%% (mixed %s of %s) [%s]%n",
                 percent, mixed.toFriendlyString(), denominated.toFriendlyString(), trigger);
