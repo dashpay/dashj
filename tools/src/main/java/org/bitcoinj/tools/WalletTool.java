@@ -23,7 +23,10 @@ import org.bitcoinj.coinjoin.CoinJoinClientManager;
 import org.bitcoinj.coinjoin.CoinJoinClientOptions;
 import org.bitcoinj.coinjoin.CoinJoinSendRequest;
 import org.bitcoinj.coinjoin.Denomination;
+import org.bitcoinj.coinjoin.PoolMessage;
+import org.bitcoinj.coinjoin.DenominatedCoinSelector;
 import org.bitcoinj.coinjoin.UnmixedZeroConfCoinSelector;
+import org.bitcoinj.coinjoin.listeners.SessionCompleteListener;
 import org.bitcoinj.coinjoin.utils.CoinJoinReporter;
 import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.crypto.*;
@@ -92,6 +95,7 @@ import org.bitcoinj.core.TransactionOutput;
 import org.bitcoinj.core.Utils;
 import org.bitcoinj.core.VerificationException;
 import org.bitcoinj.core.listeners.BlocksDownloadedEventListener;
+import org.bitcoinj.core.listeners.NewBestBlockListener;
 import org.bitcoinj.core.listeners.DownloadProgressTracker;
 import org.bitcoinj.wallet.MarriedKeyChain;
 import org.bitcoinj.wallet.Protos;
@@ -1682,12 +1686,24 @@ public class WalletTool {
         System.out.println("Mixing Configuration:");
         System.out.println(CoinJoinClientOptions.getString());
 
+        // print mixing progress to the console after each successful mixing session
+        // and each new block (mixing transactions are not reported to
+        // CoinJoinTransactionListener, so a completed session is the per-round event)
+        SessionCompleteListener progressSessionListener = (w, sessionId, denomination, state, message, address, joined) -> {
+            if (message == PoolMessage.MSG_SUCCESS) {
+                printMixingProgress("session " + sessionId + " complete");
+            }
+        };
+        NewBestBlockListener progressBlockListener = block -> printMixingProgress("block " + block.getHeight());
+
         system.coinJoinManager.coinJoinClientManagers.put(wallet.getDescription(), new CoinJoinClientManager(wallet, system.masternodeSync, system.coinJoinManager, system.masternodeListManager, system.masternodeMetaDataManager));
         system.coinJoinManager.addSessionStartedListener(Threading.SAME_THREAD, reporter);
         system.coinJoinManager.addSessionCompleteListener(Threading.SAME_THREAD, reporter);
         system.coinJoinManager.addMixingCompleteListener(Threading.SAME_THREAD, reporter);
         system.coinJoinManager.addTransationListener (Threading.SAME_THREAD, reporter);
         system.blockChain.addNewBestBlockListener(Threading.SAME_THREAD, reporter);
+        system.coinJoinManager.addSessionCompleteListener(Threading.SAME_THREAD, progressSessionListener);
+        system.blockChain.addNewBestBlockListener(Threading.SAME_THREAD, progressBlockListener);
 
         system.coinJoinManager.start();
         // mix coins
@@ -1717,14 +1733,39 @@ public class WalletTool {
             SettableFuture<Boolean> mixingFinished = system.coinJoinManager.getMixingFinishedFuture(wallet);
             mixingFinished.addListener(() -> System.out.println("Mixing complete."), Threading.SAME_THREAD);
             mixingFinished.get();
+        } catch (ExecutionException | InterruptedException x) {
+            throw new RuntimeException(x);
+        } finally {
+            // runs on every exit (early return, interruption or completion) so no
+            // listener keeps printing or writing the report after mix() returns
             system.coinJoinManager.removeSessionCompleteListener(reporter);
             system.coinJoinManager.removeMixingCompleteListener(reporter);
             system.coinJoinManager.removeSessionStartedListener(reporter);
             system.coinJoinManager.removeTransactionListener(reporter);
+            system.blockChain.removeNewBestBlockListener(reporter);
+            system.coinJoinManager.removeSessionCompleteListener(progressSessionListener);
+            system.blockChain.removeNewBestBlockListener(progressBlockListener);
             system.coinJoinManager.stop();
-        } catch (ExecutionException | InterruptedException x) {
-            throw new RuntimeException(x);
         }
+    }
+
+    private static void printMixingProgress(String trigger) {
+        // Count the total and the mixed amount over the same set of outputs. The
+        // DENOMINATED and COINJOIN balance types select outputs differently (for
+        // example pending outputs seen by one peer), so their ratio can exceed 100%.
+        List<TransactionOutput> candidates = wallet.calculateAllSpendCandidates(false, true);
+        Coin denominated = Coin.ZERO;
+        Coin mixed = Coin.ZERO;
+        for (TransactionOutput output : DenominatedCoinSelector.get().select(NetworkParameters.MAX_MONEY, candidates).gathered) {
+            if (!output.isDenominated())
+                continue;
+            denominated = denominated.add(output.getValue());
+            if (output.isCoinJoin(wallet) && wallet.isFullyMixed(output))
+                mixed = mixed.add(output.getValue());
+        }
+        double percent = denominated.isZero() ? 0.0 : 100.0 * mixed.value / denominated.value;
+        System.out.printf(Locale.US, "Mixing progress: %.2f%% (mixed %s of %s) [%s]%n",
+                percent, mixed.toFriendlyString(), denominated.toFriendlyString(), trigger);
     }
 
     static synchronized void onChange(final CountDownLatch latch) {
