@@ -57,6 +57,25 @@ ROUNDS="${ROUNDS:-16}"
 SESSIONS="${SESSIONS:-4}"
 AMOUNT="${AMOUNT:-}"
 
+# These values become WalletTool arguments (split on whitespace) and NET also
+# names the wallet file, so reject anything that is not a plain value.
+case "$NET" in
+    TEST|MAIN|REGTEST|DEVNET) ;;
+    *) echo "Error: NET must be TEST, MAIN, REGTEST or DEVNET (got '$NET')" >&2; exit 1 ;;
+esac
+if ! [[ "$ROUNDS" =~ ^[0-9]+$ ]] || [ "$ROUNDS" -lt 1 ] || [ "$ROUNDS" -gt 16 ]; then
+    echo "Error: ROUNDS must be a whole number from 1 to 16 (got '$ROUNDS')" >&2
+    exit 1
+fi
+if ! [[ "$SESSIONS" =~ ^[0-9]+$ ]] || [ "$SESSIONS" -lt 1 ]; then
+    echo "Error: SESSIONS must be a whole number of at least 1 (got '$SESSIONS')" >&2
+    exit 1
+fi
+if [ -n "$AMOUNT" ] && ! [[ "$AMOUNT" =~ ^[0-9]+(\.[0-9]{1,8})?$ ]]; then
+    echo "Error: AMOUNT must be a DASH amount such as 5 or 0.5 (got '$AMOUNT')" >&2
+    exit 1
+fi
+
 WALLET="coinjoin-$(echo "$NET" | tr '[:upper:]' '[:lower:]').wallet"
 MNEMONIC_FILE="$DATA_DIR/${WALLET%.wallet}-recovery-phrase.txt"
 
