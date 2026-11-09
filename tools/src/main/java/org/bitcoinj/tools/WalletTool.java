@@ -23,11 +23,11 @@ import org.bitcoinj.coinjoin.CoinJoinClientManager;
 import org.bitcoinj.coinjoin.CoinJoinClientOptions;
 import org.bitcoinj.coinjoin.CoinJoinSendRequest;
 import org.bitcoinj.coinjoin.Denomination;
+import org.bitcoinj.coinjoin.PoolMessage;
 import org.bitcoinj.coinjoin.DenominatedCoinSelector;
 import org.bitcoinj.coinjoin.UnmixedZeroConfCoinSelector;
-import org.bitcoinj.coinjoin.listeners.CoinJoinTransactionListener;
+import org.bitcoinj.coinjoin.listeners.SessionCompleteListener;
 import org.bitcoinj.coinjoin.utils.CoinJoinReporter;
-import org.bitcoinj.coinjoin.utils.CoinJoinTransactionType;
 import org.bitcoinj.core.MasternodeSync;
 import org.bitcoinj.crypto.*;
 import org.bitcoinj.manager.DashSystem;
@@ -1686,10 +1686,12 @@ public class WalletTool {
         System.out.println("Mixing Configuration:");
         System.out.println(CoinJoinClientOptions.getString());
 
-        // print mixing progress to the console on each mixing tx and each new block
-        CoinJoinTransactionListener progressTxListener = (tx, type, sessionId) -> {
-            if (type == CoinJoinTransactionType.Mixing) {
-                printMixingProgress("mixing tx " + tx.getTxId());
+        // print mixing progress to the console after each successful mixing session
+        // and each new block (mixing transactions are not reported to
+        // CoinJoinTransactionListener, so a completed session is the per-round event)
+        SessionCompleteListener progressSessionListener = (w, sessionId, denomination, state, message, address, joined) -> {
+            if (message == PoolMessage.MSG_SUCCESS) {
+                printMixingProgress("session " + sessionId + " complete");
             }
         };
         NewBestBlockListener progressBlockListener = block -> printMixingProgress("block " + block.getHeight());
@@ -1700,7 +1702,7 @@ public class WalletTool {
         system.coinJoinManager.addMixingCompleteListener(Threading.SAME_THREAD, reporter);
         system.coinJoinManager.addTransationListener (Threading.SAME_THREAD, reporter);
         system.blockChain.addNewBestBlockListener(Threading.SAME_THREAD, reporter);
-        system.coinJoinManager.addTransationListener(Threading.SAME_THREAD, progressTxListener);
+        system.coinJoinManager.addSessionCompleteListener(Threading.SAME_THREAD, progressSessionListener);
         system.blockChain.addNewBestBlockListener(Threading.SAME_THREAD, progressBlockListener);
 
         system.coinJoinManager.start();
@@ -1741,7 +1743,7 @@ public class WalletTool {
             system.coinJoinManager.removeSessionStartedListener(reporter);
             system.coinJoinManager.removeTransactionListener(reporter);
             system.blockChain.removeNewBestBlockListener(reporter);
-            system.coinJoinManager.removeTransactionListener(progressTxListener);
+            system.coinJoinManager.removeSessionCompleteListener(progressSessionListener);
             system.blockChain.removeNewBestBlockListener(progressBlockListener);
             system.coinJoinManager.stop();
         }
