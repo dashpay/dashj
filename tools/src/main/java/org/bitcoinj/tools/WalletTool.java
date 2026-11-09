@@ -1730,15 +1730,19 @@ public class WalletTool {
             SettableFuture<Boolean> mixingFinished = system.coinJoinManager.getMixingFinishedFuture(wallet);
             mixingFinished.addListener(() -> System.out.println("Mixing complete."), Threading.SAME_THREAD);
             mixingFinished.get();
+        } catch (ExecutionException | InterruptedException x) {
+            throw new RuntimeException(x);
+        } finally {
+            // runs on every exit (early return, interruption or completion) so no
+            // listener keeps printing or writing the report after mix() returns
             system.coinJoinManager.removeSessionCompleteListener(reporter);
             system.coinJoinManager.removeMixingCompleteListener(reporter);
             system.coinJoinManager.removeSessionStartedListener(reporter);
             system.coinJoinManager.removeTransactionListener(reporter);
+            system.blockChain.removeNewBestBlockListener(reporter);
             system.coinJoinManager.removeTransactionListener(progressTxListener);
             system.blockChain.removeNewBestBlockListener(progressBlockListener);
             system.coinJoinManager.stop();
-        } catch (ExecutionException | InterruptedException x) {
-            throw new RuntimeException(x);
         }
     }
 
